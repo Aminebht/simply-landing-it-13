@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      cart_items: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          quantity: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          quantity?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checkout_fields: {
         Row: {
           created_at: string
@@ -259,6 +298,153 @@ export type Database = {
           },
         ]
       }
+      library_items: {
+        Row: {
+          id: string
+          is_for_stamping: boolean | null
+          order_item_id: string | null
+          original_file_url: string | null
+          product_id: string | null
+          purchase_date: string
+          seller_id: string | null
+          thumbnail_url: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          is_for_stamping?: boolean | null
+          order_item_id?: string | null
+          original_file_url?: string | null
+          product_id?: string | null
+          purchase_date?: string
+          seller_id?: string | null
+          thumbnail_url?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          is_for_stamping?: boolean | null
+          order_item_id?: string | null
+          original_file_url?: string | null
+          product_id?: string | null
+          purchase_date?: string
+          seller_id?: string | null
+          thumbnail_url?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          read: boolean | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          read?: boolean | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          read?: boolean | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          buyer_email: string | null
+          buyer_id: string | null
+          buyer_name: string | null
+          created_at: string | null
+          guest_email: string | null
+          guest_name: string | null
+          id: string
+          is_archived: Json | null
+          notes: Json | null
+          order_number: string
+          payment_method: string | null
+          payment_reference: string | null
+          status: string | null
+          submission_data: Json | null
+          total_amount: number
+          updated_at: string | null
+        }
+        Insert: {
+          buyer_email?: string | null
+          buyer_id?: string | null
+          buyer_name?: string | null
+          created_at?: string | null
+          guest_email?: string | null
+          guest_name?: string | null
+          id?: string
+          is_archived?: Json | null
+          notes?: Json | null
+          order_number: string
+          payment_method?: string | null
+          payment_reference?: string | null
+          status?: string | null
+          submission_data?: Json | null
+          total_amount: number
+          updated_at?: string | null
+        }
+        Update: {
+          buyer_email?: string | null
+          buyer_id?: string | null
+          buyer_name?: string | null
+          created_at?: string | null
+          guest_email?: string | null
+          guest_name?: string | null
+          id?: string
+          is_archived?: Json | null
+          notes?: Json | null
+          order_number?: string
+          payment_method?: string | null
+          payment_reference?: string | null
+          status?: string | null
+          submission_data?: Json | null
+          total_amount?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_media: {
         Row: {
           created_at: string
@@ -418,7 +604,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      complete_order_purchase: {
+        Args: {
+          p_order_id: string
+          p_payment_id: string
+          p_payment_status: string
+          p_payment_data: Json
+        }
+        Returns: Json
+      }
+      create_pending_order: {
+        Args: {
+          p_order_id: string
+          p_buyer_id: string
+          p_buyer_email: string
+          p_buyer_name: string
+          p_global_submission_data: Json
+          p_language: string
+          p_is_guest_purchase: boolean
+          p_cart_items: Json
+          p_payment_method: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
