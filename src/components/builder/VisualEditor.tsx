@@ -16,7 +16,6 @@ import { VariationSelector } from './visual-editor/VariationSelector';
 import { BackgroundControls } from './visual-editor/BackgroundControls';
 import { ButtonActionConfig } from './visual-editor/ButtonActionConfig';
 import { ElementStylePanel } from './visual-editor/ElementStylePanel';
-import { ContentEditPanel } from './visual-editor/ContentEditPanel';
 import { 
   createStyleValueGetter, 
   getElementDisplayName, 
