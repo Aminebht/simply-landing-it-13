@@ -304,115 +304,21 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
           <TabsContent value="styles" className="space-y-4 mt-0 p-4">
             {/* Variation Selector */}
             {isEditingContainer && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Shuffle className="h-4 w-4" />
-                    Variation ({getVariationNumber(selectedComponent)})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-3 gap-2">
-                    {componentVariations
-                      .filter(v => v.component_type === getComponentType(selectedComponent, componentVariations) && v.is_active)
-                      .sort((a, b) => a.variation_number - b.variation_number)
-                      .map((variation) => (
-                        <Button
-                          key={variation.id}
-                          variant={
-                            variation.variation_number.toString() === getVariationNumber(selectedComponent)
-                              ? "default"
-                              : "outline"
-                          }
-                          size="sm"
-                          onClick={() => handleVariationChange(variation.variation_number)}
-                          className="h-8"
-                        >
-                          {variation.variation_number}
-                        </Button>
-                      ))}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-2">
-                    {componentVariations.find(v => v.variation_number.toString() === getVariationNumber(selectedComponent))?.description || 
-                     `${getComponentType(selectedComponent, componentVariations)} variation ${getVariationNumber(selectedComponent)}`}
-                  </div>
-                </CardContent>
-              </Card>
+              <VariationSelector
+                selectedComponent={selectedComponent}
+                componentVariations={componentVariations}
+                onChangeVariation={handleVariationChange}
+              />
             )}
 
             {/* Background Controls */}
             {isEditingContainer && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Palette className="h-4 w-4" />
-                    Background
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex space-x-2">
-                    <Button
-                      variant={backgroundType === 'solid' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setBackgroundType('solid')}
-                      className="flex-1"
-                    >
-                      Solid
-                    </Button>
-                    <Button
-                      variant={backgroundType === 'gradient' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setBackgroundType('gradient')}
-                      className="flex-1"
-                    >
-                      Gradient
-                    </Button>
-                  </div>
-
-                  {backgroundType === 'solid' && (
-                    <ColorPicker
-                      label="Background Color"
-                      color={getStyleValue('backgroundColor', '#ffffff')}
-                      onChange={(color) => handleStyleChange('backgroundColor', color)}
-                    />
-                  )}
-
-                  {backgroundType === 'gradient' && (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-xs font-medium mb-2 block">Direction</label>
-                        <Select value={gradientDirection} onValueChange={setGradientDirection}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="to-r">Left to Right</SelectItem>
-                            <SelectItem value="to-l">Right to Left</SelectItem>
-                            <SelectItem value="to-b">Top to Bottom</SelectItem>
-                            <SelectItem value="to-t">Bottom to Top</SelectItem>
-                            <SelectItem value="to-br">Top Left to Bottom Right</SelectItem>
-                            <SelectItem value="to-tr">Bottom Left to Top Right</SelectItem>
-                            <SelectItem value="to-bl">Top Right to Bottom Left</SelectItem>
-                            <SelectItem value="to-tl">Bottom Right to Top Left</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <ColorPicker
-                        label="From Color"
-                        color={gradientFromColor}
-                        onChange={setGradientFromColor}
-                      />
-
-                      <ColorPicker
-                        label="To Color"
-                        color={gradientToColor}
-                        onChange={setGradientToColor}
-                      />
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <BackgroundControls
+                currentBackground={getStyleValue('background', '')}
+                currentBackgroundColor={getStyleValue('backgroundColor', '#ffffff')}
+                onStyleChange={handleStyleChange}
+                onGradientChange={handleGradientChange}
+              />
             )}
 
             {/* Button Action Config */}
@@ -433,204 +339,12 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
               />
             )}
 
-            {/* Typography Section - Only for text elements */}
-            {isTextElement && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Type className="h-4 w-4" />
-                    Typography
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <ColorPicker
-                    label="Text Color"
-                    color={getStyleValue('textColor', '#000000')}
-                    onChange={(color) => handleStyleChange('textColor', color)}
-                  />
-
-                  <div>
-                    <Label className="text-xs">Font Size</Label>
-                    <Slider
-                      value={[getNumericStyleValue(getStyleValue('fontSize', 16), 16)]}
-                      onValueChange={(value) => handleStyleChange('fontSize', value[0])}
-                      min={8}
-                      max={72}
-                      step={1}
-                      className="w-full"
-                    />
-                    <div className="text-xs text-gray-500">
-                      {getStyleValue('fontSize', 16)}px
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label className="text-xs">Font Weight</Label>
-                    <Select
-                      value={getStyleValue('fontWeight', 400).toString()}
-                      onValueChange={(value) => handleStyleChange('fontWeight', parseInt(value))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="400">Normal (400)</SelectItem>
-                        <SelectItem value="500">Medium (500)</SelectItem>
-                        <SelectItem value="600">Semi Bold (600)</SelectItem>
-                        <SelectItem value="700">Bold (700)</SelectItem>
-                        <SelectItem value="800">Extra Bold (800)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label className="text-xs">Line Height</Label>
-                    <Slider
-                      value={[getNumericStyleValue(getStyleValue('lineHeight', 1.5), 1.5)]}
-                      onValueChange={(value) => handleStyleChange('lineHeight', value[0])}
-                      min={1}
-                      max={3}
-                      step={0.1}
-                      className="w-full"
-                    />
-                    <div className="text-xs text-gray-500">
-                      {getStyleValue('lineHeight', 1.5)}
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label className="text-xs">Letter Spacing</Label>
-                    <Slider
-                      value={[getNumericStyleValue(getStyleValue('letterSpacing', 0), 0)]}
-                      onValueChange={(value) => handleStyleChange('letterSpacing', `${value[0]}px`)}
-                      min={-2}
-                      max={5}
-                      step={0.1}
-                      className="w-full"
-                    />
-                    <div className="text-xs text-gray-500">
-                      {getDisplayStyleValue(getStyleValue('letterSpacing', 0), '0px')}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Border Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Border</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label className="text-xs">Border Width</Label>
-                  <Slider
-                    value={[getNumericStyleValue(getStyleValue('borderWidth', 0), 0)]}
-                    onValueChange={(value) => handleStyleChange('borderWidth', `${value[0]}px`)}
-                    max={10}
-                    step={1}
-                    className="w-full"
-                  />
-                  <div className="text-xs text-gray-500">
-                    {getDisplayStyleValue(getStyleValue('borderWidth', 0), '0px')}
-                  </div>
-                </div>
-
-                <ColorPicker
-                  label="Border Color"
-                  color={getStyleValue('borderColor', '#e5e7eb')}
-                  onChange={(color) => handleStyleChange('borderColor', color)}
-                />
-
-                <div>
-                  <Label className="text-xs">Border Style</Label>
-                  <Select
-                    value={getStyleValue('borderStyle', 'solid')}
-                    onValueChange={(value) => handleStyleChange('borderStyle', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="solid">Solid</SelectItem>
-                      <SelectItem value="dashed">Dashed</SelectItem>
-                      <SelectItem value="dotted">Dotted</SelectItem>
-                      <SelectItem value="double">Double</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label className="text-xs">Border Radius</Label>
-                  <Slider
-                    value={[getNumericStyleValue(getStyleValue('borderRadius', 0), 0)]}
-                    onValueChange={(value) => handleStyleChange('borderRadius', `${value[0]}px`)}
-                    max={50}
-                    step={1}
-                    className="w-full"
-                  />
-                  <div className="text-xs text-gray-500">
-                    {getDisplayStyleValue(getStyleValue('borderRadius', 0), '0px')}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Spacing Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Layout className="h-4 w-4" />
-                  Spacing & Layout
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label className="text-xs">Text Alignment</Label>
-                  <Select
-                    value={getStyleValue('textAlign', 'left')}
-                    onValueChange={(value) => handleStyleChange('textAlign', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="left">Left</SelectItem>
-                      <SelectItem value="center">Center</SelectItem>
-                      <SelectItem value="right">Right</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label className="text-xs">Padding</Label>
-                  <Slider
-                    value={[getNumericStyleValue(getStyleValue('padding', 0), 0)]}
-                    onValueChange={(value) => handleStyleChange('padding', `${value[0]}px`)}
-                    max={100}
-                    step={4}
-                    className="w-full"
-                  />
-                  <div className="text-xs text-gray-500">
-                    {getDisplayStyleValue(getStyleValue('padding', 0), '0px')}
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="text-xs">Margin</Label>
-                  <Slider
-                    value={[getNumericStyleValue(getStyleValue('margin', 0), 0)]}
-                    onValueChange={(value) => handleStyleChange('margin', `${value[0]}px`)}
-                    max={100}
-                    step={4}
-                    className="w-full"
-                  />
-                  <div className="text-xs text-gray-500">
-                    {getDisplayStyleValue(getStyleValue('margin', 0), '0px')}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Element Style Panel */}
+            <ElementStylePanel
+              getStyleValue={getStyleValue}
+              onStyleChange={handleStyleChange}
+              isTextElement={isTextElement}
+            />
           </TabsContent>
 
           {/* Visibility Tab */}
