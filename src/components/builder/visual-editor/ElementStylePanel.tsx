@@ -24,81 +24,59 @@ export const ElementStylePanel: React.FC<ElementStylePanelProps> = ({
       {isTextElement && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Type className="h-4 w-4" />
-              Typography
-            </CardTitle>
+            <CardTitle className="text-sm">Typography</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Font Size and Weight */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Font Size</Label>
+                <Select
+                  value={getStyleValue('fontSize', '16').toString()}
+                  onValueChange={(value) => onStyleChange('fontSize', parseInt(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="12">12px</SelectItem>
+                    <SelectItem value="14">14px</SelectItem>
+                    <SelectItem value="16">16px</SelectItem>
+                    <SelectItem value="18">18px</SelectItem>
+                    <SelectItem value="20">20px</SelectItem>
+                    <SelectItem value="24">24px</SelectItem>
+                    <SelectItem value="32">32px</SelectItem>
+                    <SelectItem value="48">48px</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label className="text-xs">Font Weight</Label>
+                <Select
+                  value={getStyleValue('fontWeight', '400').toString()}
+                  onValueChange={(value) => onStyleChange('fontWeight', parseInt(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="400">Normal</SelectItem>
+                    <SelectItem value="500">Medium</SelectItem>
+                    <SelectItem value="600">Semi Bold</SelectItem>
+                    <SelectItem value="700">Bold</SelectItem>
+                    <SelectItem value="800">Extra Bold</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Text Color */}
             <ColorPicker
               label="Text Color"
-              color={getStyleValue('textColor', '#000000')}
-              onChange={(color) => onStyleChange('textColor', color)}
+              color={getStyleValue('color', '#111827')}
+              onChange={(color) => onStyleChange('color', color)}
             />
-
-            <div>
-              <Label className="text-xs">Font Size</Label>
-              <Slider
-                value={[getNumericStyleValue(getStyleValue('fontSize', 16), 16)]}
-                onValueChange={(value) => onStyleChange('fontSize', value[0])}
-                min={8}
-                max={72}
-                step={1}
-                className="w-full"
-              />
-              <div className="text-xs text-gray-500">
-                {getStyleValue('fontSize', 16)}px
-              </div>
-            </div>
-
-            <div>
-              <Label className="text-xs">Font Weight</Label>
-              <Select
-                value={getStyleValue('fontWeight', 400).toString()}
-                onValueChange={(value) => onStyleChange('fontWeight', parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="400">Normal (400)</SelectItem>
-                  <SelectItem value="500">Medium (500)</SelectItem>
-                  <SelectItem value="600">Semi Bold (600)</SelectItem>
-                  <SelectItem value="700">Bold (700)</SelectItem>
-                  <SelectItem value="800">Extra Bold (800)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label className="text-xs">Line Height</Label>
-              <Slider
-                value={[getNumericStyleValue(getStyleValue('lineHeight', 1.5), 1.5)]}
-                onValueChange={(value) => onStyleChange('lineHeight', value[0])}
-                min={1}
-                max={3}
-                step={0.1}
-                className="w-full"
-              />
-              <div className="text-xs text-gray-500">
-                {getStyleValue('lineHeight', 1.5)}
-              </div>
-            </div>
-
-            <div>
-              <Label className="text-xs">Letter Spacing</Label>
-              <Slider
-                value={[getNumericStyleValue(getStyleValue('letterSpacing', 0), 0)]}
-                onValueChange={(value) => onStyleChange('letterSpacing', `${value[0]}px`)}
-                min={-2}
-                max={5}
-                step={0.1}
-                className="w-full"
-              />
-              <div className="text-xs text-gray-500">
-                {getDisplayStyleValue(getStyleValue('letterSpacing', 0), '0px')}
-              </div>
-            </div>
           </CardContent>
         </Card>
       )}

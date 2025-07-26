@@ -314,10 +314,9 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
             {/* Background Controls */}
             {isEditingContainer && (
               <BackgroundControls
-                currentBackground={getStyleValue('background', '')}
-                currentBackgroundColor={getStyleValue('backgroundColor', '#ffffff')}
-                onStyleChange={handleStyleChange}
-                onGradientChange={handleGradientChange}
+                getStyleValue={getStyleValue}
+                handleStyleChange={handleStyleChange}
+                handleGradientChange={handleGradientChange}
               />
             )}
 
