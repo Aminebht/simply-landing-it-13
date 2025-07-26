@@ -1,64 +1,74 @@
 import React from 'react';
 import { LandingPageComponent, ComponentVariation } from '@/types/components';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Shuffle } from 'lucide-react';
 import { getVariationNumber, getComponentType } from './styleHelpers';
 
 interface VariationSelectorProps {
   selectedComponent: LandingPageComponent;
   componentVariations: ComponentVariation[];
-  onVariationChange: (newVariation: number) => void;
+  onChangeVariation?: (newVariation: number) => void;
 }
 
 export const VariationSelector: React.FC<VariationSelectorProps> = ({
   selectedComponent,
   componentVariations,
-  onVariationChange
+  onChangeVariation
 }) => {
-  const currentVariationNumber = getVariationNumber(selectedComponent);
-  const componentType = getComponentType(selectedComponent, componentVariations);
-  
-  // Get available variations for this component type
-  const availableVariations = componentVariations
-    .filter(v => v.component_type === componentType && v.is_active)
-    .sort((a, b) => a.variation_number - b.variation_number);
+  const currentVariation = componentVariations.find(v => 
+    v.id === selectedComponent.component_variation_id
+  );
 
-  if (availableVariations.length <= 1) {
-    return null; // Don't show if only one variation available
-  }
+  const handleVariationChange = (value: number) => {
+    if (onChangeVariation) {
+      onChangeVariation(value);
+    }
+  };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm flex items-center gap-2">
-          <Shuffle className="h-4 w-4" />
-          Variation ({currentVariationNumber})
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-3 gap-2">
-          {availableVariations.map((variation) => (
-            <Button
-              key={variation.id}
-              variant={
-                variation.variation_number.toString() === currentVariationNumber
-                  ? "default"
-                  : "outline"
-              }
-              size="sm"
-              onClick={() => onVariationChange(variation.variation_number)}
-              className="h-8"
-            >
-              {variation.variation_number}
-            </Button>
-          ))}
+    <>
+      {onChangeVariation && (
+        <div className="mb-4">
+          <Label className="text-sm font-medium mb-2 block">Component Variation</Label>
+          <Select
+            value={getVariationNumber(selectedComponent)}
+            onValueChange={(value) => handleVariationChange(parseInt(value))}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue>
+                <div className="flex items-center">
+                  <Shuffle className="h-4 w-4 mr-2" />
+                  {/* Extract and display variation name without nested functions that could create hooks inconsistency */}
+                  {currentVariation?.variation_name || 
+                   selectedComponent.component_variation?.variation_name || 
+                   `Variation ${getVariationNumber(selectedComponent)}`}
+                </div>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {componentVariations
+                .filter(v => {
+                  // Use the currentVariation to determine which type to display
+                  if (currentVariation) {
+                    return v.component_type === currentVariation.component_type;
+                  }
+                  
+                  // Get component type from multiple possible sources
+                  const componentType = getComponentType(selectedComponent, componentVariations);
+                  return v.component_type === componentType;
+                })
+                .map((variation) => (
+                  <SelectItem key={variation.variation_number} value={variation.variation_number.toString()}>
+                    <div className="flex items-center justify-between w-full">
+                      <span>{variation.variation_name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
         </div>
-        <div className="text-xs text-gray-500 mt-2">
-          {availableVariations.find(v => v.variation_number.toString() === currentVariationNumber)?.description || 
-           `${componentType} variation ${currentVariationNumber}`}
-        </div>
-      </CardContent>
-    </Card>
+      )}
+    </>
   );
 };
