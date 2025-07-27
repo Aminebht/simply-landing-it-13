@@ -35,10 +35,10 @@ const FeaturesVariation4: React.FC<FeaturesVariation4Props> = ({
   };
 
   const containerClassMap = {
-    mobile: 'py-12 px-4',
-    tablet: 'py-16 px-6',
-    desktop: 'py-20 px-8',
-    responsive: 'py-12 px-4 md:py-16 md:px-6 lg:py-20 lg:px-8',
+    mobile: 'py-12 px-4 bg-gradient-to-b from-background to-muted/20',
+    tablet: 'py-16 px-6 bg-gradient-to-b from-background to-muted/20',
+    desktop: 'py-20 px-8 bg-gradient-to-b from-background to-muted/20',
+    responsive: 'py-12 px-4 md:py-16 md:px-6 lg:py-20 lg:px-8 bg-gradient-to-b from-background to-muted/20',
   };
 
   const gridClassMap = {
@@ -56,7 +56,11 @@ const FeaturesVariation4: React.FC<FeaturesVariation4Props> = ({
   };
 
   const tabButtonClass = (isActive: boolean) =>
-    `w-full text-left p-4 rounded-lg transition-all text-lg font-medium ${isActive ? 'bg-primary text-primary-foreground shadow-md' : 'bg-gray-100 hover:bg-gray-200'}`;
+    `w-full text-left p-6 rounded-xl transition-all duration-300 text-lg font-semibold border ${
+      isActive 
+        ? 'bg-primary text-primary-foreground shadow-lg border-primary transform scale-105' 
+        : 'bg-card hover:bg-muted border-border hover:border-primary/30 hover:shadow-md hover:-translate-y-1'
+    }`;
 
   const contentContainerClassMap = {
     mobile: 'lg:col-span-8',
@@ -67,19 +71,19 @@ const FeaturesVariation4: React.FC<FeaturesVariation4Props> = ({
 
   const defaultFeatures = [
     {
-      title: 'Seamless Integration',
-      description: 'Connect with your favorite tools in just a few clicks. Our extensive library of integrations makes your workflow smoother than ever.',
-      image: 'https://via.placeholder.com/800x600?text=Integration',
+      title: 'AI-Powered Automation',
+      description: 'Automate 90% of repetitive tasks with our intelligent AI system. Save 20+ hours per week and focus on what matters most - growing your business.',
+      image: 'https://via.placeholder.com/800x600?text=AI+Automation',
     },
     {
-      title: 'Advanced Analytics',
-      description: 'Gain deep insights into your performance with our comprehensive analytics dashboard. Track metrics that matter and make data-driven decisions.',
-      image: 'https://via.placeholder.com/800x600?text=Analytics',
+      title: 'Advanced Analytics Dashboard',
+      description: 'Make data-driven decisions with real-time insights. Track ROI, conversion rates, and customer behavior with precision analytics that drive results.',
+      image: 'https://via.placeholder.com/800x600?text=Analytics+Dashboard',
     },
     {
-      title: '24/7 Priority Support',
-      description: 'Our dedicated support team is always available to help you with any questions or issues. Get expert help whenever you need it.',
-      image: 'https://via.placeholder.com/800x600?text=Support',
+      title: 'White-Glove Onboarding',
+      description: 'Get up and running in 24 hours with our dedicated success team. Personal training, custom setup, and ongoing support ensure your success.',
+      image: 'https://via.placeholder.com/800x600?text=Onboarding+Support',
     },
   ];
 
@@ -137,21 +141,21 @@ const FeaturesVariation4: React.FC<FeaturesVariation4Props> = ({
 
           <div className={getClass(contentContainerClassMap, viewport)}>
             {activeFeature && (
-              <div className="bg-white p-8 rounded-xl shadow-lg">
+              <div className="bg-card/80 backdrop-blur-sm p-8 lg:p-12 rounded-2xl border border-border/50 shadow-xl">
                 {isVisible(visibility, `feature-image-${activeTab}`) && (
                   <SelectableElement
                     elementId={`feature-image-container-${activeTab}`}
                     isSelected={selectedElementId === `feature-image-container-${activeTab}`}
                     isEditing={isEditing}
                     onSelect={onElementSelect}
-                    className="mb-6 w-full h-64 bg-gray-200 rounded-lg overflow-hidden"
+                    className="mb-8 w-full h-80 bg-muted/30 rounded-xl overflow-hidden border border-border/30 shadow-lg"
                   >
                     <img
-                src={content.mainImageUrl || 'https://via.placeholder.com/600x400'}
-                alt="Feature showcase"
-                className="w-full h-full object-cover rounded-xl"
-                style={getElementStyles(styles, 'mainImage')}
-              />
+                      src={content.mainImageUrl || activeFeature.image || 'https://via.placeholder.com/800x600'}
+                      alt="Feature showcase"
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                      style={getElementStyles(styles, 'mainImage')}
+                    />
                   </SelectableElement>
                 )}
                 {isVisible(visibility, `feature-description-${activeTab}`) && (
@@ -163,7 +167,7 @@ const FeaturesVariation4: React.FC<FeaturesVariation4Props> = ({
                     onContentChange={(field, value) => onContentChange(`features[${activeTab}].description`, value)}
                     contentField={`features[${activeTab}].description`}
                     isContentEditable
-                    className="text-lg text-muted-foreground"
+                    className="text-lg text-muted-foreground leading-relaxed"
                     style={getElementStyles(styles, `feature-description-${activeTab}`)}
                   >
                     {activeFeature.description}

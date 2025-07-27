@@ -18,10 +18,10 @@ const FeaturesVariation3: React.FC<FeaturesVariation3Props> = ({
   viewport,
 }) => {
   const containerClassMap = {
-    mobile: 'py-12 px-4 bg-gray-50',
-    tablet: 'py-16 px-6 bg-gray-50',
-    desktop: 'py-20 px-8 bg-gray-50',
-    responsive: 'py-12 px-4 md:py-16 md:px-6 lg:py-20 lg:px-8 bg-gray-50',
+    mobile: 'py-12 px-4 bg-gradient-to-br from-background via-muted/30 to-background',
+    tablet: 'py-16 px-6 bg-gradient-to-br from-background via-muted/30 to-background',
+    desktop: 'py-20 px-8 bg-gradient-to-br from-background via-muted/30 to-background',
+    responsive: 'py-12 px-4 md:py-16 md:px-6 lg:py-20 lg:px-8 bg-gradient-to-br from-background via-muted/30 to-background',
   };
 
   const gridClassMap = {
@@ -32,34 +32,34 @@ const FeaturesVariation3: React.FC<FeaturesVariation3Props> = ({
   };
 
   const featureCardClassMap = {
-    mobile: 'bg-white p-6 rounded-xl shadow-sm transition-all hover:shadow-lg hover:-translate-y-1',
-    tablet: 'bg-white p-6 rounded-xl shadow-sm transition-all hover:shadow-lg hover:-translate-y-1',
-    desktop: 'bg-white p-8 rounded-2xl shadow-md transition-all hover:shadow-xl hover:-translate-y-2',
-    responsive: 'bg-white p-6 rounded-xl shadow-sm transition-all hover:shadow-lg hover:-translate-y-1 md:p-6 lg:p-8 lg:rounded-2xl lg:hover:shadow-xl lg:hover:-translate-y-2',
+    mobile: 'group bg-card/50 backdrop-blur-sm p-8 rounded-2xl border border-border/50 shadow-lg transition-all duration-500 hover:shadow-2xl hover:-translate-y-3 hover:border-primary/30 hover:bg-card/80',
+    tablet: 'group bg-card/50 backdrop-blur-sm p-8 rounded-2xl border border-border/50 shadow-lg transition-all duration-500 hover:shadow-2xl hover:-translate-y-3 hover:border-primary/30 hover:bg-card/80',
+    desktop: 'group bg-card/50 backdrop-blur-sm p-10 rounded-3xl border border-border/50 shadow-xl transition-all duration-500 hover:shadow-3xl hover:-translate-y-4 hover:border-primary/30 hover:bg-card/80',
+    responsive: 'group bg-card/50 backdrop-blur-sm p-8 rounded-2xl border border-border/50 shadow-lg transition-all duration-500 hover:shadow-2xl hover:-translate-y-3 hover:border-primary/30 hover:bg-card/80 lg:p-10 lg:rounded-3xl lg:shadow-xl lg:hover:shadow-3xl lg:hover:-translate-y-4',
   };
 
   const iconContainerClassMap = {
-    mobile: 'w-12 h-12 mb-4 flex items-center justify-center rounded-full bg-primary text-primary-foreground',
-    tablet: 'w-14 h-14 mb-5 flex items-center justify-center rounded-full bg-primary text-primary-foreground',
-    desktop: 'w-16 h-16 mb-6 flex items-center justify-center rounded-full bg-primary text-primary-foreground',
-    responsive: 'w-12 h-12 mb-4 flex items-center justify-center rounded-full bg-primary text-primary-foreground md:w-14 md:h-14 md:mb-5 lg:w-16 lg:h-16 lg:mb-6',
+    mobile: 'w-16 h-16 mb-6 mx-auto flex items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-primary to-primary/80 text-primary-foreground shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300',
+    tablet: 'w-18 h-18 mb-7 mx-auto flex items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-primary to-primary/80 text-primary-foreground shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300',
+    desktop: 'w-20 h-20 mb-8 mx-auto flex items-center justify-center rounded-3xl bg-gradient-to-br from-primary via-primary to-primary/80 text-primary-foreground shadow-xl group-hover:shadow-2xl group-hover:scale-110 transition-all duration-300',
+    responsive: 'w-16 h-16 mb-6 mx-auto flex items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-primary to-primary/80 text-primary-foreground shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300 md:w-18 md:h-18 md:mb-7 lg:w-20 lg:h-20 lg:mb-8 lg:rounded-3xl lg:shadow-xl lg:group-hover:shadow-2xl',
   };
 
   const defaultFeatures = [
     {
-      icon: '💡',
-      title: 'Innovative Ideas',
-      description: 'We bring fresh perspectives to solve complex challenges.',
+      icon: '🚀',
+      title: 'Launch Faster',
+      description: 'Go from idea to market in half the time with our streamlined development process and proven frameworks.',
     },
     {
-      icon: '📈',
-      title: 'Measurable Growth',
-      description: 'Data-driven strategies that deliver tangible results.',
+      icon: '💰',
+      title: 'Increase Revenue',
+      description: 'Boost your bottom line with features designed to maximize conversions and customer lifetime value.',
     },
     {
-      icon: '🤝',
-      title: 'Collaborative Spirit',
-      description: 'We work with you, not just for you, to achieve shared goals.',
+      icon: '🎯',
+      title: 'Hit Your Goals',
+      description: 'Achieve ambitious targets with data-driven strategies and continuous optimization.',
     },
   ];
 

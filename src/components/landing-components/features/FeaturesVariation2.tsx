@@ -35,17 +35,17 @@ const FeaturesVariation2: React.FC<FeaturesVariation2Props> = ({
   };
 
   const featureItemClassMap = {
-    mobile: 'flex items-start gap-4 p-4 rounded-lg transition-all hover:bg-gray-50',
-    tablet: 'flex items-start gap-5 p-5 rounded-lg transition-all hover:bg-gray-50',
-    desktop: 'flex items-start gap-6 p-6 rounded-xl transition-all hover:bg-gray-100',
-    responsive: 'flex items-start gap-4 p-4 rounded-lg transition-all hover:bg-gray-50 md:gap-5 md:p-5 lg:gap-6 lg:p-6 lg:rounded-xl lg:hover:bg-gray-100',
+    mobile: 'group flex items-start gap-4 p-6 rounded-xl bg-card border border-border hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:-translate-y-1',
+    tablet: 'group flex items-start gap-5 p-7 rounded-xl bg-card border border-border hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:-translate-y-1',
+    desktop: 'group flex items-start gap-6 p-8 rounded-2xl bg-card border border-border hover:border-primary/30 transition-all duration-300 hover:shadow-xl hover:-translate-y-2',
+    responsive: 'group flex items-start gap-4 p-6 rounded-xl bg-card border border-border hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 md:gap-5 md:p-7 lg:gap-6 lg:p-8 lg:rounded-2xl lg:hover:shadow-xl lg:hover:-translate-y-2',
   };
 
   const iconContainerClassMap = {
-    mobile: 'flex-shrink-0 w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center',
-    tablet: 'flex-shrink-0 w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center',
-    desktop: 'flex-shrink-0 w-14 h-14 bg-primary/10 text-primary rounded-full flex items-center justify-center',
-    responsive: 'flex-shrink-0 w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center md:w-12 md:h-12 lg:w-14 lg:h-14',
+    mobile: 'flex-shrink-0 w-12 h-12 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg',
+    tablet: 'flex-shrink-0 w-14 h-14 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg',
+    desktop: 'flex-shrink-0 w-16 h-16 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-xl',
+    responsive: 'flex-shrink-0 w-12 h-12 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg md:w-14 md:h-14 lg:w-16 lg:h-16 lg:rounded-2xl lg:shadow-xl',
   };
 
   const iconClassMap = {
@@ -57,24 +57,24 @@ const FeaturesVariation2: React.FC<FeaturesVariation2Props> = ({
 
   const defaultFeatures = [
     {
-      icon: '✨',
-      title: 'Modern Design',
-      description: 'A sleek and contemporary design that captivates your audience.',
-      buttonText: 'Learn More',
+      icon: '🎯',
+      title: 'Precision Targeting',
+      description: 'Reach exactly the right audience with AI-powered targeting that increases conversion rates by 3x.',
+      buttonText: 'See How →',
       action: { type: 'open_link', url: '#', newTab: false },
     },
     {
-      icon: '🚀',
-      title: 'Highly Performant',
-      description: 'Optimized for speed and a smooth user experience.',
-      buttonText: 'Learn More',
+      icon: '📊',
+      title: 'Real-Time Analytics',
+      description: 'Track performance with advanced analytics dashboard. Make data-driven decisions that boost ROI.',
+      buttonText: 'View Demo →',
       action: { type: 'open_link', url: '#', newTab: false },
     },
     {
-      icon: '🎨',
-      title: 'Fully Customizable',
-      description: 'Easily adapt the look and feel to match your brand.',
-      buttonText: 'Learn More',
+      icon: '⚡',
+      title: 'Instant Results',
+      description: 'See improvements within 24 hours. Our proven system delivers results faster than any competitor.',
+      buttonText: 'Start Now →',
       action: { type: 'open_link', url: '#', newTab: false },
     },
   ];
@@ -203,7 +203,7 @@ const FeaturesVariation2: React.FC<FeaturesVariation2Props> = ({
                       onSelect: onElementSelect,
                       onContentChange: (field, value) => onContentChange(`features[${index}].buttonText`, value),
                       contentField: `features[${index}].buttonText`,
-                      className: 'text-primary font-semibold hover:underline',
+                      className: 'inline-flex items-center text-primary font-semibold hover:text-primary/80 transition-colors duration-200 group-hover:translate-x-1',
                       style: getElementStyles(styles, `feature-button-${index}`),
                     })}
                 </div>
