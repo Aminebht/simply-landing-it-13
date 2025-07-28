@@ -15,10 +15,14 @@ interface ButtonActionConfigProps {
   url: string;
   newTab: boolean;
   targetId: string;
+  productId: string;
+  amount: string;
   onActionTypeChange: (type: string) => void;
   onUrlChange: (url: string) => void;
   onNewTabChange: (newTab: boolean) => void;
   onTargetIdChange: (targetId: string) => void;
+  onProductIdChange: (productId: string) => void;
+  onAmountChange: (amount: string) => void;
   onUpdateComponent: (componentId: string, updates: Partial<LandingPageComponent>) => void;
 }
 
@@ -30,10 +34,14 @@ export const ButtonActionConfig: React.FC<ButtonActionConfigProps> = ({
   url,
   newTab,
   targetId,
+  productId,
+  amount,
   onActionTypeChange,
   onUrlChange,
   onNewTabChange,
   onTargetIdChange,
+  onProductIdChange,
+  onAmountChange,
   onUpdateComponent
 }) => {
   const handleSaveAction = () => {
@@ -42,6 +50,8 @@ export const ButtonActionConfig: React.FC<ButtonActionConfigProps> = ({
       url: actionType === 'open_link' ? url : undefined,
       newTab: actionType === 'open_link' ? newTab : undefined,
       targetId: actionType === 'scroll_to' ? targetId : undefined,
+      productId: actionType === 'checkout' ? productId : undefined,
+      amount: actionType === 'checkout' ? parseFloat(amount) : undefined,
     };
 
     const updatedCustomActions = {
@@ -72,6 +82,7 @@ export const ButtonActionConfig: React.FC<ButtonActionConfigProps> = ({
             <SelectContent>
               <SelectItem value="open_link">Open Link</SelectItem>
               <SelectItem value="scroll_to">Scroll to Section</SelectItem>
+              <SelectItem value="checkout">Checkout</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -114,6 +125,31 @@ export const ButtonActionConfig: React.FC<ButtonActionConfigProps> = ({
               </SelectContent>
             </Select>
           </div>
+        )}
+
+        {actionType === 'checkout' && (
+          <>
+            <div>
+              <Label className="text-xs">Product ID</Label>
+              <Input
+                value={productId}
+                onChange={(e) => onProductIdChange(e.target.value)}
+                placeholder="product-uuid"
+                onBlur={handleSaveAction}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Price (TND)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={amount}
+                onChange={(e) => onAmountChange(e.target.value)}
+                placeholder="29.99"
+                onBlur={handleSaveAction}
+              />
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

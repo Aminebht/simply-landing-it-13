@@ -62,6 +62,8 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
   const [buttonUrl, setButtonUrl] = useState('');
   const [buttonNewTab, setButtonNewTab] = useState(false);
   const [buttonTargetId, setButtonTargetId] = useState('');
+  const [buttonProductId, setButtonProductId] = useState('');
+  const [buttonAmount, setButtonAmount] = useState('');
 
   // Background control states
   const [backgroundType, setBackgroundType] = useState<'solid' | 'gradient'>('solid');
@@ -119,6 +121,8 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
       setButtonUrl(action.url || '');
       setButtonNewTab(!!action.newTab);
       setButtonTargetId(action.targetId || '');
+      setButtonProductId(action.productId || '');
+      setButtonAmount(action.amount?.toString() || '');
     }
   }, [selectedElementId, selectedComponent?.id, selectedComponent?.custom_actions]);
 
@@ -329,10 +333,14 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
                 url={buttonUrl}
                 newTab={buttonNewTab}
                 targetId={buttonTargetId}
+                productId={buttonProductId}
+                amount={buttonAmount}
                 onActionTypeChange={setButtonActionType}
                 onUrlChange={setButtonUrl}
                 onNewTabChange={setButtonNewTab}
                 onTargetIdChange={setButtonTargetId}
+                onProductIdChange={setButtonProductId}
+                onAmountChange={setButtonAmount}
                 onUpdateComponent={onUpdateComponent}
               />
             )}
