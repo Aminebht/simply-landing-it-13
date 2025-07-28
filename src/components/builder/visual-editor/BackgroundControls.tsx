@@ -5,8 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ColorPicker } from '../ColorPicker';
 
 interface BackgroundControlsProps {
-  getStyleValue: (property: string, defaultValue?: any) => any;
-  handleStyleChange: (property: string, value: any) => void;
+  getStyleValue: (property: string, defaultValue?: unknown) => unknown;
+  handleStyleChange: (property: string, value: unknown) => void;
   handleGradientChange: (gradientValue: string) => void;
 }
 
@@ -51,7 +51,7 @@ export const BackgroundControls: React.FC<BackgroundControlsProps> = ({
         {backgroundType === 'solid' && (
           <ColorPicker
             label="Background Color"
-            color={getStyleValue('backgroundColor', '#ffffff')}
+            color={String(getStyleValue('backgroundColor', '#ffffff') || '#ffffff')}
             onChange={(color) => handleStyleChange('backgroundColor', color)}
           />
         )}
@@ -60,8 +60,9 @@ export const BackgroundControls: React.FC<BackgroundControlsProps> = ({
         {backgroundType === 'gradient' && (() => {
           // fallback to a default if not a gradient string
           const backgroundColorValue = getStyleValue('backgroundColor', 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
-          const actualBackgroundValue = backgroundColorValue && backgroundColorValue.includes('gradient')
-            ? backgroundColorValue
+          const backgroundValueStr = typeof backgroundColorValue === 'string' ? backgroundColorValue : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+          const actualBackgroundValue = backgroundValueStr && backgroundValueStr.includes('gradient')
+            ? backgroundValueStr
             : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
           const colors = actualBackgroundValue.match(/#[0-9a-f]{6}/gi) || ['#667eea', '#764ba2'];
           const direction = actualBackgroundValue.includes('135deg') ? '135deg' :

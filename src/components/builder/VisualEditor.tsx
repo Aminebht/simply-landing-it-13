@@ -84,29 +84,6 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
     setBackgroundType(hasGradient ? 'gradient' : 'solid');
   }, [selectedComponent, selectedElementId, getStyleValue]);
 
-  // Update gradient when values change
-  useEffect(() => {
-    if (backgroundType === 'gradient') {
-      const getCSSDirection = (tailwindDirection: string): string => {
-        const directionMap: Record<string, string> = {
-          'to-r': 'to right',
-          'to-l': 'to left',
-          'to-b': 'to bottom',
-          'to-t': 'to top',
-          'to-br': 'to bottom right',
-          'to-tr': 'to top right',
-          'to-bl': 'to bottom left',
-          'to-tl': 'to top left'
-        };
-        return directionMap[tailwindDirection] || 'to right';
-      };
-      
-      const cssDirection = getCSSDirection(gradientDirection);
-      const gradientValue = `linear-gradient(${cssDirection}, ${gradientFromColor}, ${gradientToColor})`;
-      handleGradientChange(gradientValue);
-    }
-  }, [gradientDirection, gradientFromColor, gradientToColor, backgroundType]);
-
   // Auto-select styles tab when component or element changes
   useEffect(() => {
     setActiveTab('styles');
@@ -156,7 +133,7 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
     onChangeVariation(selectedComponent.id, newVariation);
   }, [selectedComponent, onChangeVariation, componentVariations]);
 
-  const handleContentChange = useCallback((field: string, value: any) => {
+  const handleContentChange = useCallback((field: string, value: unknown) => {
     if (!selectedComponent) return;
     
     const updatedContent = {
@@ -167,7 +144,7 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
     onUpdateComponent(selectedComponent.id, { content: updatedContent });
   }, [selectedComponent, onUpdateComponent]);
 
-  const handleStyleChange = useCallback((styleProperty: string, value: any) => {
+  const handleStyleChange = useCallback((styleProperty: string, value: unknown) => {
     if (!selectedComponent) return;
     
     const targetElementKey = selectedElementId || 'container';
@@ -200,6 +177,29 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
     onUpdateStyles(selectedComponent.id, elementStyleChange);
   }, [selectedComponent, selectedElementId, onUpdateStyles]);
 
+  // Update gradient when values change
+  useEffect(() => {
+    if (backgroundType === 'gradient') {
+      const getCSSDirection = (tailwindDirection: string): string => {
+        const directionMap: Record<string, string> = {
+          'to-r': 'to right',
+          'to-l': 'to left',
+          'to-b': 'to bottom',
+          'to-t': 'to top',
+          'to-br': 'to bottom right',
+          'to-tr': 'to top right',
+          'to-bl': 'to bottom left',
+          'to-tl': 'to top left'
+        };
+        return directionMap[tailwindDirection] || 'to right';
+      };
+      
+      const cssDirection = getCSSDirection(gradientDirection);
+      const gradientValue = `linear-gradient(${cssDirection}, ${gradientFromColor}, ${gradientToColor})`;
+      handleGradientChange(gradientValue);
+    }
+  }, [gradientDirection, gradientFromColor, gradientToColor, backgroundType, handleGradientChange]);
+
   const handleVisibilityChange = useCallback((elementKey: string, isVisible: boolean) => {
     if (!selectedComponent) return;
     
@@ -230,7 +230,7 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
       type: buttonActionType,
       url: buttonActionType === 'open_link' ? buttonUrl : undefined,
       newTab: buttonActionType === 'open_link' ? buttonNewTab : undefined,
-      targetId: buttonActionType === 'scroll_to' ? buttonTargetId : undefined,
+      targetId: buttonActionType === 'scroll' ? buttonTargetId : undefined,
     };
 
     const updatedCustomActions = {

@@ -38,12 +38,12 @@ export const ButtonActionConfig: React.FC<ButtonActionConfigProps> = ({
   onUpdateComponent,
   productData
 }) => {
-  const handleSaveAction = () => {
+  const handleSaveAction = React.useCallback(() => {
     const action = {
       type: actionType,
       url: actionType === 'open_link' ? url : undefined,
       newTab: actionType === 'open_link' ? newTab : undefined,
-      targetId: actionType === 'scroll_to' ? targetId : undefined,
+      targetId: actionType === 'scroll' ? targetId : undefined,
       productId: actionType === 'checkout' ? productData?.id : undefined,
       amount: actionType === 'checkout' ? productData?.price : undefined,
     };
@@ -56,7 +56,26 @@ export const ButtonActionConfig: React.FC<ButtonActionConfigProps> = ({
     onUpdateComponent(selectedComponent.id, {
       custom_actions: updatedCustomActions
     });
-  };
+  }, [actionType, url, newTab, targetId, productData, selectedComponent.custom_actions, selectedComponent.id, selectedElementId, onUpdateComponent]);
+
+  // Auto-save when action type changes
+  React.useEffect(() => {
+    handleSaveAction();
+  }, [actionType, handleSaveAction]);
+
+  // Auto-save when URL or newTab changes for open_link
+  React.useEffect(() => {
+    if (actionType === 'open_link') {
+      handleSaveAction();
+    }
+  }, [actionType, url, newTab, handleSaveAction]);
+
+  // Auto-save when targetId changes for scroll
+  React.useEffect(() => {
+    if (actionType === 'scroll') {
+      handleSaveAction();
+    }
+  }, [actionType, targetId, handleSaveAction]);
 
   return (
     <Card>
@@ -75,7 +94,7 @@ export const ButtonActionConfig: React.FC<ButtonActionConfigProps> = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="open_link">Open Link</SelectItem>
-              <SelectItem value="scroll_to">Scroll to Section</SelectItem>
+              <SelectItem value="scroll">Scroll to Section</SelectItem>
               <SelectItem value="checkout">Checkout</SelectItem>
             </SelectContent>
           </Select>
@@ -89,7 +108,6 @@ export const ButtonActionConfig: React.FC<ButtonActionConfigProps> = ({
                 value={url}
                 onChange={(e) => onUrlChange(e.target.value)}
                 placeholder="https://example.com"
-                onBlur={handleSaveAction}
               />
             </div>
             <div className="flex items-center space-x-2">
@@ -102,7 +120,7 @@ export const ButtonActionConfig: React.FC<ButtonActionConfigProps> = ({
           </>
         )}
 
-        {actionType === 'scroll_to' && (
+        {actionType === 'scroll' && (
           <div>
             <Label className="text-xs">Target Section</Label>
             <Select value={targetId} onValueChange={onTargetIdChange}>
@@ -110,12 +128,19 @@ export const ButtonActionConfig: React.FC<ButtonActionConfigProps> = ({
                 <SelectValue placeholder="Select section..." />
               </SelectTrigger>
               <SelectContent>
-                {allSections.map((section) => (
-                  <SelectItem key={section.id} value={section.id}>
-                    {section.component_variation?.component_type || 'Section'} - 
-                    Position {section.order_index}
-                  </SelectItem>
-                ))}
+                {allSections.map((section, idx) => {
+                  const label =
+                    section.content?.headline?.trim() ||
+                    section.content?.title?.trim() ||
+                    (section.component_variation?.component_type
+                      ? section.component_variation.component_type
+                      : section.id.slice(0, 8));
+                  return (
+                    <SelectItem key={section.id} value={`section-${section.id}`}>
+                      {label} ({idx + 1})
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
