@@ -245,7 +245,7 @@ const CtaVariation3: React.FC<CtaVariation3Props> = ({
                 >
                   <DynamicCheckoutForm 
                     className="w-full"
-                    onSubmit={(data) => console.log('Form submitted:', data)}
+                    onSubmit={() => { /* handle form submit */ }}
                   />
                 </SelectableElement>
 

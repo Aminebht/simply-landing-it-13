@@ -201,7 +201,7 @@ const CtaVariation1: React.FC<CtaVariation1Props> = ({
               >
                 <DynamicCheckoutForm 
                   className="w-full [&_input]:rounded-full [&_input]:bg-white/10 [&_input]:backdrop-blur-md [&_input]:border-white/20 [&_input]:text-white [&_input]:placeholder-white/60 [&_select]:rounded-full [&_select]:bg-white/10 [&_select]:backdrop-blur-md [&_select]:border-white/20 [&_select]:text-white [&_textarea]:rounded-2xl [&_textarea]:bg-white/10 [&_textarea]:backdrop-blur-md [&_textarea]:border-white/20 [&_textarea]:text-white [&_textarea]:placeholder-white/60"
-                  onSubmit={(data) => console.log('Form submitted:', data)}
+                  onSubmit={(data) => { /* handle form submit */ }}
                 />
               </SelectableElement>
           

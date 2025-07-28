@@ -494,15 +494,14 @@ export default function Builder() {
       await pageSyncService.forceSave();
       
       // Verify components in PageSyncService after save
-      console.log('PageSyncService components after save:', 
-        pageSyncService.getComponents().map(c => ({ id: c.id, hasCustomStyles: !!c.custom_styles })));
+      // ...existing code...
       
       toast({
         title: "Changes saved",
         description: "All changes have been saved to the database"
       });
       
-      console.log('Manual save completed successfully');
+      // ...existing code...
       setLastSavedTime(new Date());
     } catch (error) {
       console.error('Failed to save changes:', error);
@@ -529,7 +528,7 @@ export default function Builder() {
    * Handle custom style changes for a component's element
    */
   const handleCustomStylesChange = (componentId: string, elementId: string, styles: Record<string, any>) => {
-    console.log(`Style change for component ${componentId}, element ${elementId}:`, styles);
+    // ...existing code...
     
     // Get the component to update
     const component = components.find(c => c.id === componentId);
@@ -540,9 +539,7 @@ export default function Builder() {
     
     // Check if this is a temporary component
     const isTemporary = componentId.startsWith('comp-');
-    if (isTemporary) {
-      console.log(`This is a temporary component (${component.id}), will only update local state`);
-    }
+    // ...existing code...
     
     // Create a clean styles object with only primitive values or simple objects
     const cleanStyles = {};
@@ -563,8 +560,7 @@ export default function Builder() {
       }
     };
     
-    console.log(`Builder: Updating custom styles for component ${componentId}, element ${elementId}`, cleanStyles);
-    console.log('Updated custom styles object:', JSON.stringify(updatedCustomStyles).substring(0, 100) + '...');
+    // ...existing code...
     
     // Update in state
     const updated = components.map(c => c.id === componentId ? { ...c, custom_styles: updatedCustomStyles } : c);

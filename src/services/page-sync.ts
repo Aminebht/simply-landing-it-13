@@ -90,9 +90,6 @@ class PageSyncService {
    * Returns a promise that resolves when the database save is complete
    */
   public async updateComponentCustomStyles(componentId: string, customStyles: Record<string, any>, replaceAll: boolean = false): Promise<void> {
-    console.log('PageSyncService: Updating custom styles for component', componentId);
-    console.log('New custom styles object:', JSON.stringify(customStyles).substring(0, 200) + '...');
-    console.log('Replace all styles?', replaceAll);
     
     // Verify the component exists before updating
     const componentToUpdate = this.state.components.find(c => c.id === componentId);
@@ -101,7 +98,6 @@ class PageSyncService {
       return;
     }
     
-    console.log('Current component custom_styles before update:', JSON.stringify(componentToUpdate.custom_styles || {}).substring(0, 200) + '...');
     
     // Either replace all styles or deep merge based on flag
     const mergedCustomStyles = replaceAll 
@@ -111,8 +107,6 @@ class PageSyncService {
     // Clean up the merged styles to ensure proper structure
     const cleanedCustomStyles = this.cleanupCustomStyles(mergedCustomStyles);
     
-    console.log('Merged custom styles result:', JSON.stringify(mergedCustomStyles).substring(0, 200) + '...');
-    console.log('Cleaned custom styles result:', JSON.stringify(cleanedCustomStyles).substring(0, 200) + '...');
     
     // Find the component and update it
     const updatedComponents = this.state.components.map(component => {
@@ -132,7 +126,6 @@ class PageSyncService {
     
     // Skip database updates for demo page or temporary components
     if (this.state.pageId === 'demo-page-id' || componentId.startsWith('comp-')) {
-      console.log('Skipping database update for demo page or temporary component');
       return;
     }
     
@@ -140,8 +133,6 @@ class PageSyncService {
     try {
       const component = this.state.components.find(c => c.id === componentId);
       if (component) {
-        console.log('PageSyncService: Directly saving merged custom styles to database for component', componentId);
-        console.log('Saving custom styles keys:', Object.keys(mergedCustomStyles));
         
         // Validate component ID before sending to database
         if (!componentId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
@@ -167,8 +158,6 @@ class PageSyncService {
           console.error('Error details:', error);
           throw error;
         } else {
-          console.log('PageSyncService: Custom styles saved to database successfully');
-          console.log('Database response data:', updatedData?.[0]?.custom_styles ? JSON.stringify(updatedData[0].custom_styles).substring(0, 200) + '...' : 'No data returned');
           
           // Update last saved time
           this.state.lastSaved = new Date();
@@ -220,7 +209,6 @@ class PageSyncService {
 
     // If there's a root-level backgroundColor, move it to container
     if (cleaned.backgroundColor) {
-      console.log('PageSyncService: Found root-level backgroundColor, moving to container');
       
       // Ensure container exists
       if (!cleaned.container) {
@@ -240,7 +228,6 @@ class PageSyncService {
     const rootStyleProps = ['color', 'fontFamily', 'fontSize', 'fontWeight', 'textAlign', 'padding', 'margin'];
     rootStyleProps.forEach(prop => {
       if (cleaned[prop] && !cleaned.container?.[prop]) {
-        console.log(`PageSyncService: Found root-level ${prop}, moving to container`);
         
         if (!cleaned.container) {
           cleaned.container = {};
@@ -258,7 +245,6 @@ class PageSyncService {
         
         // If there's a gradient in the 'background' property, move it to 'backgroundColor'
         if (styles.background && typeof styles.background === 'string' && styles.background.includes('gradient')) {
-          console.log(`PageSyncService: Found gradient in ${elementId}.background, moving to backgroundColor`);
           
           // Only move if backgroundColor doesn't already exist or is empty
           if (!styles.backgroundColor || styles.backgroundColor === '') {
@@ -329,46 +315,22 @@ class PageSyncService {
    * Force immediate save to database
    */
   public async forceSave(): Promise<void> {
-    console.log('forceSave called - pageId:', this.state.pageId);
-    console.log('isDirty:', this.state.isDirty);
-    console.log('isSaving:', this.state.isSaving);
     
     if (this.state.pageId === 'demo-page-id') {
-      console.log('Not saving demo page');
       return;
     }
     
     if (!this.state.isDirty) {
-      console.log('No changes to save');
       return;
     }
 
-    // Log all components being saved for debugging
-    console.log(`Saving ${this.state.components.length} components to database...`);
-    console.log('Components with custom styles:');
-    this.state.components.forEach(component => {
-      const hasCustomStyles = component.custom_styles && Object.keys(component.custom_styles).length > 0;
-      console.log(`Component ${component.id}: has custom_styles:`, hasCustomStyles);
-      if (hasCustomStyles) {
-        console.log('- Custom styles keys:', Object.keys(component.custom_styles));
-      }
-      
-      // Log if the component has a valid ID for database operations
-      const hasValidDbId = component.id && !component.id.startsWith('comp-');
-      console.log(`- Has valid DB ID: ${hasValidDbId} (${component.id})`);
-      
-      // Log if the component has valid content
-      const hasContent = component.content && Object.keys(component.content).length > 0;
-      console.log(`- Has content: ${hasContent} (${hasContent ? Object.keys(component.content).length : 0} fields)`);
-    });
-    
     try {
-      console.log('Calling saveToDatabase()...');
+    
       // Force save to database
       await this.saveToDatabase();
-      console.log('saveToDatabase completed successfully');
+      
     } catch (error) {
-      console.error('Error in forceSave:', error);
+    
       throw error; // Re-throw the error to be caught by the caller
     }
   }
@@ -425,7 +387,6 @@ class PageSyncService {
    */
   public async saveComponentToDatabase(componentId: string): Promise<void> {
     if (this.state.pageId === 'demo-page-id') {
-      console.log('Not saving component in demo page');
       return;
     }
     
@@ -438,23 +399,16 @@ class PageSyncService {
     
     // Skip components that don't have database IDs yet
     if (!component.id || component.id.startsWith('comp-')) {
-      console.log('Skipping save for temporary component:', componentId);
       return;
     }
     
-    console.log('Direct save component to database:', component.id);
-    console.log('Component page_id:', component.page_id);
-    console.log('Content:', component.content ? Object.keys(component.content).length : 0, 'fields');
+    // ...existing code...
     
     // Detailed custom styles logging
     if (component.custom_styles) {
-      console.log('Custom styles object exists with', Object.keys(component.custom_styles).length, 'keys');
-      Object.entries(component.custom_styles).forEach(([key, value]) => {
-        console.log(`- Element "${key}" has ${Object.keys(value as object).length} style properties`);
-        console.log(`- Element "${key}" style values:`, JSON.stringify(value).substring(0, 100));
-      });
+      // ...existing code...
     } else {
-      console.log('Custom styles is null or undefined');
+      // ...existing code...
     }
     
     try {
@@ -484,12 +438,7 @@ class PageSyncService {
         updated_at: new Date().toISOString()
       };
       
-      console.log('Sending direct UPDATE to Supabase for component ID:', component.id);
-      console.log('Update payload:', JSON.stringify({
-        content_keys: Object.keys(updateData.content),
-        custom_styles_keys: Object.keys(updateData.custom_styles),
-        visibility_keys: Object.keys(updateData.visibility),
-      }));
+      // ...existing code...
       
       // Validate component ID before sending to database
       if (!component.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
@@ -507,8 +456,7 @@ class PageSyncService {
         console.error('Error in direct component update:', componentError);
         console.error('Error details:', JSON.stringify(componentError));
         throw componentError;        } else {
-          console.log('Component directly updated successfully:', component.id);
-          console.log('Response from database:', updatedComponent);
+          // ...existing code...
           
           // Update last saved time
           this.state.lastSaved = new Date();
@@ -531,14 +479,11 @@ class PageSyncService {
     }
 
     this.state.isSaving = true;
-    console.log('Saving to database:', new Date());
-    console.log('PageID:', this.state.pageId);
+    // ...existing code...
 
     try {
       // Save the global theme first
       if (this.state.globalTheme) {
-        console.log('Saving global theme');
-        
         const { error: themeError } = await supabase
           .from('landing_pages')
           .update({ 
@@ -546,12 +491,9 @@ class PageSyncService {
             updated_at: new Date().toISOString() 
           })
           .eq('id', this.state.pageId);
-          
         if (themeError) {
           console.error('Error saving global theme:', themeError);
           throw themeError;
-        } else {
-          console.log('Global theme saved successfully');
         }
       }
       
@@ -559,30 +501,13 @@ class PageSyncService {
       for (const component of this.state.components) {
         // Skip components that don't have database IDs yet
         if (!component.id || component.id.startsWith('comp-')) {
-          console.log('Skipping component without valid DB ID:', component.id);
           continue;
         }
-        
-        console.log('Batch saving component to database:', component.id);
-        console.log('Component content:', component.content ? Object.keys(component.content).length : 0, 'fields');
-        console.log('Component custom_styles:', component.custom_styles ? Object.keys(component.custom_styles).length : 0, 'fields');
-        
-        // Fix: Add more detailed logging of custom_styles structure
-        if (component.custom_styles && Object.keys(component.custom_styles).length > 0) {
-          console.log('Custom_styles structure:', JSON.stringify(component.custom_styles).substring(0, 150) + '...');
-          Object.entries(component.custom_styles).forEach(([elementId, styles]) => {
-            console.log(`- Element "${elementId}" has styles:`, Object.keys(styles as object));
-          });
-        } else {
-          console.log('Component has no custom_styles defined or empty object');
-        }
-        
         // Ensure we have valid data for all fields - only include fields that exist in the database schema
         // Fix: Use safe object for custom_styles to ensure proper JSONB formatting
         const rawCustomStyles = component.custom_styles || {};
         const cleanedCustomStyles = this.cleanupCustomStyles(rawCustomStyles);
         const safeCustomStyles = cleanedCustomStyles;
-        
         const updateData = {
           content: component.content || {},
           visibility: component.visibility || {},
@@ -592,29 +517,21 @@ class PageSyncService {
           order_index: component.order_index, // Save order_index to maintain component order
           updated_at: new Date().toISOString()
         };
-        
-        console.log('Sending UPDATE to Supabase for component ID:', component.id);
-        console.log('Update data includes custom_styles:', JSON.stringify(updateData.custom_styles).substring(0, 100) + '...');
-        
         const { data: updatedComponent, error: componentError } = await supabase
           .from('landing_page_components')
           .update(updateData)
           .eq('id', component.id)
           .select();
-          
         if (componentError) {
           console.error('Error updating component:', componentError);
           throw componentError;
-        } else {
-          console.log('Component updated successfully:', component.id);
-          console.log('Response from database:', updatedComponent);
         }
       }
 
       // Mark as saved
       this.state.isDirty = false;
       this.state.lastSaved = new Date();
-      console.log('Saved to database successfully');
+      // ...existing code...
       
     } catch (error) {
       console.error('Failed to save to database:', error);

@@ -39,7 +39,6 @@ const Index = () => {
   };
 
   const handleCreateLandingPage = () => {
-    console.log('Create Landing Page clicked');
     navigate('/onboarding');
   };
 
