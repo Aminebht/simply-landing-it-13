@@ -28,10 +28,15 @@ export function handleButtonClick(action: any, isEditing: boolean, e: React.Mous
       }
       break;
     case 'checkout':
-      if (action.productId && action.amount) {
+      // Defensive: treat empty string or null as missing
+      if (action.productId && action.productId !== '' && action.amount != null && action.amount !== '') {
         handleCheckout(action, isEditing);
       } else {
-        console.warn('[Button Checkout Debug] Missing productId or amount in action:', action);
+        console.warn('[Button Checkout Debug] Missing productId or amount in action:', {
+          productId: action.productId,
+          amount: action.amount,
+          action
+        });
       }
       break;
     default:

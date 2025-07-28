@@ -619,6 +619,7 @@ export default function Builder() {
         onExitPreview={() => setIsPreviewMode(false)}
         direction={direction}
         globalTheme={globalTheme}
+        productData={productData}
       />
     );
   }

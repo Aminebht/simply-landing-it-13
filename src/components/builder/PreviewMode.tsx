@@ -17,6 +17,7 @@ interface PreviewModeProps {
     direction: 'ltr' | 'rtl';
     language: string;
   };
+  productData?: { id: string; price: number } | null;
 }
 
 const viewportSizes = {
@@ -29,7 +30,8 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
   components,
   onExitPreview,
   direction = 'ltr',
-  globalTheme
+  globalTheme,
+  productData
 }) => {
   const [isExporting, setIsExporting] = useState(false);
   const [currentViewport, setCurrentViewport] = useState<ViewportSize>('desktop');
@@ -54,6 +56,28 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
       setIsExporting(false);
     }
   };
+
+  // Hydrate checkout actions in customActions with productData if missing
+  const hydratedComponents = React.useMemo(() => {
+    if (!productData) return components;
+    return components.map(component => {
+      if (!component.custom_actions) return component;
+      const newActions = { ...component.custom_actions };
+      Object.keys(newActions).forEach(key => {
+        const action = newActions[key];
+        if (action && action.type === 'checkout') {
+          if (!action.productId || action.productId === '' || !action.amount || action.amount === '') {
+            newActions[key] = {
+              ...action,
+              productId: productData.id,
+              amount: productData.price
+            };
+          }
+        }
+      });
+      return { ...component, custom_actions: newActions };
+    });
+  }, [components, productData]);
 
   return (
     <div className="h-screen bg-gray-100">
@@ -117,7 +141,7 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
             >
               <div className="h-full overflow-y-auto" dir={direction}>
                 <div className="space-y-0">
-                  {components.map((component) => {
+                  {hydratedComponents.map((component) => {
                     // Prefer joined component_variation (from DB) for type/variation
                     let type = component.component_variation?.component_type;
                     let variationNum = component.component_variation?.variation_number;
