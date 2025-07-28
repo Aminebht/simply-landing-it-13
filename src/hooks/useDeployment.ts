@@ -84,7 +84,6 @@ export const useDeployment = (netlifyAccessToken?: string) => {
     try {
       return await deploymentService.getDeploymentStatus(deploymentId);
     } catch (error) {
-      console.error('Failed to get deployment status:', error);
       return null;
     }
   }, [deploymentService]);
@@ -101,7 +100,6 @@ export const useDeployment = (netlifyAccessToken?: string) => {
       setDeploymentJobs(jobs);
       return jobs;
     } catch (error) {
-      console.error('Failed to get deployment history:', error);
       return [];
     }
   }, [deploymentService]);
@@ -116,7 +114,6 @@ export const useDeployment = (netlifyAccessToken?: string) => {
     try {
       return await deploymentService.previewDeployment(landingPageId);
     } catch (error) {
-      console.error('Failed to generate preview:', error);
       return null;
     }
   }, [deploymentService]);
@@ -155,7 +152,7 @@ export const useDeployment = (netlifyAccessToken?: string) => {
     try {
       return await domainService.verifyDomain(domain);
     } catch (error) {
-      console.error('Domain verification failed:', error);
+
       return false;
     }
   }, [domainService]);

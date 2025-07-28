@@ -69,15 +69,12 @@ export const DragDropCanvas: React.FC<DragDropCanvasProps> = ({
     const sortedComponents = [...components].sort((a, b) => a.order_index - b.order_index);
     const currentIndex = sortedComponents.findIndex(c => c.id === component.id);
     
-    console.log('Move up:', component.id, 'currentIndex:', currentIndex);
     
     if (currentIndex > 0) {
       // Create new array with swapped positions
       const newComponents = [...sortedComponents];
       [newComponents[currentIndex - 1], newComponents[currentIndex]] = 
       [newComponents[currentIndex], newComponents[currentIndex - 1]];
-      
-      console.log('New order:', newComponents.map(c => c.id));
       onReorderComponents(newComponents);
     }
     
@@ -92,15 +89,12 @@ export const DragDropCanvas: React.FC<DragDropCanvasProps> = ({
     const sortedComponents = [...components].sort((a, b) => a.order_index - b.order_index);
     const currentIndex = sortedComponents.findIndex(c => c.id === component.id);
     
-    console.log('Move down:', component.id, 'currentIndex:', currentIndex);
-    
     if (currentIndex < sortedComponents.length - 1) {
       // Create new array with swapped positions
       const newComponents = [...sortedComponents];
       [newComponents[currentIndex], newComponents[currentIndex + 1]] = 
       [newComponents[currentIndex + 1], newComponents[currentIndex]];
       
-      console.log('New order:', newComponents.map(c => c.id));
       onReorderComponents(newComponents);
     }
     
@@ -222,7 +216,6 @@ export const DragDropCanvas: React.FC<DragDropCanvasProps> = ({
                           size="sm"
                           variant="secondary"
                           onClick={(e) => {
-                            console.log('Up button clicked for:', component.id);
                             handleMoveUp(component, e);
                           }}
                           className="h-8 w-8 p-0 bg-white/95 hover:bg-white shadow-lg border border-gray-200 z-10"
@@ -238,7 +231,6 @@ export const DragDropCanvas: React.FC<DragDropCanvasProps> = ({
                           size="sm"
                           variant="secondary"
                           onClick={(e) => {
-                            console.log('Down button clicked for:', component.id);
                             handleMoveDown(component, e);
                           }}
                           className="h-8 w-8 p-0 bg-white/95 hover:bg-white shadow-lg border border-gray-200 z-10"
@@ -253,7 +245,6 @@ export const DragDropCanvas: React.FC<DragDropCanvasProps> = ({
                         size="sm"
                         variant="destructive"
                         onClick={(e) => {
-                          console.log('Delete button clicked for:', component.id);
                           handleDeleteComponent(component, e);
                         }}
                         className="h-8 w-8 p-0 bg-red-500/95 hover:bg-red-600 shadow-lg border border-red-300 z-10"

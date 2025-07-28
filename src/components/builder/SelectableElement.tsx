@@ -114,7 +114,7 @@ export const SelectableElement: React.FC<SelectableElementProps> = ({
           (window as any).lastInputTime = Date.now();
         }
         
-        console.log(`[${contentField}] Content changed from:`, lastContentRef.current, 'to:', newContent, `(${eventType})`);
+
         lastContentRef.current = newContent;
         onContentChange(contentField, newContent);
         

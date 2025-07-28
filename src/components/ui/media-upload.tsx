@@ -47,7 +47,7 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
         alert('Upload failed. Please try again.');
       }
     } catch (error) {
-      console.error('Upload failed:', error);
+  
       alert('Upload failed. Please try again.');
     } finally {
       setIsUploading(false);
@@ -89,7 +89,6 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
         onChange('');
       }
     } catch (error) {
-      console.error('Failed to remove media:', error);
     }
   };
 

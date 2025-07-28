@@ -44,7 +44,6 @@ export const DynamicCheckoutForm: React.FC<DynamicCheckoutFormProps> = ({
 
         setFields(filteredFields);
       } catch (error) {
-        console.error('Error fetching checkout fields:', error);
       } finally {
         setLoading(false);
       }

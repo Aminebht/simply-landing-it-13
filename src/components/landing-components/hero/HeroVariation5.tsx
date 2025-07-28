@@ -286,9 +286,7 @@ const HeroVariation5: React.FC<HeroVariation5Props> = ({
                         try {
                           await mediaService.updateComponentMediaUrl(componentId, 'videoUrl', url);
                           await refreshMediaUrls();
-                          console.log('Video URL updated successfully in media_urls');
                         } catch (error) {
-                          console.error('Error updating video URL:', error);
                         }
                       }
                     }}

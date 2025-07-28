@@ -147,17 +147,11 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
     );
 
     if (!variationMetadata) {
-      console.error('Could not find variation metadata for', { componentType, newVariation });
+   
       return;
     }
 
-    console.log('Changing variation:', {
-      componentId: selectedComponent.id,
-      componentType,
-      fromVariation: selectedComponent.component_variation_id,
-      toVariation: variationMetadata.id,
-      metadata: variationMetadata
-    });
+  
         
     onChangeVariation(selectedComponent.id, newVariation);
   }, [selectedComponent, onChangeVariation, componentVariations]);
@@ -184,7 +178,7 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
       }
     };
     
-    console.log('VisualEditor: handleStyleChange - updating custom_styles for', targetElementKey, 'with', styleProperty, '=', value);
+   
     
     onUpdateStyles(selectedComponent.id, elementStyleChange);
   }, [selectedComponent, selectedElementId, onUpdateStyles]);
@@ -201,7 +195,7 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
       }
     };
     
-    console.log('VisualEditor: handleGradientChange - saving gradient under backgroundColor:', gradientValue);
+    
     
     onUpdateStyles(selectedComponent.id, elementStyleChange);
   }, [selectedComponent, selectedElementId, onUpdateStyles]);

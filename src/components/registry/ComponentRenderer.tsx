@@ -193,8 +193,6 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
           cleanStyles[key] = value;
         });
         
-        console.log(`ComponentRenderer: Clean styles for element ${elementId}:`, cleanStyles);
-        
         const updatedStyles = {
           ...currentStyles,
           [elementId]: {
@@ -210,26 +208,17 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             ...styles
           }
         };
-        
-        console.log(`ComponentRenderer: Saving updated custom styles for component ${componentId} element ${elementId}`);
-        console.log('Before:', JSON.stringify(currentElementStyles));
-        console.log('Element changes:', JSON.stringify(elementChanges));
+     
         
         pageSyncService.updateComponentCustomStyles(componentId, elementChanges, false)
           .then(() => {
-            console.log(`ComponentRenderer: Successfully updated custom styles in PageSyncService for ${componentId}`);
+      
             
             // After successful style update, also save the entire component to ensure it gets persisted
             return pageSyncService.saveComponentToDatabase(componentId);
           })
-          .then(() => {
-            console.log(`ComponentRenderer: Successfully saved component ${componentId} to database`);
-          })
-          .catch(err => {
-            console.error('ComponentRenderer: Failed to save style changes:', err);
-          });
+         
       } catch (error) {
-        console.error('ComponentRenderer: Failed to save custom styles to database:', error);
       }
     }
   };
@@ -248,13 +237,12 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
         // We use a short timeout to batch content changes that might happen in sequence
         setTimeout(() => {
           const pageSyncService = PageSyncService.getInstance();
-          console.log(`Saving content changes for component ${componentId} field ${field}`, value);
           pageSyncService.saveComponentToDatabase(componentId).catch(err => 
             console.error('Failed direct component save after content change:', err)
           );
         }, 500);
       } catch (error) {
-        console.error('Failed to save content changes to database:', error);
+      
       }
     }
   };
@@ -276,25 +264,8 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     customActions // <-- Pass down
   };
   
-  // Debug logging for media URLs
-  if (mediaUrls && Object.keys(mediaUrls).length > 0) {
-    console.log(`ComponentRenderer: Passing media URLs to ${componentType}-${componentVariation}:`, mediaUrls);
-  }
 
-  // Debug log for customActions and all props
-  console.log('ComponentRenderer props:', {
-    type: componentType,
-    variation: componentVariation,
-    customActions,
-    content,
-    styles: mergedStyles,
-    visibility,
-    mediaUrls,
-    isEditing,
-    selectedElementId,
-    viewport,
-    componentId
-  });
+
   
   return <Component {...componentProps} />;
 };

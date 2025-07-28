@@ -38,7 +38,6 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
 
   const handleExport = async () => {
     if (components.length === 0) {
-      console.log("No content to export");
       return;
     }
 
@@ -49,9 +48,7 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
       // const exportedProject = exportLandingPage(components);
       // await downloadProjectAsZip(exportedProject);
 
-      console.log("Export coming soon!");
     } catch (error) {
-      console.error('Export failed:', error);
     } finally {
       setIsExporting(false);
     }
@@ -168,7 +165,7 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
                       }
                     }
                     // Debug log for custom_actions in PreviewMode
-                    console.log('PreviewMode: component.custom_actions', component.id, component.custom_actions);
+      
 
                     return (
                       <div key={component.id} id={`section-${component.id}`} data-section-id={component.id}>

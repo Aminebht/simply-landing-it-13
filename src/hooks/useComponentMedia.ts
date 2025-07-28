@@ -39,7 +39,6 @@ export const useComponentMedia = (
       const urls = await mediaService.getComponentMediaUrls(componentId);
       setMediaUrls(urls);
     } catch (error) {
-      console.error('Failed to load media URLs:', error);
     } finally {
       setIsLoading(false);
     }
@@ -72,7 +71,6 @@ export const useComponentMedia = (
 
       return url;
     } catch (error) {
-      console.error('Failed to upload media:', error);
       return null;
     } finally {
       setIsLoading(false);
@@ -99,7 +97,6 @@ export const useComponentMedia = (
 
       return success;
     } catch (error) {
-      console.error('Failed to remove media:', error);
       return false;
     } finally {
       setIsLoading(false);

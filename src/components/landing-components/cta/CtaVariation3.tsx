@@ -112,7 +112,6 @@ const CtaVariation3: React.FC<CtaVariation3Props> = ({
 
   // Action handler for CTA button
   const ctaAction = customActions?.['cta-button'];
-  console.log('CtaVariation3 CTA debug:', { ctaAction, isEditing });
 
   return (
     <SelectableElement

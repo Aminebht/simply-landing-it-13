@@ -39,7 +39,6 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         setPrompt('');
       }
     } catch (error) {
-      console.error('AI generation failed:', error);
     }
   };
 

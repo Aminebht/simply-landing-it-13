@@ -141,7 +141,6 @@ export default function Builder() {
         const variations = await getComponentVariations();
         setComponentVariations(variations);
       } catch (error) {
-        console.error('Failed to fetch component variations:', error);
       }
     };
     
@@ -177,7 +176,7 @@ export default function Builder() {
         
         // Force final save when navigating away
         pageSyncService.forceSave().then(() => {
-          console.log('Saved changes before unmounting Builder');
+      
         });
       };
     }
@@ -203,13 +202,10 @@ export default function Builder() {
           };
       });
       // Log components being synced
-      console.log('Syncing components to PageSyncService, count:', enrichedComponents.length);
       enrichedComponents.forEach(comp => {
         if (comp.custom_styles && Object.keys(comp.custom_styles).length > 0) {
-          console.log(`Component ${comp.id} has custom styles:`, comp.custom_styles);
         }
         if (comp.custom_actions && Object.keys(comp.custom_actions).length > 0) {
-          console.log(`Component ${comp.id} has custom actions:`, comp.custom_actions);
         }
       });
       // Update components in PageSyncService
@@ -292,7 +288,6 @@ export default function Builder() {
       
       if (cachedComponents && cachedComponents.length > 0) {
         // Use local cached data if available
-        console.log('Using locally cached components', cachedComponents.length);
         setComponents(cachedComponents.map(comp => ({
           ...comp,
           custom_actions: comp.custom_actions || {},
@@ -323,7 +318,7 @@ export default function Builder() {
           // Log media URLs for debugging
           componentsData.forEach(comp => {
             if (comp.media_urls && Object.keys(comp.media_urls).length > 0) {
-              console.log(`Component ${comp.id} loaded with media URLs:`, comp.media_urls);
+             
             }
           });
           setComponents(componentsData.map(comp => ({
@@ -337,7 +332,7 @@ export default function Builder() {
         }
       }
     } catch (error) {
-      console.error('Error loading existing page:', error);
+     
       toast({
         title: "Error loading page",
         description: "Could not load page data",
@@ -490,25 +485,12 @@ export default function Builder() {
       return;
     }
     
-    console.log('Manually saving page:', pageId);
-    console.log('Components count:', components.length);
-    
-    // Enhanced debugging - log all components details
-    console.log('--- DETAILED COMPONENT DEBUG ---');
-    components.forEach(component => {
-      console.log(`Component ${component.id}:`);
-      console.log('- Type:', component.component_variation_id);
-      console.log('- Content:', component.content);
-      console.log('- Has Custom Styles:', component.custom_styles ? 'YES' : 'NO');
-      if (component.custom_styles && Object.keys(component.custom_styles).length > 0) {
-        console.log('- Custom styles:', JSON.stringify(component.custom_styles, null, 2));
-      }
-    });
+  
+ 
     
     // Optionally show a toast or spinner if needed
     try {
       const pageSyncService = PageSyncService.getInstance();
-      console.log('Calling PageSyncService.forceSave()...');
       await pageSyncService.forceSave();
       
       // Verify components in PageSyncService after save

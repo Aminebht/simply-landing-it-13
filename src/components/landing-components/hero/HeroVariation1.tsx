@@ -160,8 +160,6 @@ const HeroVariation1: React.FC<HeroVariation1Props> = ({
   // Action handler for Secondary button
   const secondaryAction = customActions?.['secondary-button'];
 
-  // Debug log before rendering CTA button
-  console.log('HeroVariation1 CTA debug:', { ctaAction, isEditing });
 
   return (
     <SelectableElement

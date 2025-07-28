@@ -23,7 +23,7 @@ export function handleButtonClick(action: any, isEditing: boolean, e: React.Mous
         if (el) {
           el.scrollIntoView({ behavior: 'smooth' });
         } else {
-          console.warn('[Button Scroll Debug] No element found for targetId:', action.targetId);
+       
         }
       }
       break;
@@ -31,12 +31,6 @@ export function handleButtonClick(action: any, isEditing: boolean, e: React.Mous
       // Defensive: treat empty string or null as missing
       if (action.productId && action.productId !== '' && action.amount != null && action.amount !== '') {
         handleCheckout(action, isEditing);
-      } else {
-        console.warn('[Button Checkout Debug] Missing productId or amount in action:', {
-          productId: action.productId,
-          amount: action.amount,
-          action
-        });
       }
       break;
     default:
@@ -108,7 +102,6 @@ async function handleCheckout(action: any, isEditing: boolean) {
     });
 
     if (orderError) {
-      console.error('Order creation error:', orderError);
       toast({
         title: "Order Error",
         description: "Failed to create order. Please try again.",
@@ -136,7 +129,6 @@ async function handleCheckout(action: any, isEditing: boolean) {
     });
 
     if (paymentError || !paymentData?.payUrl) {
-      console.error('Payment creation error:', paymentError);
       toast({
         title: "Payment Error",
         description: "Failed to create payment session. Please try again.",
@@ -149,7 +141,6 @@ async function handleCheckout(action: any, isEditing: boolean) {
     window.location.href = paymentData.payUrl;
 
   } catch (error) {
-    console.error('Checkout error:', error);
     toast({
       title: "Checkout Error",
       description: "An unexpected error occurred. Please try again.",

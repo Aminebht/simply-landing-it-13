@@ -130,7 +130,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         processedFile = conversionInfo.file;
         setConversionResult(conversionInfo);
         
-        console.log(`Image optimized: ${formatFileSize(conversionInfo.originalSize)} → ${formatFileSize(conversionInfo.compressedSize)} (${conversionInfo.compressionRatio}% reduction)`);
+      
       }
 
       // Create object URL for cropping
@@ -142,7 +142,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       });
       reader.readAsDataURL(processedFile);
     } catch (error) {
-      console.error('Error processing image:', error);
+
       alert('Failed to process image. Please try again.');
       setIsLoading(false);
     }
@@ -269,7 +269,6 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       setImageSrc('');
       setRotation(0);
     } catch (error) {
-      console.error('Error cropping image:', error);
       alert('Failed to crop image. Please try again.');
     } finally {
       setIsLoading(false);
@@ -332,7 +331,6 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         });
 
       if (uploadError) {
-        console.error('Upload error:', uploadError);
         throw uploadError;
       }
 
@@ -349,7 +347,6 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       onChange(publicUrl);
       
     } catch (error) {
-      console.error('Upload failed:', error);
       alert(getErrorMessage(error));
       throw error;
     }
@@ -402,13 +399,11 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             .remove([filePath]);
             
           if (error) {
-            console.error('Failed to delete file from storage:', error);
-            // Continue with removal even if deletion fails
+         
           }
         }
       } catch (error) {
-        console.error('Failed to delete file from storage:', error);
-        // Continue with removal even if deletion fails
+      
       }
     }
     onChange('');

@@ -25,7 +25,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onUrlChange,
   isPreviewMode = false
 }) => {
-  console.log('VideoPlayer render: url prop is:', url);
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
@@ -35,7 +34,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // Sync URL prop with internal state
   useEffect(() => {
-    console.log('VideoPlayer useEffect: url prop changed to:', url);
     setVideoUrlInput(url || '');
   }, [url]);
 
@@ -85,7 +83,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const handleVideoUrlSubmit = () => {
-    console.log('handleVideoUrlSubmit called with:', videoUrlInput.trim());
+
     if (videoUrlInput.trim()) {
       onUrlChange?.(videoUrlInput.trim());
       setShowPopup(false);
