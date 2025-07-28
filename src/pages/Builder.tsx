@@ -794,7 +794,7 @@ export default function Builder() {
       <div className={`bg-white border-r border-gray-200 flex-shrink-0 h-full flex flex-col sticky top-0 transition-all duration-300 ${
         isLeftSidebarOpen ? 'w-80' : 'w-0'
       }`}>
-        <div className={`${isLeftSidebarOpen ? 'block' : 'hidden'} w-80`}>
+        <div className={`${isLeftSidebarOpen ? 'block' : 'hidden'} w-80 flex-1 overflow-hidden`}>
           <ComponentLibrary onAddComponent={handleAddComponent} />
         </div>
       </div>

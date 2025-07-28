@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Filter } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 interface ComponentLibraryProps {
   onAddComponent: (type: string) => void;
@@ -14,7 +13,6 @@ export const ComponentLibrary: React.FC<ComponentLibraryProps> = ({
   onAddComponent,
   language = 'en'
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
 
   const componentTypes = [
     {
@@ -55,47 +53,17 @@ export const ComponentLibrary: React.FC<ComponentLibraryProps> = ({
     }
   ];
 
-  const filteredComponents = componentTypes.filter(component => {
-    if (!searchQuery) return true;
-    
-    const matchesSearch = component.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         component.type.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
-  });
-
   return (
     <div className="h-full bg-white flex flex-col">
-      {/* Header */}
-      <div className="p-6 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Component Library</h2>
-        
-        {/* Search Input */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            type="text"
-            placeholder="Search components..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+      {/* Header - Fixed */}
+      <div className="p-6 border-b border-gray-200 flex-shrink-0">
+        <h2 className="text-lg font-semibold text-gray-900">Component Library</h2>
       </div>
 
-      {/* Components List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {filteredComponents.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">
-              <Filter className="h-12 w-12 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No components found</h3>
-              <p className="text-gray-500">
-                Try adjusting your search filter
-              </p>
-            </div>
-          </div>
-        ) : (
-          filteredComponents.map((component) => (
+      {/* Content - Scrollable */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-4 space-y-3">
+          {componentTypes.map((component) => (
             <Card key={component.type} className="group hover:shadow-md transition-all cursor-pointer">
               <CardContent className="p-0">
                 <div className="flex items-start p-4">
@@ -122,7 +90,7 @@ export const ComponentLibrary: React.FC<ComponentLibraryProps> = ({
                         title={`Add ${component.name}`}
                       >
                         <Plus className="h-4 w-4 mr-1" />
-                        Add
+                    
                       </Button>
                     </div>
                     
@@ -136,8 +104,8 @@ export const ComponentLibrary: React.FC<ComponentLibraryProps> = ({
                 </div>
               </CardContent>
             </Card>
-          ))
-        )}
+          ))}
+        </div>
       </div>
     </div>
   );
