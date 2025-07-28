@@ -15,15 +15,12 @@ interface ButtonActionConfigProps {
   url: string;
   newTab: boolean;
   targetId: string;
-  productId: string;
-  amount: string;
   onActionTypeChange: (type: string) => void;
   onUrlChange: (url: string) => void;
   onNewTabChange: (newTab: boolean) => void;
   onTargetIdChange: (targetId: string) => void;
-  onProductIdChange: (productId: string) => void;
-  onAmountChange: (amount: string) => void;
   onUpdateComponent: (componentId: string, updates: Partial<LandingPageComponent>) => void;
+  productData?: { id: string; price: number } | null;
 }
 
 export const ButtonActionConfig: React.FC<ButtonActionConfigProps> = ({
@@ -34,15 +31,12 @@ export const ButtonActionConfig: React.FC<ButtonActionConfigProps> = ({
   url,
   newTab,
   targetId,
-  productId,
-  amount,
   onActionTypeChange,
   onUrlChange,
   onNewTabChange,
   onTargetIdChange,
-  onProductIdChange,
-  onAmountChange,
-  onUpdateComponent
+  onUpdateComponent,
+  productData
 }) => {
   const handleSaveAction = () => {
     const action = {
@@ -50,8 +44,8 @@ export const ButtonActionConfig: React.FC<ButtonActionConfigProps> = ({
       url: actionType === 'open_link' ? url : undefined,
       newTab: actionType === 'open_link' ? newTab : undefined,
       targetId: actionType === 'scroll_to' ? targetId : undefined,
-      productId: actionType === 'checkout' ? productId : undefined,
-      amount: actionType === 'checkout' ? parseFloat(amount) : undefined,
+      productId: actionType === 'checkout' ? productData?.id : undefined,
+      amount: actionType === 'checkout' ? productData?.price : undefined,
     };
 
     const updatedCustomActions = {
@@ -128,28 +122,25 @@ export const ButtonActionConfig: React.FC<ButtonActionConfigProps> = ({
         )}
 
         {actionType === 'checkout' && (
-          <>
-            <div>
-              <Label className="text-xs">Product ID</Label>
-              <Input
-                value={productId}
-                onChange={(e) => onProductIdChange(e.target.value)}
-                placeholder="product-uuid"
-                onBlur={handleSaveAction}
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Price (TND)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={amount}
-                onChange={(e) => onAmountChange(e.target.value)}
-                placeholder="29.99"
-                onBlur={handleSaveAction}
-              />
-            </div>
-          </>
+          <div className="space-y-2">
+            {productData ? (
+              <div className="p-3 bg-gray-50 rounded-md">
+                <Label className="text-xs font-medium">Product Information</Label>
+                <div className="mt-1 space-y-1">
+                  <div className="text-xs text-gray-600">
+                    <span className="font-medium">ID:</span> {productData.id}
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    <span className="font-medium">Price:</span> {productData.price} TND
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 bg-yellow-50 rounded-md">
+                <Label className="text-xs text-yellow-800">No product linked to this landing page</Label>
+              </div>
+            )}
+          </div>
         )}
       </CardContent>
     </Card>

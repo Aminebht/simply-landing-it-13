@@ -33,6 +33,7 @@ export default function Builder() {
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
   const [globalTheme, setGlobalTheme] = useState<ThemeConfig | null>(null);
+  const [productData, setProductData] = useState<{ id: string; price: number } | null>(null);
 
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
   const [selectedComponent, setSelectedComponent] = useState<LandingPageComponent | null>(null);
@@ -256,14 +257,25 @@ export default function Builder() {
     if (!pageId) return;
     
     try {
-      // Fetch landing page data
+      // Fetch landing page data with product information
       const { data: page, error: pageError } = await supabase
         .from('landing_pages')
-        .select('*')
+        .select(`
+          *,
+          products(id, price)
+        `)
         .eq('id', pageId)
         .single();
 
       if (pageError) throw pageError;
+
+      // Set product data if available
+      if (page.products) {
+        setProductData({
+          id: page.products.id,
+          price: page.products.price
+        });
+      }
 
       // Set page-level data
       if (page.global_theme) {
@@ -792,6 +804,7 @@ export default function Builder() {
                 language={undefined}
                 allSections={components}
                 globalTheme={globalTheme}
+                productData={productData}
               />
             </div>
           </div>

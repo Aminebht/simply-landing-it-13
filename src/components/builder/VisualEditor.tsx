@@ -38,6 +38,7 @@ interface VisualEditorProps {
   allSections: LandingPageComponent[];
   onSave?: () => Promise<void>;
   globalTheme?: ThemeConfig | null;
+  productData?: { id: string; price: number } | null;
 }
 
 export const VisualEditor: React.FC<VisualEditorProps> = ({
@@ -51,7 +52,8 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
   language = 'en',
   allSections,
   onSave,
-  globalTheme
+  globalTheme,
+  productData
 }) => {
   // State management
   const [activeTab, setActiveTab] = useState('styles');
@@ -62,8 +64,6 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
   const [buttonUrl, setButtonUrl] = useState('');
   const [buttonNewTab, setButtonNewTab] = useState(false);
   const [buttonTargetId, setButtonTargetId] = useState('');
-  const [buttonProductId, setButtonProductId] = useState('');
-  const [buttonAmount, setButtonAmount] = useState('');
 
   // Background control states
   const [backgroundType, setBackgroundType] = useState<'solid' | 'gradient'>('solid');
@@ -121,8 +121,6 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
       setButtonUrl(action.url || '');
       setButtonNewTab(!!action.newTab);
       setButtonTargetId(action.targetId || '');
-      setButtonProductId(action.productId || '');
-      setButtonAmount(action.amount?.toString() || '');
     }
   }, [selectedElementId, selectedComponent?.id, selectedComponent?.custom_actions]);
 
@@ -333,15 +331,12 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
                 url={buttonUrl}
                 newTab={buttonNewTab}
                 targetId={buttonTargetId}
-                productId={buttonProductId}
-                amount={buttonAmount}
                 onActionTypeChange={setButtonActionType}
                 onUrlChange={setButtonUrl}
                 onNewTabChange={setButtonNewTab}
                 onTargetIdChange={setButtonTargetId}
-                onProductIdChange={setButtonProductId}
-                onAmountChange={setButtonAmount}
                 onUpdateComponent={onUpdateComponent}
+                productData={productData}
               />
             )}
 
