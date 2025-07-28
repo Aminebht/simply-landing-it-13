@@ -13,7 +13,6 @@ interface HeroVariation5Props extends ComponentProps {
   componentId?: string;
   mediaUrls?: Record<string, string>;
   selectedElementId?: string;
-  customActions?: Record<string, any>;
 }
 
 const HeroVariation5: React.FC<HeroVariation5Props> = ({
@@ -287,6 +286,7 @@ const HeroVariation5: React.FC<HeroVariation5Props> = ({
                           await mediaService.updateComponentMediaUrl(componentId, 'videoUrl', url);
                           await refreshMediaUrls();
                         } catch (error) {
+                          console.error('Error updating video URL:', error);
                         }
                       }
                     }}

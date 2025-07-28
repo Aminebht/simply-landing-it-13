@@ -8,7 +8,6 @@ import { getClass, getElementStyles } from '../classUtils';
 
 interface CtaVariation1Props extends ComponentProps {
   viewport?: 'mobile' | 'tablet' | 'desktop';
-  customActions?: Record<string, any>;
 }
 
 const CtaVariation1: React.FC<CtaVariation1Props> = ({

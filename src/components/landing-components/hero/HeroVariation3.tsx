@@ -9,7 +9,6 @@ import { getClass, getElementStyles } from '../classUtils';
 
 interface HeroVariation3Props extends ComponentProps {
   viewport?: 'mobile' | 'tablet' | 'desktop';
-  customActions?: Record<string, any>;
 }
 
 const HeroVariation3: FC<HeroVariation3Props> = ({

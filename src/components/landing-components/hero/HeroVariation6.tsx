@@ -9,7 +9,6 @@ import { getClass, getElementStyles } from '../classUtils';
 
 interface HeroVariation6Props extends ComponentProps {
   viewport?: 'mobile' | 'tablet' | 'desktop';
-  customActions?: Record<string, any>;
 }
 
 const HeroVariation6: React.FC<HeroVariation6Props> = ({

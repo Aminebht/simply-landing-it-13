@@ -46,11 +46,11 @@ export const DragDropCanvas: React.FC<DragDropCanvasProps> = ({
     onSelectComponent(component);
   };
 
-  const handleStyleChange = (componentId: string, styles: any) => {
+  const handleStyleChange = (componentId: string, styles: Record<string, unknown>) => {
     onUpdateComponent(componentId, { styles });
   };
 
-  const handleContentChange = (componentId: string, field: string, value: any) => {
+  const handleContentChange = (componentId: string, field: string, value: unknown) => {
     const component = components.find(c => c.id === componentId);
     if (!component) return;
 
@@ -66,15 +66,27 @@ export const DragDropCanvas: React.FC<DragDropCanvasProps> = ({
     e.stopPropagation(); // Prevent component selection
     setReorderingId(component.id);
     
+    console.log('Moving component up:', component.id, 'current order_index:', component.order_index);
+    
     const sortedComponents = [...components].sort((a, b) => a.order_index - b.order_index);
     const currentIndex = sortedComponents.findIndex(c => c.id === component.id);
     
+    console.log('Sorted components before move:', sortedComponents.map(c => ({ id: c.id, order_index: c.order_index })));
+    console.log('Current index:', currentIndex);
     
     if (currentIndex > 0) {
       // Create new array with swapped positions
       const newComponents = [...sortedComponents];
       [newComponents[currentIndex - 1], newComponents[currentIndex]] = 
       [newComponents[currentIndex], newComponents[currentIndex - 1]];
+      
+      // Update order_index to reflect the new positions
+      newComponents.forEach((comp, index) => {
+        comp.order_index = index + 1;
+      });
+      
+      console.log('New components order after move:', newComponents.map(c => ({ id: c.id, order_index: c.order_index })));
+      
       onReorderComponents(newComponents);
     }
     
@@ -86,14 +98,26 @@ export const DragDropCanvas: React.FC<DragDropCanvasProps> = ({
     e.stopPropagation(); // Prevent component selection
     setReorderingId(component.id);
     
+    console.log('Moving component down:', component.id, 'current order_index:', component.order_index);
+    
     const sortedComponents = [...components].sort((a, b) => a.order_index - b.order_index);
     const currentIndex = sortedComponents.findIndex(c => c.id === component.id);
+    
+    console.log('Sorted components before move:', sortedComponents.map(c => ({ id: c.id, order_index: c.order_index })));
+    console.log('Current index:', currentIndex);
     
     if (currentIndex < sortedComponents.length - 1) {
       // Create new array with swapped positions
       const newComponents = [...sortedComponents];
       [newComponents[currentIndex], newComponents[currentIndex + 1]] = 
       [newComponents[currentIndex + 1], newComponents[currentIndex]];
+      
+      // Update order_index to reflect the new positions
+      newComponents.forEach((comp, index) => {
+        comp.order_index = index + 1;
+      });
+      
+      console.log('New components order after move:', newComponents.map(c => ({ id: c.id, order_index: c.order_index })));
       
       onReorderComponents(newComponents);
     }

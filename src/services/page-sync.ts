@@ -1,4 +1,4 @@
-import { LandingPageComponent } from '@/types/components';
+import { LandingPageComponent, CustomizableStyles } from '@/types/components';
 import { LandingPage, ThemeConfig } from '@/types/landing-page';
 import { supabase } from './supabase';
 import debounce from 'lodash/debounce';
@@ -67,7 +67,29 @@ class PageSyncService {
    * Update components in memory and mark as dirty
    */
   public updateComponents(components: LandingPageComponent[]): void {
-    this.state.components = components;
+    console.log('PageSyncService: Updating components with order:', components.map(c => ({ id: c.id, order_index: c.order_index })));
+    
+    // Check if order_index values are properly set and sequential
+    const sortedComponents = [...components].sort((a, b) => a.order_index - b.order_index);
+    const hasValidOrderIndex = sortedComponents.every((comp, index) => comp.order_index === index + 1);
+    
+    let componentsWithUpdatedOrder;
+    if (hasValidOrderIndex) {
+      // Use existing order_index values if they are properly set
+      componentsWithUpdatedOrder = components;
+      console.log('PageSyncService: Using existing order_index values');
+    } else {
+      // Update order_index for each component based on array position
+      componentsWithUpdatedOrder = components.map((component, index) => ({
+        ...component,
+        order_index: index + 1 // order_index starts from 1
+      }));
+      console.log('PageSyncService: Updated order_index based on array position');
+    }
+    
+    console.log('PageSyncService: Final components order:', componentsWithUpdatedOrder.map(c => ({ id: c.id, order_index: c.order_index })));
+    
+    this.state.components = componentsWithUpdatedOrder;
     this.state.isDirty = true;
     
     // Schedule debounced save to database
@@ -89,7 +111,7 @@ class PageSyncService {
    * Update specific component's custom styles in memory and mark as dirty
    * Returns a promise that resolves when the database save is complete
    */
-  public async updateComponentCustomStyles(componentId: string, customStyles: Record<string, any>, replaceAll: boolean = false): Promise<void> {
+  public async updateComponentCustomStyles(componentId: string, customStyles: Record<string, unknown>, replaceAll: boolean = false): Promise<void> {
     
     // Verify the component exists before updating
     const componentToUpdate = this.state.components.find(c => c.id === componentId);
@@ -176,17 +198,22 @@ class PageSyncService {
   /**
    * Deep merge custom styles objects to preserve existing styles while adding new ones
    */
-  private deepMergeCustomStyles(existing: Record<string, any>, newStyles: Record<string, any>): Record<string, any> {
+  private deepMergeCustomStyles(existing: Record<string, unknown>, newStyles: Record<string, unknown>): Record<string, unknown> {
     const result = { ...existing };
     
     // Merge each element's styles
     Object.entries(newStyles).forEach(([elementId, elementStyles]) => {
       if (elementStyles && typeof elementStyles === 'object') {
         // If element already has styles, merge them; otherwise use new styles
-        result[elementId] = {
-          ...(result[elementId] || {}),
-          ...elementStyles
-        };
+        const existingElementStyles = result[elementId];
+        if (existingElementStyles && typeof existingElementStyles === 'object') {
+          result[elementId] = {
+            ...(existingElementStyles as Record<string, unknown>),
+            ...(elementStyles as Record<string, unknown>)
+          };
+        } else {
+          result[elementId] = elementStyles;
+        }
       } else {
         // For non-object values, just set directly
         result[elementId] = elementStyles;
@@ -200,24 +227,31 @@ class PageSyncService {
    * Clean up custom_styles to ensure backgroundColor is always under container key
    * This prevents global_theme backgroundColor from being saved at root level
    */
-  private cleanupCustomStyles(styles: Record<string, any>): Record<string, any> {
+  private cleanupCustomStyles(styles: Record<string, unknown>): Record<string, unknown> {
     if (!styles || typeof styles !== 'object') {
       return {};
     }
 
-    const cleaned = { ...styles };
+    const cleaned = { ...styles } as Record<string, unknown>;
+
+    // Type guard helper function
+    const isRecord = (value: unknown): value is Record<string, unknown> => {
+      return value !== null && typeof value === 'object' && !Array.isArray(value);
+    };
 
     // If there's a root-level backgroundColor, move it to container
-    if (cleaned.backgroundColor) {
+    if ('backgroundColor' in cleaned) {
       
       // Ensure container exists
-      if (!cleaned.container) {
+      if (!cleaned.container || !isRecord(cleaned.container)) {
         cleaned.container = {};
       }
       
+      const container = cleaned.container as Record<string, unknown>;
+      
       // Only move to container if container doesn't already have a backgroundColor
-      if (!cleaned.container.backgroundColor) {
-        cleaned.container.backgroundColor = cleaned.backgroundColor;
+      if (!('backgroundColor' in container)) {
+        container.backgroundColor = cleaned.backgroundColor;
       }
       
       // Remove the root-level backgroundColor
@@ -227,21 +261,22 @@ class PageSyncService {
     // Clean up any other root-level style properties that should be under container
     const rootStyleProps = ['color', 'fontFamily', 'fontSize', 'fontWeight', 'textAlign', 'padding', 'margin'];
     rootStyleProps.forEach(prop => {
-      if (cleaned[prop] && !cleaned.container?.[prop]) {
+      if (cleaned[prop] && (!cleaned.container || !isRecord(cleaned.container) || !(prop in cleaned.container))) {
         
-        if (!cleaned.container) {
+        if (!cleaned.container || !isRecord(cleaned.container)) {
           cleaned.container = {};
         }
         
-        cleaned.container[prop] = cleaned[prop];
+        const container = cleaned.container as Record<string, unknown>;
+        container[prop] = cleaned[prop];
         delete cleaned[prop];
       }
     });
 
     // Process each element to ensure gradients are under backgroundColor, not background
     Object.entries(cleaned).forEach(([elementId, elementStyles]) => {
-      if (elementStyles && typeof elementStyles === 'object') {
-        const styles = elementStyles as Record<string, any>;
+      if (isRecord(elementStyles)) {
+        const styles = elementStyles as Record<string, unknown>;
         
         // If there's a gradient in the 'background' property, move it to 'backgroundColor'
         if (styles.background && typeof styles.background === 'string' && styles.background.includes('gradient')) {
@@ -264,23 +299,28 @@ class PageSyncService {
    * Helper function to sanitize custom_styles for database storage
    * This ensures we only keep serializable values and prevent any circular references
    */
-  private sanitizeCustomStyles(styles: Record<string, any>): Record<string, any> {
+  private sanitizeCustomStyles(styles: Record<string, unknown>): Record<string, unknown> {
     if (!styles || typeof styles !== 'object') {
       return {};
     }
     
-    const sanitized = {};
+    const sanitized: Record<string, unknown> = {};
+    
+    // Type guard helper function
+    const isRecord = (value: unknown): value is Record<string, unknown> => {
+      return value !== null && typeof value === 'object' && !Array.isArray(value);
+    };
     
     // Process each element's styles
     Object.entries(styles).forEach(([elementId, elementStyles]) => {
-      if (!elementStyles || typeof elementStyles !== 'object') {
+      if (!isRecord(elementStyles)) {
         sanitized[elementId] = {};
         return;
       }
       
       // Process each style property
-      const cleanStyles = {};
-      Object.entries(elementStyles as Record<string, any>).forEach(([styleKey, styleValue]) => {
+      const cleanStyles: Record<string, unknown> = {};
+      Object.entries(elementStyles).forEach(([styleKey, styleValue]) => {
         // Skip undefined, null, functions or DOM elements
         if (styleValue === undefined || 
             styleValue === null || 
@@ -324,15 +364,8 @@ class PageSyncService {
       return;
     }
 
-    try {
-    
-      // Force save to database
-      await this.saveToDatabase();
-      
-    } catch (error) {
-    
-      throw error; // Re-throw the error to be caught by the caller
-    }
+    // Force save to database
+    await this.saveToDatabase();
   }
 
   /**

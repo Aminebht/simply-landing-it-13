@@ -13,6 +13,7 @@ import { Palette, Eye, Edit, Save, Globe, ChevronLeft, ChevronRight, CloudUpload
 import { useAIGeneration } from '@/hooks/useAIGeneration';
 import { useDeployment } from '@/hooks/useDeployment';
 import { LandingPageComponent, ComponentVariation } from '@/types/components';
+import { LandingPageService } from '@/services/landing-page';
 import { getComponentVariations } from '@/services/supabase';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
@@ -114,8 +115,13 @@ export default function Builder() {
   };
 
   // 7. Reorder Components
-  const handleReorderComponents = (newOrder: LandingPageComponent[]) => {
+  const handleReorderComponents = async (newOrder: LandingPageComponent[]) => {
+    console.log('Reordering components:', newOrder.map(c => ({ id: c.id, order_index: c.order_index })));
+    
+    // Update local state immediately for UI responsiveness
     setComponents(newOrder);
+    
+    // PageSyncService will handle saving to database automatically via debounced save
     PageSyncService.getInstance().updateComponents(newOrder);
   };
 
@@ -141,6 +147,7 @@ export default function Builder() {
         const variations = await getComponentVariations();
         setComponentVariations(variations);
       } catch (error) {
+        console.error('Error fetching component variations:', error);
       }
     };
     
@@ -182,74 +189,7 @@ export default function Builder() {
     }
   }, [pageId]);
 
-  // Add useEffect to load existing page data
-  useEffect(() => {
-    if (pageId && pageId !== 'demo-page-id') {
-      loadExistingPage();
-    }
-  }, [pageId]);
-
-  // Add useEffect to sync components to PageSyncService when they change
-  useEffect(() => {
-    if (pageId && components.length > 0) {
-      const pageSyncService = PageSyncService.getInstance();
-      // Ensure all components have the custom_styles and custom_actions fields
-      const enrichedComponents = components.map(component => {
-          return {
-            ...component,
-          custom_styles: component.custom_styles || {},
-          custom_actions: component.custom_actions || {},
-          };
-      });
-      // Log components being synced
-      enrichedComponents.forEach(comp => {
-        if (comp.custom_styles && Object.keys(comp.custom_styles).length > 0) {
-        }
-        if (comp.custom_actions && Object.keys(comp.custom_actions).length > 0) {
-        }
-      });
-      // Update components in PageSyncService
-      pageSyncService.updateComponents(enrichedComponents);
-    }
-  }, [components, pageId]);
-  
-  // Add useEffect to sync global theme to PageSyncService when it changes
-  useEffect(() => {
-    if (pageId && globalTheme) {
-      const pageSyncService = PageSyncService.getInstance();
-      pageSyncService.updateGlobalTheme(globalTheme);
-    }
-  }, [globalTheme, pageId]);
-
-  // Effect to update last saved time when the page sync service saves
-  useEffect(() => {
-    if (pageId) {
-      const pageSyncService = PageSyncService.getInstance();
-      
-      // Check for existing saved time
-      const savedTime = pageSyncService.getLastSavedTime();
-      if (savedTime) {
-        setLastSavedTime(new Date(savedTime));
-      }
-      
-      // Create a timer to check for updates to last saved time
-      const intervalId = setInterval(() => {
-        const currentSavedTime = pageSyncService.getLastSavedTime();
-        if (currentSavedTime) {
-          const savedDate = new Date(currentSavedTime);
-          if (!lastSavedTime || savedDate > lastSavedTime) {
-            setLastSavedTime(savedDate);
-          }
-        }
-      }, 2000);
-      
-      return () => {
-        clearInterval(intervalId);
-      };
-    }
-  }, [pageId]);
-
-  const loadExistingPage = async () => {
+  const loadExistingPage = useCallback(async () => {
     if (!pageId) return;
     
     try {
@@ -318,7 +258,7 @@ export default function Builder() {
           // Log media URLs for debugging
           componentsData.forEach(comp => {
             if (comp.media_urls && Object.keys(comp.media_urls).length > 0) {
-             
+              console.log('Component has media URLs:', comp.id, comp.media_urls);
             }
           });
           setComponents(componentsData.map(comp => ({
@@ -332,14 +272,86 @@ export default function Builder() {
         }
       }
     } catch (error) {
-     
+      console.error('Error loading page:', error);
       toast({
         title: "Error loading page",
         description: "Could not load page data",
         variant: "destructive"
       });
     }
-  };
+  }, [pageId, toast, setComponents, setGlobalTheme, setDirection, setProductData]);
+
+  // Add useEffect to load existing page data
+  useEffect(() => {
+    if (pageId && pageId !== 'demo-page-id') {
+      loadExistingPage();
+    }
+  }, [pageId, loadExistingPage]);
+
+  // Add useEffect to sync components to PageSyncService when they change
+  useEffect(() => {
+    if (pageId && components.length > 0) {
+      const pageSyncService = PageSyncService.getInstance();
+      // Ensure all components have the custom_styles and custom_actions fields
+      const enrichedComponents = components.map(component => {
+          return {
+            ...component,
+          custom_styles: component.custom_styles || {},
+          custom_actions: component.custom_actions || {},
+          };
+      });
+      // Log components being synced
+      enrichedComponents.forEach(comp => {
+        if (comp.custom_styles && Object.keys(comp.custom_styles).length > 0) {
+          console.log('Component has custom styles:', comp.id);
+        }
+        if (comp.custom_actions && Object.keys(comp.custom_actions).length > 0) {
+          console.log('Component has custom actions:', comp.id);
+        }
+      });
+      // Update components in PageSyncService
+      pageSyncService.updateComponents(enrichedComponents);
+    }
+  }, [components, pageId]);
+  
+  // Add useEffect to sync global theme to PageSyncService when it changes
+  useEffect(() => {
+    if (pageId && globalTheme) {
+      const pageSyncService = PageSyncService.getInstance();
+      pageSyncService.updateGlobalTheme(globalTheme);
+    }
+  }, [globalTheme, pageId]);
+
+  // Effect to update last saved time when the page sync service saves
+  useEffect(() => {
+    if (pageId) {
+      const pageSyncService = PageSyncService.getInstance();
+      
+      // Check for existing saved time
+      const savedTime = pageSyncService.getLastSavedTime();
+      if (savedTime) {
+        setLastSavedTime(new Date(savedTime));
+      }
+      
+      // Create a timer to check for updates to last saved time
+      const intervalId = setInterval(() => {
+        const currentSavedTime = pageSyncService.getLastSavedTime();
+        if (currentSavedTime) {
+          const savedDate = new Date(currentSavedTime);
+          setLastSavedTime(prevTime => {
+            if (!prevTime || savedDate > prevTime) {
+              return savedDate;
+            }
+            return prevTime;
+          });
+        }
+      }, 2000);
+      
+      return () => {
+        clearInterval(intervalId);
+      };
+    }
+  }, [pageId]);
 
   // Implement local state update logic for handlers:
   const handleComponentUpdate = (componentId: string, updates: Partial<LandingPageComponent>) => {
@@ -349,7 +361,7 @@ export default function Builder() {
     PageSyncService.getInstance().updateComponents(updated);
   };
 
-  const handleStyleChange = (componentId: string, styles: Record<string, any>) => {
+  const handleStyleChange = (componentId: string, styles: Record<string, unknown>) => {
     const updated = components.map(c => {
       if (c.id !== componentId) return c;
       const existingCustomStyles = c.custom_styles || {};
@@ -527,7 +539,7 @@ export default function Builder() {
   /**
    * Handle custom style changes for a component's element
    */
-  const handleCustomStylesChange = (componentId: string, elementId: string, styles: Record<string, any>) => {
+  const handleCustomStylesChange = (componentId: string, elementId: string, styles: Record<string, unknown>) => {
     // ...existing code...
     
     // Get the component to update

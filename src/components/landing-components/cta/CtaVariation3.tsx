@@ -10,7 +10,6 @@ import { getClass, getElementStyles } from '../classUtils';
 
 interface CtaVariation3Props extends ComponentProps {
   viewport?: 'mobile' | 'tablet' | 'desktop';
-  customActions?: Record<string, any>;
 }
 
 const CtaVariation3: React.FC<CtaVariation3Props> = ({
