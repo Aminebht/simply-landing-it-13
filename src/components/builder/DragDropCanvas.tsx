@@ -129,8 +129,18 @@ export const DragDropCanvas: React.FC<DragDropCanvasProps> = ({
   const handleDeleteComponent = (component: LandingPageComponent, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent component selection
     
-    // Confirm deletion
-    if (window.confirm('Are you sure you want to delete this component?')) {
+    // Get component type for better confirmation message
+    const componentType = (() => {
+      if (component.component_variation?.component_type) {
+        return component.component_variation.component_type;
+      }
+      const parts = component.component_variation_id.split('-');
+      return parts[0] || 'component';
+    })();
+    
+    // Confirm deletion with more specific message
+    const confirmMessage = `Are you sure you want to delete this ${componentType} component? This action cannot be undone.`;
+    if (window.confirm(confirmMessage)) {
       onRemoveComponent?.(component.id);
     }
   };

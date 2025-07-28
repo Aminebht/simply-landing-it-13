@@ -53,66 +53,222 @@ export default function Builder() {
   } = useUndoRedo<LandingPageComponent[]>([]);
 
   const handleAddComponent = async (type: string) => {
-    // Add new component and update undo/redo state
-    const variation = 1;
-    const variationMetadata = componentVariations.find(v => v.component_type === type && v.variation_number === variation);
-    const defaultContent = variationMetadata?.default_content || {
-      headline: 'Your Headline Here',
-      subheadline: 'Your subheadline here',
-      ctaButton: 'Get Started'
-    };
-    // Use visibility_keys to determine default visibility
-    const defaultVisibility: Record<string, boolean> = {};
-    if (variationMetadata?.visibility_keys) {
-      variationMetadata.visibility_keys.forEach(vk => {
-        defaultVisibility[vk.key] = true;
-      });
-    } else {
-      defaultVisibility.headline = true;
-      defaultVisibility.subheadline = true;
-      defaultVisibility.ctaButton = true;
-    }
-    const newComponent: Omit<LandingPageComponent, 'id' | 'created_at' | 'updated_at'> = {
-      page_id: pageId || landingPageId || 'temp-page',
-      component_variation_id: variationMetadata?.id || `${type}-variation-${variation}`,
-      order_index: components.length + 1,
-      content: defaultContent,
-      styles: {
-        container: {
-          padding: [60, 20, 60, 20],
-          backgroundColor: '#ffffff',
-          textColor: '#1a202c',
-          primaryColor: globalTheme?.primaryColor || '#3b82f6',
-          headingFont: {
-            family: 'Inter',
-            variants: ['400', '500', '600', '700'],
-            category: 'sans-serif',
-            googleFontUrl: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'
+    try {
+      // Add new component and update undo/redo state
+      const variation = 1;
+      const variationMetadata = componentVariations.find(v => v.component_type === type && v.variation_number === variation);
+      
+      if (!variationMetadata) {
+        console.warn(`No variation metadata found for component type: ${type}`);
+        toast({
+          title: "Error",
+          description: `Component type "${type}" not found. Please try refreshing the page.`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const defaultContent = variationMetadata.default_content || {
+        headline: 'Your Headline Here',
+        subheadline: 'Your subheadline here',
+        ctaButton: 'Get Started'
+      };
+      
+      // Use visibility_keys to determine default visibility
+      const defaultVisibility: Record<string, boolean> = {};
+      if (variationMetadata.visibility_keys) {
+        variationMetadata.visibility_keys.forEach(vk => {
+          defaultVisibility[vk.key] = true;
+        });
+      } else {
+        defaultVisibility.headline = true;
+        defaultVisibility.subheadline = true;
+        defaultVisibility.ctaButton = true;
+      }
+      
+      // For demo page, create temporary component
+      if (!pageId || pageId === 'demo-page-id') {
+        const tempId = `comp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        const newComponent: LandingPageComponent = {
+          id: tempId,
+          page_id: pageId || 'demo-page-id',
+          component_variation_id: variationMetadata.id,
+          order_index: components.length + 1,
+          content: defaultContent,
+          styles: {
+            container: {
+              padding: [60, 20, 60, 20],
+              backgroundColor: '#ffffff',
+              textColor: '#1a202c',
+              primaryColor: globalTheme?.primaryColor || '#3b82f6',
+              headingFont: {
+                family: 'Inter',
+                variants: ['400', '500', '600', '700'],
+                category: 'sans-serif',
+                googleFontUrl: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'
+              },
+              bodyFont: {
+                family: 'Inter',
+                variants: ['400', '500', '600', '700'],
+                category: 'sans-serif',
+                googleFontUrl: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'
+              }
+            }
           },
-          bodyFont: {
-            family: 'Inter',
-            variants: ['400', '500', '600', '700'],
-            category: 'sans-serif',
-            googleFontUrl: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'
+          visibility: defaultVisibility,
+          custom_styles: {},
+          media_urls: {},
+          component_variation: variationMetadata,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        const updatedComponents = [...components, newComponent];
+        setComponents(updatedComponents);
+        setSelectedComponent(newComponent);
+        
+        // Show success toast
+        toast({
+          title: "Component added",
+          description: `${type.charAt(0).toUpperCase() + type.slice(1)} component has been added to your page`,
+        });
+        
+        console.log('Added demo component:', { id: newComponent.id, type, order_index: newComponent.order_index });
+        return;
+      }
+      
+      // For real pages, save to database
+      const landingPageService = LandingPageService.getInstance();
+      
+      const componentData = {
+        component_variation_id: variationMetadata.id,
+        order_index: components.length + 1,
+        content: defaultContent,
+        styles: {}, // Required by TypeScript interface but will be ignored by database
+        visibility: defaultVisibility,
+        custom_styles: {
+          container: {
+            padding: [60, 20, 60, 20] as [number, number, number, number],
+            backgroundColor: '#ffffff',
+            textColor: '#1a202c',
+            primaryColor: globalTheme?.primaryColor || '#3b82f6',
+            headingFont: {
+              family: 'Inter',
+              variants: ['400', '500', '600', '700'],
+              category: 'sans-serif' as const,
+              googleFontUrl: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'
+            },
+            bodyFont: {
+              family: 'Inter',
+              variants: ['400', '500', '600', '700'],
+              category: 'sans-serif' as const,
+              googleFontUrl: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'
+            }
           }
-        }
-      },
-      visibility: defaultVisibility,
-      custom_styles: {},
-      media_urls: {},
-      component_variation: variationMetadata
-    };
-    const updatedComponents = [...components, newComponent as LandingPageComponent];
-    setComponents(updatedComponents);
-    setSelectedComponent(newComponent as LandingPageComponent);
+        },
+        media_urls: {}
+      };
+      
+      // Save to database and get the new component with real ID
+      const savedComponent = await landingPageService.addComponent(pageId, componentData);
+      
+      const updatedComponents = [...components, savedComponent];
+      setComponents(updatedComponents);
+      setSelectedComponent(savedComponent);
+      
+      // Update PageSyncService
+      PageSyncService.getInstance().updateComponents(updatedComponents);
+      
+      // Show success toast
+      toast({
+        title: "Component added",
+        description: `${type.charAt(0).toUpperCase() + type.slice(1)} component has been added and saved to your page`,
+      });
+      
+      console.log('Added new component:', { id: savedComponent.id, type, order_index: savedComponent.order_index });
+    } catch (error) {
+      console.error('Error adding component:', error);
+      toast({
+        title: "Error adding component",
+        description: "There was a problem adding the component. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   // 6. Remove Component
-  const handleRemoveComponent = (componentId: string) => {
-    const newComponents = components.filter(c => c.id !== componentId);
-    setComponents(newComponents);
-    PageSyncService.getInstance().updateComponents(newComponents);
-  };
+  const handleRemoveComponent = useCallback(async (componentId: string) => {
+    try {
+      console.log('Removing component:', componentId);
+      
+      // Check if the component exists
+      const componentToRemove = components.find(c => c.id === componentId);
+      if (!componentToRemove) {
+        console.warn('Component not found for deletion:', componentId);
+        toast({
+          title: "Component not found",
+          description: "The component you're trying to delete could not be found.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // For real pages (with page_id), delete from database
+      if (pageId && pageId !== 'demo') {
+        try {
+          console.log('Deleting component from database:', componentId);
+          await LandingPageService.getInstance().deleteComponent(componentId);
+          console.log('Component deleted from database successfully');
+        } catch (dbError) {
+          console.error('Error deleting component from database:', dbError);
+          toast({
+            title: "Database error",
+            description: "Failed to delete component from database. Please try again.",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+      
+      // Filter out the component to be removed
+      const filteredComponents = components.filter(c => c.id !== componentId);
+      
+      // Recalculate order_index for remaining components to ensure sequential ordering
+      const reorderedComponents = filteredComponents
+        .sort((a, b) => a.order_index - b.order_index)
+        .map((component, index) => ({
+          ...component,
+          order_index: index + 1
+        }));
+      
+      console.log('Components after deletion and reordering:', reorderedComponents.map(c => ({ id: c.id, order_index: c.order_index })));
+      
+      setComponents(reorderedComponents);
+      
+      // Clear selection if the deleted component was selected
+      if (selectedComponent?.id === componentId) {
+        setSelectedComponent(null);
+        setSelectedElementId(null);
+      }
+      
+      // Update PageSyncService
+      PageSyncService.getInstance().updateComponents(reorderedComponents);
+      
+      // Show success toast
+      toast({
+        title: "Component deleted",
+        description: "The component has been removed from your page",
+      });
+    } catch (error) {
+      console.error('Error deleting component:', error);
+      toast({
+        title: "Error deleting component",
+        description: "There was a problem removing the component. Please try again.",
+        variant: "destructive"
+      });
+    }
+  }, [components, selectedComponent, setSelectedComponent, setSelectedElementId, setComponents, toast, pageId]);
 
   // 7. Reorder Components
   const handleReorderComponents = async (newOrder: LandingPageComponent[]) => {
@@ -125,9 +281,10 @@ export default function Builder() {
     PageSyncService.getInstance().updateComponents(newOrder);
   };
 
-  // 8. Keyboard shortcuts for undo/redo
+  // 8. Keyboard shortcuts for undo/redo and component operations
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Undo/Redo shortcuts
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         undo();
@@ -135,10 +292,27 @@ export default function Builder() {
         e.preventDefault();
         redo();
       }
+      // Delete selected component with Delete key
+      else if (e.key === 'Delete' && selectedComponent && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        const componentType = selectedComponent.component_variation?.component_type || 'component';
+        if (window.confirm(`Are you sure you want to delete the selected ${componentType} component? This action cannot be undone.`)) {
+          handleRemoveComponent(selectedComponent.id);
+        }
+      }
+      // Sidebar toggle shortcuts
+      else if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        setIsLeftSidebarOpen(!isLeftSidebarOpen);
+      }
+      else if ((e.ctrlKey || e.metaKey) && e.key === 'j') {
+        e.preventDefault();
+        setIsRightSidebarOpen(!isRightSidebarOpen);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo]);
+  }, [undo, redo, selectedComponent, handleRemoveComponent, isLeftSidebarOpen, isRightSidebarOpen]);
 
   // Fetch component variations on mount
   useEffect(() => {

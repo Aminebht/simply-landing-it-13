@@ -3,10 +3,10 @@ import { LandingPageComponent, ComponentVariation } from '@/types/components';
 import { LandingPage, MarketplaceData } from '@/types/landing-page';
 
 // Helper function to clean content by removing image URLs
-const cleanContentFromImageUrls = (content: any): any => {
+const cleanContentFromImageUrls = (content: unknown): unknown => {
   if (!content || typeof content !== 'object') return content;
   
-  const cleaned = { ...content };
+  const cleaned = { ...content as Record<string, unknown> };
   
   // Remove any field that looks like an image URL
   Object.keys(cleaned).forEach(key => {
@@ -127,6 +127,10 @@ export class LandingPageService {
       cleanComponentData.content = cleanContentFromImageUrls(cleanComponentData.content);
     }
     
+    // Remove the 'styles' property as it doesn't exist in database schema
+    // The database only has 'custom_styles', 'content', 'visibility' etc.
+    const { styles, ...dbComponentData } = cleanComponentData;
+    
     // Calculate order_index as number of existing components + 1 (1,2,3...)
     const { data: existingComponents } = await supabase
       .from('landing_page_components')
@@ -138,7 +142,7 @@ export class LandingPageService {
     const { data, error } = await supabase
       .from('landing_page_components')
       .insert([{
-        ...cleanComponentData,
+        ...dbComponentData,
         page_id: pageId,
         order_index: orderIndex,
         created_at: new Date().toISOString(),
@@ -151,7 +155,15 @@ export class LandingPageService {
       .single();
 
     if (error) throw error;
-    return data;
+    
+    // Add the 'styles' property for frontend compatibility
+    // Frontend expects both 'styles' and 'custom_styles' but database only has 'custom_styles'
+    const componentWithStyles = {
+      ...data,
+      styles: data.custom_styles || {}
+    };
+    
+    return componentWithStyles;
   }
 
   async updateComponent(componentId: string, updates: Partial<LandingPageComponent>): Promise<LandingPageComponent> {
@@ -175,7 +187,14 @@ export class LandingPageService {
       .single();
 
     if (error) throw error;
-    return data;
+    
+    // Add the 'styles' property for frontend compatibility
+    const componentWithStyles = {
+      ...data,
+      styles: data.custom_styles || {}
+    };
+    
+    return componentWithStyles;
   }
 
   async deleteComponent(componentId: string): Promise<void> {
@@ -206,7 +225,7 @@ export class LandingPageService {
     }
   }
 
-  async updateComponentStyles(componentId: string, styles: any): Promise<void> {
+  async updateComponentStyles(componentId: string, styles: Record<string, unknown>): Promise<void> {
     const { error } = await supabase
       .from('landing_page_components')
       .update({
@@ -218,7 +237,7 @@ export class LandingPageService {
     if (error) throw error;
   }
 
-  async updateComponentContent(componentId: string, content: any): Promise<void> {
+  async updateComponentContent(componentId: string, content: Record<string, unknown>): Promise<void> {
     // Clean content to remove image URLs (they should be in media_urls)
     const cleanContent = cleanContentFromImageUrls(content);
     
@@ -284,22 +303,26 @@ export class LandingPageService {
   // Marketplace integration
   async enrichComponentsWithMarketplace(
     components: LandingPageComponent[],
-    product: any,
-    profile: any
+    product: unknown,
+    profile: unknown
   ): Promise<LandingPageComponent[]> {
     if (!product || !profile) {
       return components;
     }
 
+    const productData = product as { id: string; price: number };
+    const profileData = profile as { id: string };
+
     const marketplaceData: MarketplaceData = {
-      product_id: product.id,
-      price: product.price,
+      product_id: productData.id,
+      price: productData.price,
       currency: 'TND',
-      checkout_url: this.generateCheckoutUrl(product.id, profile.id)
+      checkout_url: this.generateCheckoutUrl(productData.id, profileData.id)
     };
 
     return components.map(component => ({
       ...component,
+      styles: component.custom_styles || {}, // Add styles property for frontend compatibility
       marketplace_data: marketplaceData
     }));
   }
@@ -368,7 +391,7 @@ export class LandingPageService {
   }
 
   // Theme and SEO management
-  async updateTheme(id: string, theme: any): Promise<void> {
+  async updateTheme(id: string, theme: Record<string, unknown>): Promise<void> {
     const { error } = await supabase
       .from('landing_pages')
       .update({
@@ -380,7 +403,7 @@ export class LandingPageService {
     if (error) throw error;
   }
 
-  async updateSEO(id: string, seoConfig: any): Promise<void> {
+  async updateSEO(id: string, seoConfig: Record<string, unknown>): Promise<void> {
     const { error } = await supabase
       .from('landing_pages')
       .update({

@@ -58,8 +58,8 @@ export const ComponentLibrary: React.FC<ComponentLibraryProps> = ({
   const filteredComponents = componentTypes.filter(component => {
     if (!searchQuery) return true;
     
-    const matchesSearch = component.name.toLowerCase().includes(searchQuery.toLowerCase())
-                         
+    const matchesSearch = component.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         component.type.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
 
@@ -68,6 +68,18 @@ export const ComponentLibrary: React.FC<ComponentLibraryProps> = ({
       {/* Header */}
       <div className="p-6 border-b border-gray-200">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Component Library</h2>
+        
+        {/* Search Input */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            type="text"
+            placeholder="Search components..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
       </div>
 
       {/* Components List */}
@@ -107,8 +119,10 @@ export const ComponentLibrary: React.FC<ComponentLibraryProps> = ({
                         onClick={() => onAddComponent(component.type)}
                         className="bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-200 ml-3 flex-shrink-0"
                         variant="outline"
+                        title={`Add ${component.name}`}
                       >
                         <Plus className="h-4 w-4 mr-1" />
+                        Add
                       </Button>
                     </div>
                     
