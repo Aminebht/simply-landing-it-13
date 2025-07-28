@@ -1,35 +1,35 @@
 import React from 'react';
 import { SelectableElement } from '@/components/builder/SelectableElement';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 
 // Shared button click handler
-export function handleButtonClick(action: any, isEditing: boolean, e: React.MouseEvent) {
+export function handleButtonClick(action: unknown, isEditing: boolean, e: React.MouseEvent) {
   if (isEditing || !action) return;
   e.preventDefault();
-  switch (action.type) {
+  
+  const actionObj = action as Record<string, unknown>;
+  
+  switch (actionObj.type) {
     case 'open_link':
-      if (action.url) {
-        let url = action.url;
+      if (actionObj.url) {
+        let url = String(actionObj.url);
         if (url && !/^https?:\/\//i.test(url)) {
           url = 'https://' + url;
         }
-        window.open(url, action.newTab ? '_blank' : '_self');
+        window.open(url, actionObj.newTab ? '_blank' : '_self');
       }
       break;
     case 'scroll':
-      if (action.targetId) {
-        const el = document.getElementById(action.targetId);
+      if (actionObj.targetId) {
+        const el = document.getElementById(String(actionObj.targetId));
         if (el) {
           el.scrollIntoView({ behavior: 'smooth' });
-        } else {
-       
         }
       }
       break;
     case 'checkout':
       // Defensive: treat empty string or null as missing
-      if (action.productId && action.productId !== '' && action.amount != null && action.amount !== '') {
+      if (actionObj.productId && actionObj.productId !== '' && actionObj.amount != null && actionObj.amount !== '') {
         handleCheckout(action, isEditing);
       }
       break;
@@ -39,10 +39,10 @@ export function handleButtonClick(action: any, isEditing: boolean, e: React.Mous
 }
 
 // Checkout handler function
-async function handleCheckout(action: any, isEditing: boolean) {
+async function handleCheckout(action: unknown, isEditing: boolean) {
   if (isEditing) return;
   
-  const { toast } = useToast();
+  const actionObj = action as Record<string, unknown>;
   
   try {
     // Get form data from DynamicCheckoutForm if it exists
@@ -61,22 +61,14 @@ async function handleCheckout(action: any, isEditing: boolean) {
 
     // Validate required email
     if (!userEmail) {
-      toast({
-        title: "Email Required",
-        description: "Please enter your email to proceed with checkout.",
-        variant: "destructive"
-      });
+      alert("Please enter your email to proceed with checkout.");
       return;
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(userEmail)) {
-      toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address.",
-        variant: "destructive"
-      });
+      alert("Please enter a valid email address.");
       return;
     }
 
@@ -94,7 +86,7 @@ async function handleCheckout(action: any, isEditing: boolean) {
       p_language: 'en',
       p_is_guest_purchase: true,
       p_cart_items: [{
-        product_id: action.productId,
+        product_id: String(actionObj.productId),
         quantity: 1,
         submission_data: formData
       }],
@@ -102,22 +94,19 @@ async function handleCheckout(action: any, isEditing: boolean) {
     });
 
     if (orderError) {
-      toast({
-        title: "Order Error",
-        description: "Failed to create order. Please try again.",
-        variant: "destructive"
-      });
+      console.error('Order creation error:', orderError);
+      alert("Failed to create order. Please try again.");
       return;
     }
 
     // Prepare success URL
-    const successUrl = `${window.location.origin}/download/order-${orderId}-${action.productId}`;
+    const successUrl = `${window.location.origin}/download/order-${orderId}-${actionObj.productId}`;
     const failUrl = `${window.location.origin}`;
 
     // Create payment session
     const { data: paymentData, error: paymentError } = await supabase.functions.invoke('create-payment', {
       body: {
-        amount: Math.round(action.amount * 1000), // Convert to millimes
+        amount: Math.round(Number(actionObj.amount) * 1000), // Convert to millimes
         orderId,
         successUrl,
         failUrl,
@@ -129,11 +118,8 @@ async function handleCheckout(action: any, isEditing: boolean) {
     });
 
     if (paymentError || !paymentData?.payUrl) {
-      toast({
-        title: "Payment Error",
-        description: "Failed to create payment session. Please try again.",
-        variant: "destructive"
-      });
+      console.error('Payment creation error:', paymentError);
+      alert("Failed to create payment session. Please try again.");
       return;
     }
 
@@ -141,17 +127,14 @@ async function handleCheckout(action: any, isEditing: boolean) {
     window.location.href = paymentData.payUrl;
 
   } catch (error) {
-    toast({
-      title: "Checkout Error",
-      description: "An unexpected error occurred. Please try again.",
-      variant: "destructive"
-    });
+    console.error('Checkout error:', error);
+    alert("An unexpected error occurred. Please try again.");
   }
 }
 
 // Props for rendering a CTA button
 export interface RenderButtonProps {
-  action: any;
+  action: unknown;
   isEditing: boolean;
   content: string;
   elementId: string;
@@ -179,16 +162,18 @@ export function renderButton({
   as = 'primary',
   viewport
 }: RenderButtonProps) {
-  if (action?.type === 'open_link' && !isEditing) {
-    let url = action.url || '#';
+  const actionObj = action as Record<string, unknown>;
+  
+  if (actionObj?.type === 'open_link' && !isEditing) {
+    let url = String(actionObj.url || '#');
     if (url && !/^https?:\/\//i.test(url)) {
       url = 'https://' + url;
     }
     return (
       <a
         href={url}
-        target={action.newTab ? '_blank' : '_self'}
-        rel={action.newTab ? 'noopener noreferrer' : undefined}
+        target={actionObj.newTab ? '_blank' : '_self'}
+        rel={actionObj.newTab ? 'noopener noreferrer' : undefined}
         className={className}
         style={style}
       >
