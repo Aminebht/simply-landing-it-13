@@ -130,19 +130,14 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
       mergedStyles.container = {};
     }
     
-    // Preserve original component background color - don't override with global theme
-    // Only apply global backgroundColor if container doesn't have any background set
-    const hasExistingBackground = mergedStyles.container.backgroundColor || 
-                                 mergedStyles.container.background ||
-                                 styles?.container?.backgroundColor ||
-                                 styles?.container?.background;
+    const hasCustomBackgroundColor = mergedStyles.container.backgroundColor && 
+                                    mergedStyles.container.backgroundColor !== 'transparent' && 
+                                    mergedStyles.container.backgroundColor !== 'inherit';
     
     mergedStyles.container = {
       ...mergedStyles.container,
-      // Preserve component's background color, only use global as fallback if none exists
-      backgroundColor: hasExistingBackground ? 
-        (mergedStyles.container.backgroundColor || mergedStyles.container.background || styles?.container?.backgroundColor || styles?.container?.background) : 
-        globalTheme.backgroundColor,
+      // Only use global backgroundColor if component doesn't have one explicitly set
+      backgroundColor: hasCustomBackgroundColor ? mergedStyles.container.backgroundColor : globalTheme.backgroundColor,
       color: globalTheme.primaryColor || mergedStyles.container.textColor,
       fontFamily: globalTheme.fontFamily || mergedStyles.container.fontFamily,
       direction: globalTheme.direction || mergedStyles.container.direction,
