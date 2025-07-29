@@ -100,7 +100,7 @@ async function handleCheckout(action: unknown, isEditing: boolean) {
     }
 
     // Prepare success URL
-    const successUrl = `${window.location.origin}/download/order-${orderId}-${actionObj.productId}`;
+    const successUrl = `https://demarky.tn/download/order-${orderId}-${actionObj.productId}`;
     const failUrl = `${window.location.origin}`;
 
     // Create payment session
