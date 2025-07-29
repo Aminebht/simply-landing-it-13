@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { LandingPageComponent } from '@/types/components';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Settings } from 'lucide-react';
 
-interface ButtonActionConfigProps {
+export interface ButtonActionConfigProps {
   selectedComponent: LandingPageComponent;
   selectedElementId: string;
   allSections: LandingPageComponent[];
@@ -27,10 +27,10 @@ export const ButtonActionConfig: React.FC<ButtonActionConfigProps> = ({
   selectedComponent,
   selectedElementId,
   allSections,
-  actionType,
-  url,
-  newTab,
-  targetId,
+  actionType: propActionType,
+  url: propUrl,
+  newTab: propNewTab,
+  targetId: propTargetId,
   onActionTypeChange,
   onUrlChange,
   onNewTabChange,
@@ -38,44 +38,122 @@ export const ButtonActionConfig: React.FC<ButtonActionConfigProps> = ({
   onUpdateComponent,
   productData
 }) => {
-  const handleSaveAction = React.useCallback(() => {
-    const action = {
-      type: actionType,
-      url: actionType === 'open_link' ? url : undefined,
-      newTab: actionType === 'open_link' ? newTab : undefined,
-      targetId: actionType === 'scroll' ? targetId : undefined,
-      productId: actionType === 'checkout' ? productData?.id : undefined,
-      amount: actionType === 'checkout' ? productData?.price : undefined,
-    };
+  // Keep track of the last saved action to prevent unnecessary updates
+  const lastSavedAction = React.useRef<string>('');
 
+  // Generate a unique key for the current action state
+  const getActionKey = useCallback((type: string, url: string, newTab: boolean, targetId: string) => {
+    return `${type}:${url}:${newTab}:${targetId}`;
+  }, []);
+
+  // Save action with debouncing
+  const saveAction = useCallback((action: {
+    type: string;
+    url?: string;
+    newTab?: boolean;
+    targetId?: string;
+    productId?: string;
+    amount?: number;
+  }) => {
+    if (!selectedElementId) return;
+
+    const actionKey = getActionKey(
+      action.type || '',
+      action.url || '',
+      action.newTab || false,
+      action.targetId || ''
+    );
+
+    // Only proceed if the action has actually changed
+    if (actionKey === lastSavedAction.current) return;
+
+    lastSavedAction.current = actionKey;
+
+    // If action type is empty, remove the action
+    if (!action.type) {
+      const { [selectedElementId]: _, ...remainingActions } = selectedComponent.custom_actions || {};
+      onUpdateComponent(selectedComponent.id, {
+        custom_actions: remainingActions
+      });
+      return;
+    }
+
+    // Otherwise, update the action
     const updatedCustomActions = {
       ...selectedComponent.custom_actions,
-      [selectedElementId]: action
+      [selectedElementId]: {
+        ...action,
+        // Only include relevant fields based on action type
+        url: action.type === 'open_link' ? action.url : undefined,
+        newTab: action.type === 'open_link' ? action.newTab : undefined,
+        targetId: action.type === 'scroll' ? action.targetId : undefined,
+        productId: action.type === 'checkout' ? (productData?.id || '') : undefined,
+        amount: action.type === 'checkout' ? (productData?.price || 0) : undefined,
+      }
     };
 
     onUpdateComponent(selectedComponent.id, {
       custom_actions: updatedCustomActions
     });
-  }, [actionType, url, newTab, targetId, productData, selectedComponent.custom_actions, selectedComponent.id, selectedElementId, onUpdateComponent]);
+  }, [getActionKey, onUpdateComponent, productData, selectedComponent, selectedElementId]);
 
-  // Auto-save when action type changes
-  React.useEffect(() => {
-    handleSaveAction();
-  }, [actionType, handleSaveAction]);
+  // Handle action type change
+  const handleActionTypeChange = (type: string) => {
+    const newAction = {
+      type,
+      url: propUrl,
+      newTab: propNewTab,
+      targetId: propTargetId,
+      productId: type === 'checkout' ? productData?.id : undefined,
+      amount: type === 'checkout' ? productData?.price : undefined
+    };
+    saveAction(newAction);
+    onActionTypeChange(type);
+  };
 
-  // Auto-save when URL or newTab changes for open_link
-  React.useEffect(() => {
-    if (actionType === 'open_link') {
-      handleSaveAction();
-    }
-  }, [actionType, url, newTab, handleSaveAction]);
+  // Handle URL change
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const url = e.target.value;
+    saveAction({
+      type: propActionType,
+      url,
+      newTab: propNewTab,
+      targetId: propTargetId
+    });
+    onUrlChange(url);
+  };
 
-  // Auto-save when targetId changes for scroll
-  React.useEffect(() => {
-    if (actionType === 'scroll') {
-      handleSaveAction();
-    }
-  }, [actionType, targetId, handleSaveAction]);
+  // Handle new tab change
+  const handleNewTabChange = (newTab: boolean) => {
+    saveAction({
+      type: propActionType,
+      url: propUrl,
+      newTab,
+      targetId: propTargetId
+    });
+    onNewTabChange(newTab);
+  };
+
+  // Handle target ID change
+  const handleTargetIdChange = (targetId: string) => {
+    saveAction({
+      type: propActionType,
+      url: propUrl,
+      newTab: propNewTab,
+      targetId
+    });
+    onTargetIdChange(targetId);
+  };
+
+  // Update last saved action when props change
+  useEffect(() => {
+    lastSavedAction.current = getActionKey(
+      propActionType || '',
+      propUrl || '',
+      propNewTab || false,
+      propTargetId || ''
+    );
+  }, [getActionKey, propActionType, propUrl, propNewTab, propTargetId]);
 
   return (
     <Card>
@@ -88,9 +166,12 @@ export const ButtonActionConfig: React.FC<ButtonActionConfigProps> = ({
       <CardContent className="space-y-4">
         <div>
           <Label className="text-xs">Action Type</Label>
-          <Select value={actionType} onValueChange={onActionTypeChange}>
+          <Select 
+            value={propActionType} 
+            onValueChange={handleActionTypeChange}
+          >
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue placeholder="Select an action" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="open_link">Open Link</SelectItem>
@@ -100,30 +181,33 @@ export const ButtonActionConfig: React.FC<ButtonActionConfigProps> = ({
           </Select>
         </div>
 
-        {actionType === 'open_link' && (
+        {propActionType === 'open_link' && (
           <>
             <div>
               <Label className="text-xs">URL</Label>
               <Input
-                value={url}
-                onChange={(e) => onUrlChange(e.target.value)}
+                value={propUrl}
+                onChange={handleUrlChange}
                 placeholder="https://example.com"
               />
             </div>
             <div className="flex items-center space-x-2">
               <Switch
-                checked={newTab}
-                onCheckedChange={onNewTabChange}
+                checked={propNewTab}
+                onCheckedChange={handleNewTabChange}
               />
               <Label className="text-xs">Open in new tab</Label>
             </div>
           </>
         )}
 
-        {actionType === 'scroll' && (
+        {propActionType === 'scroll' && (
           <div>
             <Label className="text-xs">Target Section</Label>
-            <Select value={targetId} onValueChange={onTargetIdChange}>
+            <Select 
+              value={propTargetId} 
+              onValueChange={handleTargetIdChange}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select section..." />
               </SelectTrigger>
@@ -146,7 +230,7 @@ export const ButtonActionConfig: React.FC<ButtonActionConfigProps> = ({
           </div>
         )}
 
-        {actionType === 'checkout' && (
+        {propActionType === 'checkout' && (
           <div className="space-y-2">
             {productData ? (
               <div className="p-3 bg-gray-50 rounded-md">

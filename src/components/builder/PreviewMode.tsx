@@ -57,8 +57,48 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
   // Hydrate checkout actions in customActions with productData if missing
   const hydratedComponents = React.useMemo(() => {
     if (!productData) return components;
+    
+    // Check if any component needs hydration to avoid unnecessary object creation
+    let needsHydration = false;
+    for (const component of components) {
+      if (!component.custom_actions) continue;
+      
+      for (const key of Object.keys(component.custom_actions)) {
+        const action = component.custom_actions[key];
+        if (action && action.type === 'checkout') {
+          if (!action.productId || action.productId === '' || !action.amount || action.amount === '') {
+            needsHydration = true;
+            break;
+          }
+        }
+      }
+      
+      if (needsHydration) break;
+    }
+    
+    // If no hydration is needed, return original components to maintain referential equality
+    if (!needsHydration) return components;
+    
+    // Only hydrate when necessary
     return components.map(component => {
       if (!component.custom_actions) return component;
+      
+      // Check if this component needs hydration
+      let componentNeedsHydration = false;
+      for (const key of Object.keys(component.custom_actions)) {
+        const action = component.custom_actions[key];
+        if (action && action.type === 'checkout') {
+          if (!action.productId || action.productId === '' || !action.amount || action.amount === '') {
+            componentNeedsHydration = true;
+            break;
+          }
+        }
+      }
+      
+      // If no hydration needed for this component, return as is
+      if (!componentNeedsHydration) return component;
+      
+      // Hydrate only the actions that need it
       const newActions = { ...component.custom_actions };
       Object.keys(newActions).forEach(key => {
         const action = newActions[key];
@@ -72,6 +112,7 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
           }
         }
       });
+      
       return { ...component, custom_actions: newActions };
     });
   }, [components, productData]);

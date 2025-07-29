@@ -74,14 +74,29 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
   }, [selectedComponent?.id, selectedElementId]);
 
   // Initialize button action state when selecting button elements
+  // Use ref to track previous values and avoid circular dependencies
+  const prevSelectedElementId = React.useRef<string | null>(null);
+  const prevCustomActions = React.useRef<Record<string, any> | undefined>(undefined);
+  
   useEffect(() => {
-    if (selectedElementId === 'cta-button' || selectedElementId === 'secondary-button') {
-      const customActions = selectedComponent?.custom_actions || {};
-      const action = customActions[selectedElementId] || { type: 'open_link' };
+    // Only run when selected element or custom actions actually change
+    const customActions = selectedComponent?.custom_actions;
+    const hasCustomActionsChanged = JSON.stringify(customActions) !== JSON.stringify(prevCustomActions.current);
+    
+    if ((selectedElementId !== prevSelectedElementId.current || hasCustomActionsChanged) && 
+        (selectedElementId === 'cta-button' || selectedElementId === 'secondary-button')) {
+      
+      const action = customActions?.[selectedElementId] || { type: 'open_link' };
+      
+      // Update state only if values have actually changed
       setButtonActionType(action.type || 'open_link');
       setButtonUrl(action.url || '');
       setButtonNewTab(!!action.newTab);
       setButtonTargetId(action.targetId || '');
+      
+      // Update refs
+      prevSelectedElementId.current = selectedElementId;
+      prevCustomActions.current = customActions;
     }
   }, [selectedElementId, selectedComponent?.id, selectedComponent?.custom_actions]);
 
@@ -183,27 +198,6 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
     
     onUpdateVisibility(selectedComponent.id, updatedVisibility);
   }, [selectedComponent, onUpdateVisibility]);
-
-  // Save button action configuration
-  const handleSaveButtonAction = useCallback(() => {
-    if (!selectedComponent || !selectedElementId) return;
-
-    const action = {
-      type: buttonActionType,
-      url: buttonActionType === 'open_link' ? buttonUrl : undefined,
-      newTab: buttonActionType === 'open_link' ? buttonNewTab : undefined,
-      targetId: buttonActionType === 'scroll' ? buttonTargetId : undefined,
-    };
-
-    const updatedCustomActions = {
-      ...selectedComponent.custom_actions,
-      [selectedElementId]: action
-    };
-
-    onUpdateComponent(selectedComponent.id, {
-      custom_actions: updatedCustomActions
-    });
-  }, [selectedComponent, selectedElementId, buttonActionType, buttonUrl, buttonNewTab, buttonTargetId, onUpdateComponent]);
 
   // Early return if no component selected
   if (!selectedComponent) {
