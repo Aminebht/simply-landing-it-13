@@ -302,10 +302,10 @@ const Onboarding = () => {
           }
         }
 
-        // Alternate background gradient direction for each component
+        // Use the same background as global theme for first component, alternate for others
         let componentBackground = palette.backgroundColor;
-        if (onboardingData.selectedComponents.length > 1) {
-          // Odd index (i=0,2,4...) => 135deg, Even index (i=1,3,5...) => 45deg
+        if (onboardingData.selectedComponents.length > 1 && i > 0) {
+          // Alternate gradient direction for subsequent components  
           const angle = (i % 2 === 0) ? '135deg' : '45deg';
           componentBackground = palette.backgroundColor.replace(/linear-gradient\(([^,]+),/, `linear-gradient(${angle},`);
         }

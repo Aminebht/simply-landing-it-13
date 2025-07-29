@@ -127,6 +127,15 @@ export const createStyleValueGetter = (
       return elementStyles[property];
     }
     
+    // Special handling for container backgroundColor - preserve existing custom styles
+    if (targetElementKey === 'container' && property === 'backgroundColor') {
+      const containerStyles = component.custom_styles?.container || {};
+      // If container has backgroundColor or background property, don't override with defaults
+      if (containerStyles.backgroundColor || containerStyles.background) {
+        return containerStyles.backgroundColor || containerStyles.background;
+      }
+    }
+    
     const componentType = getComponentType(component, variations);
     const variationNumber = parseInt(getVariationNumber(component));
     const primaryColor = component.custom_styles?.container?.primaryColor || '#2563e0';
