@@ -8,21 +8,24 @@ interface BackgroundControlsProps {
   getStyleValue: (property: string, defaultValue?: unknown) => unknown;
   handleStyleChange: (property: string, value: unknown) => void;
   handleGradientChange?: (gradientValue: string) => void;
+  isEditingContainer?: boolean;
 }
 
 export const BackgroundControls: React.FC<BackgroundControlsProps> = ({
   getStyleValue,
   handleStyleChange,
-  handleGradientChange = () => {}
+  handleGradientChange = () => {},
+  isEditingContainer = true
 }) => {
   // Determine initial background type based on existing styles
   const initialBackgroundColor = getStyleValue('backgroundColor', '#ffffff');
   const isInitiallyGradient = typeof initialBackgroundColor === 'string' && 
     initialBackgroundColor.includes('gradient');
   
-  const [backgroundType, setBackgroundType] = useState<'solid' | 'gradient'>(
-    isInitiallyGradient ? 'gradient' : 'solid'
-  );
+  // For non-container elements, always default to solid
+  const initialBackgroundType = isEditingContainer && isInitiallyGradient ? 'gradient' : 'solid';
+  
+  const [backgroundType, setBackgroundType] = useState<'solid' | 'gradient'>(initialBackgroundType);
 
   // Track when we're in the middle of a user-initiated background type change
   const isChangingBackgroundTypeRef = useRef(false);
@@ -34,7 +37,15 @@ export const BackgroundControls: React.FC<BackgroundControlsProps> = ({
       return;
     }
     
-    // Update background type when it actually changes in the styles
+    // For non-container elements, always force solid background type
+    if (!isEditingContainer) {
+      if (backgroundType !== 'solid') {
+        setBackgroundType('solid');
+      }
+      return;
+    }
+    
+    // Update background type when it actually changes in the styles (container only)
     const currentBackgroundColor = getStyleValue('backgroundColor', '#ffffff');
     const isCurrentGradient = typeof currentBackgroundColor === 'string' && 
       currentBackgroundColor.includes('gradient');
@@ -45,10 +56,15 @@ export const BackgroundControls: React.FC<BackgroundControlsProps> = ({
     if (newBackgroundType !== backgroundType) {
       setBackgroundType(newBackgroundType);
     }
-  }, [getStyleValue, backgroundType]);
+  }, [getStyleValue, backgroundType, isEditingContainer]);
 
   // Preserve the existing gradient when switching to gradient mode
   const handleBackgroundTypeChange = (value: 'solid' | 'gradient') => {
+    // Non-container elements can only have solid background
+    if (!isEditingContainer && value !== 'solid') {
+      return;
+    }
+    
     // Indicate that this is a user-initiated change
     isChangingBackgroundTypeRef.current = true;
     
@@ -79,24 +95,26 @@ export const BackgroundControls: React.FC<BackgroundControlsProps> = ({
         <CardTitle className="text-sm">Background</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div>
-          <Label className="text-xs">Background Type</Label>
-          <Select
-            value={backgroundType}
-            onValueChange={handleBackgroundTypeChange}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="solid">Solid Color</SelectItem>
-              <SelectItem value="gradient">Gradient</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {isEditingContainer && (
+          <div>
+            <Label className="text-xs">Background Type</Label>
+            <Select
+              value={backgroundType}
+              onValueChange={handleBackgroundTypeChange}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="solid">Solid Color</SelectItem>
+                <SelectItem value="gradient">Gradient</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {/* Solid Color */}
-        {backgroundType === 'solid' && (
+        {(backgroundType === 'solid' || !isEditingContainer) && (
           <ColorPicker
             label="Background Color"
             color={String(getStyleValue('backgroundColor', '#ffffff') || '#ffffff')}
@@ -105,7 +123,7 @@ export const BackgroundControls: React.FC<BackgroundControlsProps> = ({
         )}
 
         {/* Gradient */}
-        {backgroundType === 'gradient' && (() => {
+        {isEditingContainer && backgroundType === 'gradient' && (() => {
           // fallback to a default if not a gradient string
           const backgroundColorValue = getStyleValue('backgroundColor', 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
           const backgroundValueStr = typeof backgroundColorValue === 'string' ? backgroundColorValue : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';

@@ -269,13 +269,12 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
             )}
 
             {/* Background Controls */}
-            {isEditingContainer && (
-              <BackgroundControls
-                getStyleValue={getStyleValue}
-                handleStyleChange={handleStyleChange}
-                handleGradientChange={handleGradientChange}
-              />
-            )}
+            <BackgroundControls
+              getStyleValue={getStyleValue}
+              handleStyleChange={handleStyleChange}
+              handleGradientChange={handleGradientChange}
+              isEditingContainer={isEditingContainer}
+            />
 
             {/* Button Action Config */}
             {isButtonElement && (
