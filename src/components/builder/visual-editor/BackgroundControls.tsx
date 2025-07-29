@@ -15,7 +15,12 @@ export const BackgroundControls: React.FC<BackgroundControlsProps> = ({
   handleStyleChange,
   handleGradientChange
 }) => {
-  const [backgroundType, setBackgroundType] = useState<'solid' | 'gradient'>('solid');
+  // Determine background type based on current value
+  const currentBackground = getStyleValue('backgroundColor', '') || getStyleValue('background', '');
+  const isCurrentlyGradient = typeof currentBackground === 'string' && currentBackground.includes('gradient');
+  const [backgroundType, setBackgroundType] = useState<'solid' | 'gradient'>(
+    isCurrentlyGradient ? 'gradient' : 'solid'
+  );
 
   return (
     <Card>
@@ -30,10 +35,24 @@ export const BackgroundControls: React.FC<BackgroundControlsProps> = ({
             onValueChange={(value: 'solid' | 'gradient') => {
               setBackgroundType(value);
               if (value === 'solid') {
-                handleStyleChange('backgroundColor', '#ffffff');
-                handleStyleChange('background', '');
+                // Only change to solid if currently not solid - preserve existing solid color
+                if (isCurrentlyGradient) {
+                  const existingSolidColor = getStyleValue('backgroundColor', '#ffffff');
+                  const solidColor = typeof existingSolidColor === 'string' && !existingSolidColor.includes('gradient') 
+                    ? existingSolidColor 
+                    : '#ffffff';
+                  handleStyleChange('backgroundColor', solidColor);
+                  handleStyleChange('background', '');
+                }
               } else if (value === 'gradient') {
-                handleGradientChange('linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
+                // Only change to gradient if currently not gradient - preserve existing gradient
+                if (!isCurrentlyGradient) {
+                  const existingGradient = getStyleValue('background', '') || getStyleValue('backgroundColor', '');
+                  const gradientValue = typeof existingGradient === 'string' && existingGradient.includes('gradient')
+                    ? existingGradient
+                    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                  handleGradientChange(gradientValue);
+                }
               }
             }}
           >

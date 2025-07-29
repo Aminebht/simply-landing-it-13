@@ -123,19 +123,33 @@ export const createStyleValueGetter = (
     const targetElementKey = selectedElementId || 'container';
     const elementStyles = component.custom_styles?.[targetElementKey] || {};
     
+    // FIRST PRIORITY: Check if the element has this property in custom_styles
     if (elementStyles[property] !== undefined) {
       return elementStyles[property];
     }
     
-    // Special handling for container backgroundColor - preserve existing custom styles
-    if (targetElementKey === 'container' && property === 'backgroundColor') {
+    // SECOND PRIORITY: For background properties, check other background variants in custom_styles
+    if (property === 'backgroundColor' || property === 'background') {
       const containerStyles = component.custom_styles?.container || {};
-      // If container has backgroundColor or background property, don't override with defaults
-      if (containerStyles.backgroundColor || containerStyles.background) {
-        return containerStyles.backgroundColor || containerStyles.background;
-      }
+      
+      // Return any existing background-related custom style
+      if (containerStyles.backgroundColor) return containerStyles.backgroundColor;
+      if (containerStyles.background) return containerStyles.background;
+      if (containerStyles.backgroundImage) return containerStyles.backgroundImage;
+      
+      // Also check the direct styles object for backward compatibility
+      const directStyles = component.styles?.[targetElementKey] || {};
+      if (directStyles.backgroundColor) return directStyles.backgroundColor;
+      if (directStyles.background) return directStyles.background;
     }
     
+    // THIRD PRIORITY: Check if the property exists in the component's main styles
+    const mainElementStyles = component.styles?.[targetElementKey] || {};
+    if (mainElementStyles[property] !== undefined) {
+      return mainElementStyles[property];
+    }
+    
+    // LAST RESORT: Use variation defaults only if no custom styles exist
     const componentType = getComponentType(component, variations);
     const variationNumber = parseInt(getVariationNumber(component));
     const primaryColor = component.custom_styles?.container?.primaryColor || '#2563e0';
