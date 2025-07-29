@@ -77,6 +77,28 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     return undefined;
   }, [aspectRatio, cropWidth, cropHeight]);
 
+  // Extract storage path from public URL (for deletion)
+  const extractPathFromUrl = (url: string): string | null => {
+    try {
+      // Create URL object to parse pathname
+      const urlObj = new URL(url);
+      const pathname = urlObj.pathname;
+      
+      // Find the bucket segment and extract the path after it
+      const pathSegments = pathname.split('/');
+      const bucketIndex = pathSegments.findIndex(segment => segment === bucket);
+      
+      if (bucketIndex !== -1 && bucketIndex < pathSegments.length - 1) {
+        return pathSegments.slice(bucketIndex + 1).join('/');
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Failed to extract path from URL:', error);
+      return null;
+    }
+  };
+
   // Helper function to show user-friendly error messages
   const getErrorMessage = (error: any): string => {
     if (error?.message?.includes('Duplicate')) {
@@ -382,31 +404,45 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   };
 
   const handleRemove = async () => {
-    if (value && value.includes(bucket)) {
-      try {
-        // Extract file path from URL for deletion
-        const url = new URL(value);
-        const pathSegments = url.pathname.split('/');
-        
-        // Find the bucket segment and extract the path after it
-        const bucketIndex = pathSegments.findIndex(segment => segment === bucket);
-        if (bucketIndex !== -1 && bucketIndex < pathSegments.length - 1) {
-          const filePath = pathSegments.slice(bucketIndex + 1).join('/');
-          
+    if (!value) {
+      onChange('');
+      return;
+    }
+    
+    try {
+      // If using media service, remove via media service
+      if (useMediaService && componentId && fieldName) {
+        const success = await mediaService.removeComponentMediaUrl(componentId, fieldName);
+        if (!success) {
+          alert('Failed to remove image from database');
+        }
+        onChange('');
+        return;
+      }
+      
+      // For direct Supabase storage uploads, extract file path from URL for deletion
+      if (value.includes(bucket)) {
+        const path = extractPathFromUrl(value);
+        if (path) {
           // Delete from Supabase storage
           const { error } = await supabase.storage
             .from(bucket)
-            .remove([filePath]);
+            .remove([path]);
             
           if (error) {
-         
+            console.error('Failed to delete image from storage:', error);
+            alert('Failed to delete image from storage: ' + error.message);
+            // Still call onChange to clear the UI even if deletion fails
           }
         }
-      } catch (error) {
-      
       }
+    } catch (error) {
+      console.error('Error removing image:', error);
+      alert('Failed to remove image: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      // Always clear the value in the UI
+      onChange('');
     }
-    onChange('');
   };
 
   return (

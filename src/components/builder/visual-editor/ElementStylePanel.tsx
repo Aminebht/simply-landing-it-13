@@ -77,6 +77,24 @@ export const ElementStylePanel: React.FC<ElementStylePanelProps> = ({
               color={getStyleValue('color', '#111827')}
               onChange={(color) => onStyleChange('color', color)}
             />
+
+            {/* Text Alignment */}
+            <div>
+              <Label className="text-xs">Text Alignment</Label>
+              <Select
+                value={getStyleValue('textAlign', 'left')}
+                onValueChange={(value) => onStyleChange('textAlign', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="left">Left</SelectItem>
+                  <SelectItem value="center">Center</SelectItem>
+                  <SelectItem value="right">Right</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -150,23 +168,6 @@ export const ElementStylePanel: React.FC<ElementStylePanelProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label className="text-xs">Text Alignment</Label>
-            <Select
-              value={getStyleValue('textAlign', 'left')}
-              onValueChange={(value) => onStyleChange('textAlign', value)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="left">Left</SelectItem>
-                <SelectItem value="center">Center</SelectItem>
-                <SelectItem value="right">Right</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           <div>
             <Label className="text-xs">Padding</Label>
             <Slider
