@@ -65,24 +65,8 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
   const [buttonNewTab, setButtonNewTab] = useState(false);
   const [buttonTargetId, setButtonTargetId] = useState('');
 
-  // Background control states
-  const [backgroundType, setBackgroundType] = useState<'solid' | 'gradient'>('solid');
-  const [gradientDirection, setGradientDirection] = useState('to-r');
-  const [gradientFromColor, setGradientFromColor] = useState('#3b82f6');
-  const [gradientToColor, setGradientToColor] = useState('#8b5cf6');
-
   // Create style value getter
   const getStyleValue = createStyleValueGetter(selectedComponent, selectedElementId, componentVariations);
-
-  // Initialize background type based on current values
-  useEffect(() => {
-    if (!selectedComponent) return;
-    const currentBackground = getStyleValue('background', '');
-    const currentBackgroundColor = getStyleValue('backgroundColor', '#ffffff');
-    const hasGradient = currentBackground?.includes('gradient') || 
-                      currentBackgroundColor?.includes('gradient');
-    setBackgroundType(hasGradient ? 'gradient' : 'solid');
-  }, [selectedComponent, selectedElementId, getStyleValue]);
 
   // Auto-select styles tab when component or element changes
   useEffect(() => {
@@ -174,31 +158,9 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
     
     
     
+    
     onUpdateStyles(selectedComponent.id, elementStyleChange);
   }, [selectedComponent, selectedElementId, onUpdateStyles]);
-
-  // Update gradient when values change
-  useEffect(() => {
-    if (backgroundType === 'gradient') {
-      const getCSSDirection = (tailwindDirection: string): string => {
-        const directionMap: Record<string, string> = {
-          'to-r': 'to right',
-          'to-l': 'to left',
-          'to-b': 'to bottom',
-          'to-t': 'to top',
-          'to-br': 'to bottom right',
-          'to-tr': 'to top right',
-          'to-bl': 'to bottom left',
-          'to-tl': 'to top left'
-        };
-        return directionMap[tailwindDirection] || 'to right';
-      };
-      
-      const cssDirection = getCSSDirection(gradientDirection);
-      const gradientValue = `linear-gradient(${cssDirection}, ${gradientFromColor}, ${gradientToColor})`;
-      handleGradientChange(gradientValue);
-    }
-  }, [gradientDirection, gradientFromColor, gradientToColor, backgroundType, handleGradientChange]);
 
   const handleVisibilityChange = useCallback((elementKey: string, isVisible: boolean) => {
     if (!selectedComponent) return;

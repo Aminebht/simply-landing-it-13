@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -7,15 +7,71 @@ import { ColorPicker } from '../ColorPicker';
 interface BackgroundControlsProps {
   getStyleValue: (property: string, defaultValue?: unknown) => unknown;
   handleStyleChange: (property: string, value: unknown) => void;
-  handleGradientChange: (gradientValue: string) => void;
+  handleGradientChange?: (gradientValue: string) => void;
 }
 
 export const BackgroundControls: React.FC<BackgroundControlsProps> = ({
   getStyleValue,
   handleStyleChange,
-  handleGradientChange
+  handleGradientChange = () => {}
 }) => {
-  const [backgroundType, setBackgroundType] = useState<'solid' | 'gradient'>('solid');
+  // Determine initial background type based on existing styles
+  const initialBackgroundColor = getStyleValue('backgroundColor', '#ffffff');
+  const isInitiallyGradient = typeof initialBackgroundColor === 'string' && 
+    initialBackgroundColor.includes('gradient');
+  
+  const [backgroundType, setBackgroundType] = useState<'solid' | 'gradient'>(
+    isInitiallyGradient ? 'gradient' : 'solid'
+  );
+
+  // Track when we're in the middle of a user-initiated background type change
+  const isChangingBackgroundTypeRef = useRef(false);
+  
+  useEffect(() => {
+    // Skip updating background type if we're in the middle of a user-initiated change
+    if (isChangingBackgroundTypeRef.current) {
+      isChangingBackgroundTypeRef.current = false;
+      return;
+    }
+    
+    // Update background type when it actually changes in the styles
+    const currentBackgroundColor = getStyleValue('backgroundColor', '#ffffff');
+    const isCurrentGradient = typeof currentBackgroundColor === 'string' && 
+      currentBackgroundColor.includes('gradient');
+    
+    const newBackgroundType = isCurrentGradient ? 'gradient' : 'solid';
+    
+    // Only update if the background type in styles is different from current state
+    if (newBackgroundType !== backgroundType) {
+      setBackgroundType(newBackgroundType);
+    }
+  }, [getStyleValue, backgroundType]);
+
+  // Preserve the existing gradient when switching to gradient mode
+  const handleBackgroundTypeChange = (value: 'solid' | 'gradient') => {
+    // Indicate that this is a user-initiated change
+    isChangingBackgroundTypeRef.current = true;
+    
+    setBackgroundType(value);
+    if (value === 'solid') {
+      // For solid background, set backgroundColor and clear background
+      handleStyleChange('backgroundColor', '#ffffff');
+      handleStyleChange('background', '');
+    } else if (value === 'gradient') {
+      // For gradient background, preserve existing gradient or use default
+      const existingBackground = getStyleValue('backgroundColor', '');
+      const isExistingGradient = typeof existingBackground === 'string' && 
+        existingBackground.includes('gradient');
+      
+      if (isExistingGradient && existingBackground) {
+        // Keep the existing gradient
+        handleGradientChange(existingBackground);
+      } else {
+        // Use default gradient only if no existing gradient
+        handleGradientChange('linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
+      }
+    }
+  };
 
   return (
     <Card>
@@ -27,15 +83,7 @@ export const BackgroundControls: React.FC<BackgroundControlsProps> = ({
           <Label className="text-xs">Background Type</Label>
           <Select
             value={backgroundType}
-            onValueChange={(value: 'solid' | 'gradient') => {
-              setBackgroundType(value);
-              if (value === 'solid') {
-                handleStyleChange('backgroundColor', '#ffffff');
-                handleStyleChange('background', '');
-              } else if (value === 'gradient') {
-                handleGradientChange('linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
-              }
-            }}
+            onValueChange={handleBackgroundTypeChange}
           >
             <SelectTrigger>
               <SelectValue />
@@ -75,7 +123,8 @@ export const BackgroundControls: React.FC<BackgroundControlsProps> = ({
                 <Select
                   value={direction}
                   onValueChange={(newDirection) => {
-                    handleGradientChange(`linear-gradient(${newDirection}, ${colors[0]} 0%, ${colors[1]} 100%)`);
+                    const newGradient = `linear-gradient(${newDirection}, ${colors[0]} 0%, ${colors[1]} 100%)`;
+                    handleGradientChange(newGradient);
                   }}
                 >
                   <SelectTrigger>
@@ -95,7 +144,8 @@ export const BackgroundControls: React.FC<BackgroundControlsProps> = ({
                   color={colors[0] || '#667eea'}
                   onChange={(color) => {
                     const newColors = [color, colors[1] || '#764ba2'];
-                    handleGradientChange(`linear-gradient(${direction}, ${newColors[0]} 0%, ${newColors[1]} 100%)`);
+                    const newGradient = `linear-gradient(${direction}, ${newColors[0]} 0%, ${newColors[1]} 100%)`;
+                    handleGradientChange(newGradient);
                   }}
                 />
                 <ColorPicker
@@ -103,7 +153,8 @@ export const BackgroundControls: React.FC<BackgroundControlsProps> = ({
                   color={colors[1] || '#764ba2'}
                   onChange={(color) => {
                     const newColors = [colors[0] || '#667eea', color];
-                    handleGradientChange(`linear-gradient(${direction}, ${newColors[0]} 0%, ${newColors[1]} 100%)`);
+                    const newGradient = `linear-gradient(${direction}, ${newColors[0]} 0%, ${newColors[1]} 100%)`;
+                    handleGradientChange(newGradient);
                   }}
                 />
               </div>
