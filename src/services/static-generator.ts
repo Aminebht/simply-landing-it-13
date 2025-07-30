@@ -1,8 +1,38 @@
 import { LandingPage } from '@/types/landing-page';
 import { LandingPageComponent } from '@/types/components';
+import { supabase } from '@/services/supabase';
 import JSZip from 'jszip';
 
 export class StaticGeneratorService {
+  async exportLandingPageFromDatabase(pageId: string): Promise<Blob> {
+    // Fetch landing page data from database
+    const { data: pageData, error: pageError } = await supabase
+      .from('landing_pages')
+      .select('*, products(id, price)')
+      .eq('id', pageId)
+      .single();
+
+    if (pageError || !pageData) {
+      throw new Error(`Failed to fetch landing page: ${pageError?.message}`);
+    }
+
+    // Fetch components data from database
+    const { data: componentsData, error: componentsError } = await supabase
+      .from('landing_page_components')
+      .select('*, component_variation:component_variations(*)')
+      .eq('page_id', pageId)
+      .order('order_index', { ascending: true });
+
+    if (componentsError) {
+      throw new Error(`Failed to fetch components: ${componentsError.message}`);
+    }
+
+    const landingPage: LandingPage = pageData;
+    const components: LandingPageComponent[] = componentsData || [];
+
+    return this.exportAsZip(landingPage, components);
+  }
+
   async generateStaticSite(
     landingPage: LandingPage,
     components: LandingPageComponent[]

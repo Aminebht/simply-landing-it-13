@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { X} from 'lucide-react';
+import { X, Download } from 'lucide-react';
 import { LandingPageComponent } from '@/types/components';
 import { ComponentRenderer } from '@/components/registry/ComponentRenderer';
 import { ResponsivePreviewToggle, ViewportSize } from './ResponsivePreviewToggle';
+import { StaticGeneratorService } from '@/services/static-generator';
+import { toast } from "sonner";
+import { useParams } from 'react-router-dom';
 
 interface PreviewModeProps {
   components: LandingPageComponent[];
@@ -33,22 +36,37 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
   globalTheme,
   productData
 }) => {
+  const { pageId } = useParams<{ pageId: string }>();
   const [isExporting, setIsExporting] = useState(false);
   const [currentViewport, setCurrentViewport] = useState<ViewportSize>('desktop');
 
   const handleExport = async () => {
-    if (components.length === 0) {
+    if (!pageId || components.length === 0) {
+      toast.error("No content to export");
       return;
     }
 
     setIsExporting(true);
+    toast.info("Generating static files...");
     
     try {
-      // TODO: Implement export functionality for new component structure
-      // const exportedProject = exportLandingPage(components);
-      // await downloadProjectAsZip(exportedProject);
-
+      const staticGenerator = new StaticGeneratorService();
+      const zipBlob = await staticGenerator.exportLandingPageFromDatabase(pageId);
+      
+      // Create download link
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `landing-page-${pageId}-export.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success("Export completed successfully!");
     } catch (error) {
+      console.error('Export failed:', error);
+      toast.error("Export failed. Please try again.");
     } finally {
       setIsExporting(false);
     }
@@ -141,6 +159,16 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
         </div>
         
         <div className="flex items-center space-x-2">
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={handleExport}
+            disabled={isExporting || components.length === 0}
+            className="text-white border-white/20 hover:bg-white/20"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {isExporting ? "Exporting..." : "Export"}
+          </Button>
           <Button 
             size="sm" 
             variant="ghost" 

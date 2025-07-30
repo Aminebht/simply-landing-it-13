@@ -38,7 +38,7 @@ export default function Builder() {
   const [globalTheme, setGlobalTheme] = useState<ThemeConfig | null>(null);
   const [productData, setProductData] = useState<{ id: string; price: number } | null>(null);
   const [page, setPage] = useState<LandingPage | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
+  
 
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
   const [selectedComponent, setSelectedComponent] = useState<LandingPageComponent | null>(null);
@@ -56,34 +56,6 @@ export default function Builder() {
     getHistoryState
   } = useUndoRedo<LandingPageComponent[]>([]);
 
-  const handleExport = async () => {
-    if (!page || !components) return;
-    
-    setIsExporting(true);
-    sonnerToast.info("Generating static files...");
-    
-    try {
-      const staticGenerator = new StaticGeneratorService();
-      const zipBlob = await staticGenerator.exportAsZip(page, components);
-      
-      // Create download link
-      const url = URL.createObjectURL(zipBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${page.slug || 'landing-page'}-export.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      sonnerToast.success("Export completed successfully!");
-    } catch (error) {
-      console.error('Export failed:', error);
-      sonnerToast.error("Export failed. Please try again.");
-    } finally {
-      setIsExporting(false);
-    }
-  };
 
   const handleAddComponent = async (type: string) => {
     try {
@@ -918,14 +890,6 @@ export default function Builder() {
                 Deploy
               </Button>
               
-              <Button 
-                onClick={handleExport}
-                disabled={isExporting}
-                variant="outline"
-                size="sm"
-              >
-                {isExporting ? "Exporting..." : "Export"}
-              </Button>
               
               {lastSavedTime && (
                 <div className="text-xs text-gray-500">
