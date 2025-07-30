@@ -19,7 +19,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/services/supabase';
 import { useToast } from "@/hooks/use-toast";
 import PageSyncService from '@/services/page-sync';
-import { ThemeConfig } from '@/types/landing-page';
+import { ThemeConfig, LandingPage } from '@/types/landing-page';
+import { StaticGeneratorService } from '@/services/static-generator';
+import { toast as sonnerToast } from "sonner";
 
 export default function Builder() {
   const { pageId } = useParams<{ pageId: string }>();
@@ -35,6 +37,8 @@ export default function Builder() {
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
   const [globalTheme, setGlobalTheme] = useState<ThemeConfig | null>(null);
   const [productData, setProductData] = useState<{ id: string; price: number } | null>(null);
+  const [page, setPage] = useState<LandingPage | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
   const [selectedComponent, setSelectedComponent] = useState<LandingPageComponent | null>(null);
@@ -51,6 +55,35 @@ export default function Builder() {
     clearHistory,
     getHistoryState
   } = useUndoRedo<LandingPageComponent[]>([]);
+
+  const handleExport = async () => {
+    if (!page || !components) return;
+    
+    setIsExporting(true);
+    sonnerToast.info("Generating static files...");
+    
+    try {
+      const staticGenerator = new StaticGeneratorService();
+      const zipBlob = await staticGenerator.exportAsZip(page, components);
+      
+      // Create download link
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${page.slug || 'landing-page'}-export.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      sonnerToast.success("Export completed successfully!");
+    } catch (error) {
+      console.error('Export failed:', error);
+      sonnerToast.error("Export failed. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleAddComponent = async (type: string) => {
     try {
@@ -378,6 +411,9 @@ export default function Builder() {
         .single();
 
       if (pageError) throw pageError;
+
+      // Set page data
+      setPage(page);
 
       // Set product data if available
       if (page.products) {
@@ -880,6 +916,15 @@ export default function Builder() {
               >
                 <Globe className="h-4 w-4" />
                 Deploy
+              </Button>
+              
+              <Button 
+                onClick={handleExport}
+                disabled={isExporting}
+                variant="outline"
+                size="sm"
+              >
+                {isExporting ? "Exporting..." : "Export"}
               </Button>
               
               {lastSavedTime && (
