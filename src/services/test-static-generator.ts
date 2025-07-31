@@ -135,13 +135,13 @@ async function runTest() {
   const pageId = 'test-page-id';
 
   try {
-    const zipBlob = await generator.exportLandingPageFromDatabase(pageId);
+    const zipBlob = await generator.createZipPackage(pageId);
     console.log('Static page generated successfully!');
 
-    // For testing, you might want to save the blob to a file
-    const buffer = Buffer.from(await zipBlob.arrayBuffer());
-    await fs.writeFile(path.join(process.cwd(), 'test-output.zip'), buffer);
-    console.log('Zip file saved as test-output.zip');
+    // For testing in browser, you can create a download link
+    const url = URL.createObjectURL(zipBlob);
+    console.log('Zip blob created successfully, size:', zipBlob.size);
+    URL.revokeObjectURL(url);
 
   } catch (error) {
     console.error('Error generating static page:', error);

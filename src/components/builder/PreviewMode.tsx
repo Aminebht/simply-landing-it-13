@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { X, Download } from 'lucide-react';
+import { X, Download, Globe } from 'lucide-react';
 import { LandingPageComponent } from '@/types/components';
 import { ComponentRenderer } from '@/components/registry/ComponentRenderer';
 import { ResponsivePreviewToggle, ViewportSize } from './ResponsivePreviewToggle';
 import { StaticGeneratorService } from '@/services/static-generator';
+import { DeploymentService } from '@/services/deployment';
 import { toast } from "sonner";
 import { useParams } from 'react-router-dom';
 
@@ -51,7 +52,7 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
     
     try {
       const staticGenerator = new StaticGeneratorService();
-      const zipBlob = await staticGenerator.exportLandingPageFromDatabase(pageId);
+      const zipBlob = await staticGenerator.createZipPackage(pageId);
       
       // Create download link
       const url = URL.createObjectURL(zipBlob);
@@ -67,6 +68,27 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
     } catch (error) {
       console.error('Export failed:', error);
       toast.error("Export failed. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDeploy = async () => {
+    if (!pageId) {
+      toast.error("No landing page selected");
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      // Note: This requires Netlify access token to be configured
+      const deploymentService = new DeploymentService("your-netlify-token");
+      const result = await deploymentService.deployLandingPage(pageId);
+      
+      toast.success(`Landing page deployed successfully! URL: ${result.url}`);
+    } catch (error) {
+      console.error("Deployment failed:", error);
+      toast.error("Failed to deploy landing page. Please configure Netlify access token.");
     } finally {
       setIsExporting(false);
     }
@@ -168,6 +190,15 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
           >
             <Download className="h-4 w-4 mr-2" />
             {isExporting ? "Exporting..." : "Export"}
+          </Button>
+          <Button 
+            size="sm" 
+            onClick={handleDeploy}
+            disabled={isExporting || components.length === 0}
+            className="text-white bg-blue-600 hover:bg-blue-700"
+          >
+            <Globe className="h-4 w-4 mr-2" />
+            {isExporting ? "Deploying..." : "Deploy to Netlify"}
           </Button>
           <Button 
             size="sm" 

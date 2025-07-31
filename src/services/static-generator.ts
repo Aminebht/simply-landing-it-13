@@ -1,10 +1,5 @@
-import { LandingPage } from "@/types/landing-page";
-import { LandingPageComponent } from "@/types/components";
 import { supabase } from "@/services/supabase";
 import JSZip from "jszip";
-import * as path from "path";
-import * as fs from "fs/promises";
-import { ViteBuilder } from "./vite-builder";
 
 interface GlobalTheme {
   primaryColor: string;
@@ -14,7 +9,14 @@ interface GlobalTheme {
   fontFamily: string;
   direction: string;
   language: string;
-  customCss?: string;
+}
+
+interface SEOConfig {
+  title: string;
+  description: string;
+  keywords: string[];
+  ogImage: string;
+  canonical: string;
 }
 
 interface ComponentProcessed {
@@ -31,17 +33,13 @@ interface ComponentProcessed {
 
 export class StaticGeneratorService {
   private downloadedImages: Map<string, string> = new Map();
-  private tempDir: string = "";
 
-  async exportLandingPageFromDatabase(pageId: string): Promise<Blob> {
+  async exportLandingPageFromDatabase(pageId: string): Promise<Record<string, string>> {
     try {
-      // Create temporary directory for build process
-      this.tempDir = await this.createTempDirectory();
-
       // Fetch landing page data with global theme and SEO config
       const { data: pageData, error: pageError } = await supabase
         .from("landing_pages")
-        .select(`*, products(id, price)`)
+        .select("*, products(id, price)")
         .eq("id", pageId)
         .single();
 
@@ -66,42 +64,18 @@ export class StaticGeneratorService {
       // Process and clean components for production
       const processedComponents = await this.processComponents(componentsData || []);
       
-      // Generate static files using Vite build process
-      const viteBuilder = new ViteBuilder({
-        tempDir: this.tempDir,
-        landingPage: pageData,
-        globalTheme: pageData.global_theme,
-        components: processedComponents
-      });
-      const files = await viteBuilder.buildProject();
+      // Generate static files
+      const files = await this.generateStaticFiles(
+        pageData,
+        pageData.global_theme,
+        pageData.seo_config,
+        processedComponents
+      );
 
-      // Clean up temporary directory
-      await this.cleanupTempDirectory();
-
-      return this.createZipPackage(pageData, files);
+      return files;
     } catch (error) {
       console.error("Export failed:", error);
-      // Clean up on error
-      if (this.tempDir) {
-        await this.cleanupTempDirectory();
-      }
       throw error;
-    }
-  }
-
-  private async createTempDirectory(): Promise<string> {
-    const tempDir = path.join(process.cwd(), "temp", `build-${Date.now()}`);
-    await fs.mkdir(tempDir, { recursive: true });
-    return tempDir;
-  }
-
-  private async cleanupTempDirectory(): Promise<void> {
-    if (this.tempDir) {
-      try {
-        await fs.rm(this.tempDir, { recursive: true, force: true });
-      } catch (error) {
-        console.warn("Failed to cleanup temp directory:", error);
-      }
     }
   }
 
@@ -122,7 +96,7 @@ export class StaticGeneratorService {
         type: component.component_variation.component_type,
         variation: component.component_variation.variation_number,
         content: component.content || {},
-        styles: this.mergeStyles(component.styles, component.custom_styles),
+        styles: this.mergeStyles(component.component_variation.default_content, component.custom_styles),
         visibility: component.visibility || {},
         customActions: component.custom_actions || {},
         mediaUrls: processedMediaUrls,
@@ -144,7 +118,7 @@ export class StaticGeneratorService {
     const processed: Record<string, string> = {};
 
     for (const [key, url] of Object.entries(mediaUrls)) {
-      if (url && url.startsWith("http" )) {
+      if (url && url.startsWith("http")) {
         try {
           // Download and convert to base64 for inline embedding
           const base64Data = await this.downloadImageAsBase64(url);
@@ -186,7 +160,212 @@ export class StaticGeneratorService {
     });
   }
 
-  private async createZipPackage(pageData: any, files: Record<string, string>): Promise<Blob> {
+  private async generateStaticFiles(
+    pageData: any,
+    globalTheme: GlobalTheme,
+    seoConfig: SEOConfig,
+    components: ComponentProcessed[]
+  ): Promise<Record<string, string>> {
+    const files: Record<string, string> = {};
+
+    // Generate HTML
+    files['index.html'] = this.generateHTML(pageData, globalTheme, seoConfig, components);
+    
+    // Generate CSS
+    files['styles.css'] = this.generateCSS(globalTheme, components);
+    
+    // Generate README
+    files['README.md'] = this.generateREADME(pageData);
+
+    return files;
+  }
+
+  private generateHTML(
+    pageData: any,
+    globalTheme: GlobalTheme,
+    seoConfig: SEOConfig,
+    components: ComponentProcessed[]
+  ): string {
+    const componentsHTML = components.map(component => {
+      return this.generateComponentHTML(component, globalTheme);
+    }).join('\n');
+
+    return `<!DOCTYPE html>
+<html lang="${globalTheme.language}" dir="${globalTheme.direction}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${seoConfig.title || pageData.slug}</title>
+    <meta name="description" content="${seoConfig.description || ''}">
+    <meta name="keywords" content="${seoConfig.keywords?.join(', ') || ''}">
+    ${seoConfig.ogImage ? `<meta property="og:image" content="${seoConfig.ogImage}">` : ''}
+    ${seoConfig.canonical ? `<link rel="canonical" href="${seoConfig.canonical}">` : ''}
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=${globalTheme.fontFamily}:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body style="font-family: '${globalTheme.fontFamily}', sans-serif; background-color: ${globalTheme.backgroundColor}; color: ${globalTheme.textColor}; margin: 0; padding: 0;">
+    ${componentsHTML}
+</body>
+</html>`;
+  }
+
+  private generateComponentHTML(component: ComponentProcessed, globalTheme: GlobalTheme): string {
+    // Basic component structure - in a real implementation, this would
+    // need to handle each component type and variation specifically
+    const visibility = Object.values(component.visibility).some(v => v === false) ? 'style="display: none;"' : '';
+    
+    let html = `<section id="component-${component.id}" ${visibility}>`;
+    
+    // Apply content based on component type
+    switch (component.type) {
+      case 'hero':
+        html += this.generateHeroHTML(component, globalTheme);
+        break;
+      case 'features':
+        html += this.generateFeaturesHTML(component, globalTheme);
+        break;
+      case 'cta':
+        html += this.generateCTAHTML(component, globalTheme);
+        break;
+      default:
+        html += `<div>Component: ${component.type} - Variation: ${component.variation}</div>`;
+    }
+    
+    html += '</section>';
+    return html;
+  }
+
+  private generateHeroHTML(component: ComponentProcessed, globalTheme: GlobalTheme): string {
+    const content = component.content;
+    return `
+      <div style="padding: 4rem 1rem; text-align: center; background: linear-gradient(135deg, ${globalTheme.primaryColor}, ${globalTheme.secondaryColor});">
+        <h1 style="font-size: 3rem; font-weight: bold; color: white; margin-bottom: 1rem;">
+          ${content.headline || 'Welcome'}
+        </h1>
+        <p style="font-size: 1.25rem; color: rgba(255,255,255,0.9); margin-bottom: 2rem;">
+          ${content.subheadline || 'Your landing page description'}
+        </p>
+        ${content.ctaText ? `<button style="background: white; color: ${globalTheme.primaryColor}; padding: 1rem 2rem; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer;">${content.ctaText}</button>` : ''}
+      </div>
+    `;
+  }
+
+  private generateFeaturesHTML(component: ComponentProcessed, globalTheme: GlobalTheme): string {
+    const content = component.content;
+    return `
+      <div style="padding: 4rem 1rem; max-width: 1200px; margin: 0 auto;">
+        <h2 style="text-align: center; font-size: 2.5rem; margin-bottom: 3rem; color: ${globalTheme.primaryColor};">
+          ${content.title || 'Features'}
+        </h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+          ${content.features?.map((feature: any) => `
+            <div style="text-align: center; padding: 2rem;">
+              <h3 style="font-size: 1.5rem; margin-bottom: 1rem; color: ${globalTheme.secondaryColor};">${feature.title}</h3>
+              <p style="color: ${globalTheme.textColor};">${feature.description}</p>
+            </div>
+          `).join('') || ''}
+        </div>
+      </div>
+    `;
+  }
+
+  private generateCTAHTML(component: ComponentProcessed, globalTheme: GlobalTheme): string {
+    const content = component.content;
+    return `
+      <div style="padding: 4rem 1rem; text-align: center; background: ${globalTheme.backgroundColor};">
+        <h2 style="font-size: 2.5rem; margin-bottom: 1rem; color: ${globalTheme.primaryColor};">
+          ${content.headline || 'Ready to get started?'}
+        </h2>
+        <p style="font-size: 1.25rem; margin-bottom: 2rem; color: ${globalTheme.textColor};">
+          ${content.subheadline || 'Join thousands of satisfied customers'}
+        </p>
+        ${content.ctaText ? `<button style="background: ${globalTheme.primaryColor}; color: white; padding: 1rem 2rem; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer;">${content.ctaText}</button>` : ''}
+      </div>
+    `;
+  }
+
+  private generateCSS(globalTheme: GlobalTheme, components: ComponentProcessed[]): string {
+    return `
+/* Global Styles */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: '${globalTheme.fontFamily}', sans-serif;
+  background-color: ${globalTheme.backgroundColor};
+  color: ${globalTheme.textColor};
+  line-height: 1.6;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+  
+  h1 {
+    font-size: 2rem !important;
+  }
+  
+  h2 {
+    font-size: 1.75rem !important;
+  }
+}
+
+/* Button Styles */
+button {
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+/* Grid Responsiveness */
+.grid {
+  display: grid;
+  gap: 2rem;
+}
+
+@media (min-width: 768px) {
+  .grid-md-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .grid-md-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+`;
+  }
+
+  private generateREADME(pageData: any): string {
+    return `# ${pageData.slug || "Landing Page"} - Static Export
+
+This package contains the static files for your landing page.
+
+## Deployment Instructions
+
+1. Upload all files to your web server
+2. Ensure index.html is served as the main page
+3. Configure your server to serve static assets (CSS, JS, images)
+
+## Files Included
+
+- index.html - Main HTML file
+- styles.css - Compiled styles
+- README.md - This file
+
+Generated on: ${new Date().toISOString()}
+`;
+  }
+
+  async createZipPackage(pageId: string): Promise<Blob> {
+    const files = await this.exportLandingPageFromDatabase(pageId);
     const zip = new JSZip();
     
     // Add all generated files to zip
@@ -194,13 +373,6 @@ export class StaticGeneratorService {
       zip.file(filePath, content);
     }
     
-    // Add a README with deployment instructions
-    const readme = `# ${pageData.slug || "Landing Page"} - Static Export\n\nThis package contains the static files for your landing page.\n\n## Deployment Instructions\n\n1. Upload all files to your web server\n2. Ensure index.html is served as the main page\n3. Configure your server to serve static assets (CSS, JS, images)\n\n## Files Included\n\n- index.html - Main HTML file\n- styles.css - Compiled styles\n- main.js - Compiled JavaScript (if any)\n- assets/ - Static assets (images, fonts, etc.)\n\nGenerated on: ${new Date().toISOString()}\n`;
-    
-    zip.file("README.md", readme);
-    
     return await zip.generateAsync({ type: "blob" });
   }
 }
-
-

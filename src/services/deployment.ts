@@ -43,10 +43,7 @@ export class DeploymentService {
       }
 
       // Generate static files
-      const files = await this.staticGenerator.generateStaticSite(
-        landingPage,
-        landingPage.components
-      );
+      const files = await this.staticGenerator.exportLandingPageFromDatabase(landingPage.id);
 
       // Create or update Netlify site
       let siteId = landingPage.netlify_site_id;
@@ -217,12 +214,9 @@ export class DeploymentService {
     }
 
     // Generate static files for preview
-    const files = await this.staticGenerator.generateStaticSite(
-      landingPage,
-      landingPage.components
-    );
+    const files = await this.staticGenerator.exportLandingPageFromDatabase(landingPageId);
 
     // Return the HTML content for preview
-    return files['index.html'];
+    return files['index.html'] || 'Preview not available';
   }
 }
