@@ -45,15 +45,32 @@ export class NetlifyService {
   }
 
   async deploySite(siteId: string, files: Record<string, string>): Promise<NetlifyDeployment> {
-    // Create deployment
+    // Step 1: Create deployment with file hashes
+    const fileHashes = Object.keys(files).reduce((acc, path) => {
+      // Create a simple hash of the file content for Netlify
+      acc[path] = this.generateFileHash(files[path]);
+      return acc;
+    }, {} as Record<string, string>);
+
     const deployment = await this.request(`/sites/${siteId}/deploys`, {
       method: 'POST',
       body: JSON.stringify({
-        files: Object.keys(files).reduce((acc, path) => {
-          acc[path] = files[path];
-          return acc;
-        }, {} as Record<string, string>),
+        files: fileHashes,
       }),
+    });
+
+    // Step 2: Upload files that need to be uploaded
+    if (deployment.required && deployment.required.length > 0) {
+      for (const filePath of deployment.required) {
+        if (files[filePath]) {
+          await this.uploadFile(deployment.id, filePath, files[filePath]);
+        }
+      }
+    }
+
+    // Step 3: Publish the deployment
+    const publishedDeployment = await this.request(`/deploys/${deployment.id}/restore`, {
+      method: 'POST',
     });
 
     return {
@@ -66,6 +83,32 @@ export class NetlifyService {
       branch: deployment.branch,
       commit_ref: deployment.commit_ref,
     };
+  }
+
+  private generateFileHash(content: string): string {
+    // Simple hash function for file content
+    let hash = 0;
+    for (let i = 0; i < content.length; i++) {
+      const char = content.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(16);
+  }
+
+  private async uploadFile(deployId: string, filePath: string, content: string): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/deploys/${deployId}/files/${encodeURIComponent(filePath)}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${this.accessToken}`,
+        'Content-Type': 'application/octet-stream',
+      },
+      body: content,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to upload file ${filePath}: ${response.statusText}`);
+    }
   }
 
   async getDeployment(deployId: string): Promise<NetlifyDeployment> {
