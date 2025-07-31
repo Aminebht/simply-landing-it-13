@@ -61,8 +61,10 @@ export class NetlifyService {
 
     // Step 2: Upload files that need to be uploaded
     if (deployment.required && deployment.required.length > 0) {
-      for (const filePath of deployment.required) {
-        if (files[filePath]) {
+      for (const fileHash of deployment.required) {
+        // Find the file by matching the hash
+        const filePath = Object.keys(files).find(path => fileHashes[path] === fileHash);
+        if (filePath && files[filePath]) {
           await this.uploadFile(deployment.id, filePath, files[filePath]);
         }
       }
@@ -95,7 +97,9 @@ export class NetlifyService {
   }
 
   private async uploadFile(deployId: string, filePath: string, content: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/deploys/${deployId}/files/${encodeURIComponent(filePath)}`, {
+    // Use the correct Netlify file upload endpoint with SHA-1 hash as filename
+    const fileHash = this.generateFileHash(content);
+    const response = await fetch(`${this.baseUrl}/deploys/${deployId}/files/${fileHash}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${this.accessToken}`,
@@ -105,7 +109,7 @@ export class NetlifyService {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to upload file ${filePath}: ${response.statusText}`);
+      throw new Error(`Failed to upload file ${filePath} (${fileHash}): ${response.statusText}`);
     }
   }
 
