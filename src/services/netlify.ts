@@ -48,15 +48,41 @@ export class NetlifyService {
   }
 
   async deploySite(siteId: string, files: Record<string, string>): Promise<NetlifyDeployment> {
-    // Create deployment without files first
+    // Prepare files for Netlify deployment
+    const fileMap: Record<string, string> = {};
+    const fileHashes: Record<string, string> = {};
+    
+    for (const [filePath, content] of Object.entries(files)) {
+      const hash = await this.generateFileHash(content);
+      fileMap[filePath] = hash;
+      fileHashes[hash] = content;
+    }
+
+    // Create deployment with file manifest
+    console.log('Creating deployment with file manifest:', fileMap);
     const deployment = await this.request(`/sites/${siteId}/deploys`, {
       method: 'POST',
-      body: JSON.stringify({}),
+      body: JSON.stringify({
+        files: fileMap,
+      }),
     });
 
-    // Upload files using the correct Netlify approach
-    for (const [filePath, content] of Object.entries(files)) {
-      await this.uploadFile(deployment.id, filePath, content);
+    console.log('Deployment created:', { id: deployment.id, required: deployment.required });
+
+    // Upload required files
+    if (deployment.required && deployment.required.length > 0) {
+      console.log(`Uploading ${deployment.required.length} required files`);
+      for (const hash of deployment.required) {
+        const content = fileHashes[hash];
+        if (content) {
+          console.log(`Uploading file with hash: ${hash}`);
+          await this.uploadFileByHash(deployment.id, hash, content);
+        } else {
+          console.warn(`No content found for hash: ${hash}`);
+        }
+      }
+    } else {
+      console.log('No files need to be uploaded (all files already exist on Netlify)');
     }
 
     return {
@@ -71,20 +97,21 @@ export class NetlifyService {
     };
   }
 
-  private generateFileHash(content: string): string {
-    // Simple hash function for file content
-    let hash = 0;
-    for (let i = 0; i < content.length; i++) {
-      const char = content.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    return Math.abs(hash).toString(16);
+  private async generateFileHash(content: string): Promise<string> {
+    // Use SHA-1 hash as expected by Netlify
+    const encoder = new TextEncoder();
+    const data = encoder.encode(content);
+    const hashBuffer = await crypto.subtle.digest('SHA-1', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
-  private async uploadFile(deployId: string, filePath: string, content: string): Promise<void> {
-    // Use the correct Netlify file upload endpoint with actual file path
-    const response = await fetch(`${this.baseUrl}/deploys/${deployId}/files/${encodeURIComponent(filePath)}`, {
+  private async uploadFileByHash(deployId: string, hash: string, content: string): Promise<void> {
+    // Upload file content by hash to Netlify
+    const url = `${this.baseUrl}/deploys/${deployId}/files/${hash}`;
+    console.log(`Uploading to URL: ${url}`);
+    
+    const response = await fetch(url, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${this.accessToken}`,
@@ -94,8 +121,20 @@ export class NetlifyService {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to upload file ${filePath}: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('Upload failed:', {
+        deployId,
+        hash,
+        status: response.status,
+        statusText: response.statusText,
+        url,
+        errorText,
+        contentLength: content.length
+      });
+      throw new Error(`Failed to upload file with hash ${hash}: ${response.status} ${response.statusText} - ${errorText}`);
     }
+    
+    console.log(`Successfully uploaded file with hash: ${hash}`);
   }
 
   async getDeployment(deployId: string): Promise<NetlifyDeployment> {
