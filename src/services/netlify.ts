@@ -68,10 +68,8 @@ export class NetlifyService {
       }
     }
 
-    // Step 3: Publish the deployment
-    const publishedDeployment = await this.request(`/deploys/${deployment.id}/restore`, {
-      method: 'POST',
-    });
+    // Step 3: Wait for deployment to be ready - no need to publish manually
+    // Netlify automatically publishes when all files are uploaded
 
     return {
       id: deployment.id,
