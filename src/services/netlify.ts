@@ -26,10 +26,13 @@ export class NetlifyService {
   }
 
   async createSite(config: DeploymentConfig): Promise<{ site_id: string; deploy_url: string }> {
+    // Make site name unique by adding timestamp
+    const uniqueName = `${config.site_name}-${Date.now()}`;
+    
     const data = await this.request('/sites', {
       method: 'POST',
       body: JSON.stringify({
-        name: config.site_name,
+        name: uniqueName,
         custom_domain: config.custom_domain,
         build_settings: {
           cmd: config.build_command || 'npm run build',
