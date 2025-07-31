@@ -48,33 +48,16 @@ export class NetlifyService {
   }
 
   async deploySite(siteId: string, files: Record<string, string>): Promise<NetlifyDeployment> {
-    // Step 1: Create deployment with file hashes
-    const fileHashes = Object.keys(files).reduce((acc, path) => {
-      // Create a simple hash of the file content for Netlify
-      acc[path] = this.generateFileHash(files[path]);
-      return acc;
-    }, {} as Record<string, string>);
-
+    // Create deployment without files first
     const deployment = await this.request(`/sites/${siteId}/deploys`, {
       method: 'POST',
-      body: JSON.stringify({
-        files: fileHashes,
-      }),
+      body: JSON.stringify({}),
     });
 
-    // Step 2: Upload files that need to be uploaded
-    if (deployment.required && deployment.required.length > 0) {
-      for (const fileHash of deployment.required) {
-        // Find the file by matching the hash
-        const filePath = Object.keys(files).find(path => fileHashes[path] === fileHash);
-        if (filePath && files[filePath]) {
-          await this.uploadFile(deployment.id, filePath, files[filePath]);
-        }
-      }
+    // Upload files using the correct Netlify approach
+    for (const [filePath, content] of Object.entries(files)) {
+      await this.uploadFile(deployment.id, filePath, content);
     }
-
-    // Step 3: Wait for deployment to be ready - no need to publish manually
-    // Netlify automatically publishes when all files are uploaded
 
     return {
       id: deployment.id,
