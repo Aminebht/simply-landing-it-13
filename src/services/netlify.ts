@@ -100,9 +100,8 @@ export class NetlifyService {
   }
 
   private async uploadFile(deployId: string, filePath: string, content: string): Promise<void> {
-    // Use the correct Netlify file upload endpoint with SHA-1 hash as filename
-    const fileHash = this.generateFileHash(content);
-    const response = await fetch(`${this.baseUrl}/deploys/${deployId}/files/${fileHash}`, {
+    // Use the correct Netlify file upload endpoint with actual file path
+    const response = await fetch(`${this.baseUrl}/deploys/${deployId}/files/${encodeURIComponent(filePath)}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${this.accessToken}`,
@@ -112,7 +111,7 @@ export class NetlifyService {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to upload file ${filePath} (${fileHash}): ${response.statusText}`);
+      throw new Error(`Failed to upload file ${filePath}: ${response.statusText}`);
     }
   }
 
