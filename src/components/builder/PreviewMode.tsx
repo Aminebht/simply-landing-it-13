@@ -82,7 +82,7 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
     try {
       setIsExporting(true);
       // Note: This requires Netlify access token to be configured
-      const deploymentService = new DeploymentService("your-netlify-token");
+      const deploymentService = new DeploymentService("nfp_PxSrwC6LMCXfjrSi28pvhSdx9rNKLKyv4a6d");
       const result = await deploymentService.deployLandingPage(pageId);
       
       toast.success(`Landing page deployed successfully! URL: ${result.url}`);

@@ -2,7 +2,7 @@ import { NetlifyDeployment, DeploymentConfig, DomainConfig } from '@/types/deplo
 
 export class NetlifyService {
   private baseUrl = 'https://api.netlify.com/api/v1';
-  private accessToken: string;
+  private accessToken= 'nfp_PxSrwC6LMCXfjrSi28pvhSdx9rNKLKyv4a6d';
 
   constructor(accessToken: string) {
     this.accessToken = accessToken;
