@@ -1,5 +1,6 @@
 import { supabase } from "@/services/supabase";
 import JSZip from "jszip";
+import { ComponentTransformerService } from "./component-transformer";
 
 interface GlobalTheme {
   primaryColor: string;
@@ -33,6 +34,7 @@ interface ComponentProcessed {
 
 export class StaticGeneratorService {
   private downloadedImages: Map<string, string> = new Map();
+  private componentTransformer = new ComponentTransformerService();
 
   async exportLandingPageFromDatabase(pageId: string): Promise<Record<string, string>> {
     try {
@@ -169,7 +171,7 @@ export class StaticGeneratorService {
     const files: Record<string, string> = {};
 
     // Generate HTML
-    files['index.html'] = this.generateHTML(pageData, globalTheme, seoConfig, components);
+    files['index.html'] = await this.generateHTML(pageData, globalTheme, seoConfig, components);
     
     // Generate CSS
     files['styles.css'] = this.generateCSS(globalTheme, components);
@@ -180,15 +182,14 @@ export class StaticGeneratorService {
     return files;
   }
 
-  private generateHTML(
+  private async generateHTML(
     pageData: any,
     globalTheme: GlobalTheme,
     seoConfig: SEOConfig,
     components: ComponentProcessed[]
-  ): string {
-    const componentsHTML = components.map(component => {
-      return this.generateComponentHTML(component, globalTheme);
-    }).join('\n');
+  ): Promise<string> {
+    const componentsHTML = await this.generateComponentsHTML(components, globalTheme, pageData);
+    const allComponentsJS = await this.generateComponentsJS(components, globalTheme, pageData);
 
     return `<!DOCTYPE html>
 <html lang="${globalTheme.language}" dir="${globalTheme.direction}">
@@ -202,37 +203,99 @@ export class StaticGeneratorService {
     ${seoConfig.canonical ? `<link rel="canonical" href="${seoConfig.canonical}">` : ''}
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=${globalTheme.fontFamily}:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body style="font-family: '${globalTheme.fontFamily}', sans-serif; background-color: ${globalTheme.backgroundColor}; color: ${globalTheme.textColor}; margin: 0; padding: 0;">
-    ${componentsHTML}
+  ${componentsHTML}
+  <script>
+    ${allComponentsJS}
+  </script>
 </body>
 </html>`;
   }
 
-  private generateComponentHTML(component: ComponentProcessed, globalTheme: GlobalTheme): string {
-    // Basic component structure - in a real implementation, this would
-    // need to handle each component type and variation specifically
-    const visibility = Object.values(component.visibility).some(v => v === false) ? 'style="display: none;"' : '';
+  private async generateComponentsHTML(components: ComponentProcessed[], globalTheme: GlobalTheme, pageData: any): Promise<string> {
+    const transformResults = await Promise.all(components.map(async (component) => {
+      // Convert ComponentProcessed to LandingPageComponent format for transformer
+      const landingPageComponent = {
+        id: component.id,
+        page_id: '',
+        component_variation_id: '',
+        order_index: component.orderIndex,
+        content: component.content,
+        styles: component.styles,
+        visibility: component.visibility,
+        custom_styles: {},
+        media_urls: component.mediaUrls,
+        custom_actions: component.customActions,
+        component_variation: {
+          id: '',
+          component_type: component.type,
+          variation_name: '',
+          variation_number: component.variation,
+          description: '',
+          default_content: {},
+          character_limits: {},
+          required_images: 0,
+          supports_video: false,
+          is_active: true,
+          created_at: '',
+          updated_at: ''
+        },
+        created_at: '',
+        updated_at: ''
+      };
+      
+      return this.componentTransformer.transformComponent(landingPageComponent, {
+        viewport: 'responsive',
+        globalTheme,
+        productData: pageData.products
+      });
+    }));
     
-    let html = `<section id="component-${component.id}" ${visibility}>`;
+    return transformResults.map(result => result.html).join('\n');
+  }
+
+  private async generateComponentsJS(components: ComponentProcessed[], globalTheme: GlobalTheme, pageData: any): Promise<string> {
+    const transformResults = await Promise.all(components.map(async (component) => {
+      // Convert ComponentProcessed to LandingPageComponent format for transformer
+      const landingPageComponent = {
+        id: component.id,
+        page_id: '',
+        component_variation_id: '',
+        order_index: component.orderIndex,
+        content: component.content,
+        styles: component.styles,
+        visibility: component.visibility,
+        custom_styles: {},
+        media_urls: component.mediaUrls,
+        custom_actions: component.customActions,
+        component_variation: {
+          id: '',
+          component_type: component.type,
+          variation_name: '',
+          variation_number: component.variation,
+          description: '',
+          default_content: {},
+          character_limits: {},
+          required_images: 0,
+          supports_video: false,
+          is_active: true,
+          created_at: '',
+          updated_at: ''
+        },
+        created_at: '',
+        updated_at: ''
+      };
+      
+      return this.componentTransformer.transformComponent(landingPageComponent, {
+        viewport: 'responsive',
+        globalTheme,
+        productData: pageData.products
+      });
+    }));
     
-    // Apply content based on component type
-    switch (component.type) {
-      case 'hero':
-        html += this.generateHeroHTML(component, globalTheme);
-        break;
-      case 'features':
-        html += this.generateFeaturesHTML(component, globalTheme);
-        break;
-      case 'cta':
-        html += this.generateCTAHTML(component, globalTheme);
-        break;
-      default:
-        html += `<div>Component: ${component.type} - Variation: ${component.variation}</div>`;
-    }
-    
-    html += '</section>';
-    return html;
+    return transformResults.map(result => result.js).filter(js => js.trim()).join('\n');
   }
 
   private generateHeroHTML(component: ComponentProcessed, globalTheme: GlobalTheme): string {
