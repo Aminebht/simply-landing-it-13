@@ -151,7 +151,6 @@ export class ReactDeploymentService {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${pageData.seo_config?.title || pageData.slug}</title>
-  <meta name="description" content="${pageData.seo_config?.description || ''}">
   <link rel="stylesheet" href="styles.css">
   ${this.generateGoogleFontsLink(pageData)}
   ${this.generateTailwindCSS()}

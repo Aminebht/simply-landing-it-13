@@ -42,51 +42,6 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const [previewHTML, setPreviewHTML] = useState<string>('');
 
-  const handleEnhancedPreview = async () => {
-    if (!pageId) return;
-    
-    try {
-      setIsGeneratingPreview(true);
-      toast.info("Generating enhanced preview...");
-      
-      // Use the enhanced static generator for accurate preview
-      const staticGenerator = new EnhancedStaticGenerator();
-      const previewHTML = await staticGenerator.previewLandingPage(pageId, currentViewport);
-      
-      setPreviewHTML(previewHTML);
-      toast.success("Enhanced preview generated!");
-    } catch (error) {
-      console.error('Enhanced preview generation failed:', error);
-      toast.error("Failed to generate enhanced preview");
-    } finally {
-      setIsGeneratingPreview(false);
-    }
-  };
-
-  const handleExport = async () => {
-    if (!pageId || components.length === 0) {
-      toast.error("No content to export");
-      return;
-    }
-
-    setIsExporting(true);
-    toast.info("Generating React-based export...");
-    
-    try {
-      // Use React deployment service to generate files
-      const deploymentService = new ReactDeploymentService("nfp_PxSrwC6LMCXfjrSi28pvhSdx9rNKLKyv4a6d");
-      
-      // For export, we'll generate the same files but download instead of deploy
-      toast.success("Export functionality will be available after React deployment is tested");
-      
-    } catch (error) {
-      console.error("Export failed:", error);
-      toast.error("Failed to generate export");
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   const handleDeploy = async () => {
     if (!pageId) {
       toast.error("No landing page selected");
@@ -202,26 +157,7 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
         </div>
         
         <div className="flex items-center space-x-2">
-          <Button 
-            size="sm" 
-            variant="outline" 
-            onClick={handleEnhancedPreview}
-            disabled={isGeneratingPreview || !pageId}
-            className="text-white border-white/20 hover:bg-white/20"
-          >
-            <Globe className="h-3 w-3 mr-2" />
-            {isGeneratingPreview ? "Generating..." : "Enhanced Preview"}
-          </Button>
-          <Button 
-            size="sm" 
-            variant="outline" 
-            onClick={handleExport}
-            disabled={isExporting || components.length === 0}
-            className="text-white border-white/20 hover:bg-white/20"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            {isExporting ? "Exporting..." : "Export"}
-          </Button>
+
           <Button 
             size="sm" 
             onClick={handleDeploy}
