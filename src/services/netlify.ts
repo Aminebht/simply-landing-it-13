@@ -19,28 +19,52 @@ export class NetlifyService {
     });
 
     if (!response.ok) {
-      throw new Error(`Netlify API error: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('Netlify API Error Details:', {
+        status: response.status,
+        statusText: response.statusText,
+        endpoint,
+        errorText,
+        requestBody: options.body
+      });
+      throw new Error(`Netlify API error (${response.status}): ${response.statusText} - ${errorText}`);
     }
 
     return response.json();
   }
 
   async createSite(config: DeploymentConfig): Promise<{ site_id: string; deploy_url: string }> {
-    // Make site name unique by adding timestamp
-    const uniqueName = `${config.site_name}-${Date.now()}`;
+    // Create a valid site name (Netlify requires lowercase, no spaces, limited special characters)
+    const safeName = config.site_name
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .substring(0, 50); // Limit length
+    
+    const uniqueName = `${safeName}-${Date.now()}`;
+    
+    console.log('Creating Netlify site with name:', uniqueName);
+    
+    // Simplified site creation payload - avoid optional fields that might cause 422 errors
+    const sitePayload: any = {
+      name: uniqueName
+    };
+    
+    // Only add custom domain if it's provided and valid
+    if (config.custom_domain && config.custom_domain.trim() !== '') {
+      sitePayload.custom_domain = config.custom_domain;
+    }
+    
+    console.log('Netlify site creation payload:', sitePayload);
     
     const data = await this.request('/sites', {
       method: 'POST',
-      body: JSON.stringify({
-        name: uniqueName,
-        custom_domain: config.custom_domain,
-        build_settings: {
-          cmd: config.build_command || 'npm run build',
-          dir: config.publish_directory || 'dist',
-        },
-      }),
+      body: JSON.stringify(sitePayload),
     });
 
+    console.log('Netlify site created successfully:', data.id);
+    
     return {
       site_id: data.id,
       deploy_url: data.url,

@@ -417,6 +417,8 @@ export class LandingPageService {
 
   // Deployment tracking
   async updateDeploymentInfo(id: string, netlifyInfo: { site_id: string; url: string }): Promise<void> {
+    console.log('💾 Updating deployment info in database:', { id, netlifyInfo });
+    
     const { error } = await supabase
       .from('landing_pages')
       .update({
@@ -427,7 +429,12 @@ export class LandingPageService {
       })
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Failed to update deployment info:', error);
+      throw error;
+    }
+    
+    console.log('✅ Successfully updated deployment info - netlify_site_id:', netlifyInfo.site_id);
   }
 
   async updateCustomDomain(id: string, domain: string): Promise<void> {

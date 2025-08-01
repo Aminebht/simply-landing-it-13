@@ -7,7 +7,7 @@ export interface ComponentProps {
   trackingConfig?: any;
   isEditing?: boolean;
   selectedElementId?: string | null;
-  viewport?: 'mobile' | 'tablet' | 'desktop';
+  viewport?: 'mobile' | 'tablet' | 'desktop' | 'responsive';
   componentId?: string; // Add componentId for media service integration
   onStyleChange?: (elementId: string, styles: any) => void;
   onContentChange?: (field: string, value: any) => void;

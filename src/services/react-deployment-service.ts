@@ -12,9 +12,38 @@ export class ReactDeploymentService {
     this.netlifyService = new NetlifyService(netlifyToken);
   }
 
+  async getDeploymentStatus(pageId: string): Promise<{ 
+    isDeployed: boolean; 
+    siteId?: string; 
+    url?: string; 
+    lastDeployedAt?: string;
+  }> {
+    try {
+      console.log('🔍 Checking deployment status for page:', pageId);
+      
+      const landingPageService = LandingPageService.getInstance();
+      const pageData = await landingPageService.getLandingPageWithComponents(pageId);
+  
+      
+      return {
+        isDeployed: !!pageData.netlify_site_id,
+        siteId: pageData.netlify_site_id || undefined,
+        url: undefined, // URL will be retrieved from Netlify when needed
+        lastDeployedAt: pageData.last_deployed_at || undefined
+      };
+    } catch (error) {
+      console.error('Failed to get deployment status:', error);
+      return { isDeployed: false };
+    }
+  }
+
   async deployLandingPage(pageId: string): Promise<{ url: string; siteId: string }> {
     try {
-      console.log('Starting React-based deployment for page:', pageId);
+      console.log('🚀 Starting React-based deployment for page:', pageId);
+
+      // 0. Check current deployment status first
+      const currentStatus = await this.getDeploymentStatus(pageId);
+      console.log('📊 Current deployment status:', currentStatus);
 
       // 1. Fetch the landing page data with components
       const landingPageService = LandingPageService.getInstance();
@@ -27,7 +56,10 @@ export class ReactDeploymentService {
       console.log('Fetched page data:', {
         pageId: pageData.id,
         componentsCount: pageData.components.length,
-        globalTheme: pageData.global_theme
+        globalTheme: pageData.global_theme,
+        existingSiteId: pageData.netlify_site_id,
+        lastDeployedAt: pageData.last_deployed_at,
+        status: pageData.status
       });
 
       // 2. Generate React-based HTML
@@ -43,25 +75,90 @@ export class ReactDeploymentService {
         'app.js': js
       };
 
-      // 5. Create new site and deploy to Netlify
-      console.log('Creating new Netlify site...');
-      const siteInfo = await this.netlifyService.createSite({
-        site_name: `${pageData.slug}`,
-        custom_domain: undefined,
-        build_command: undefined,
-        publish_directory: undefined
+      let siteId: string;
+      let deploymentResult: any;
+
+      // 5. Check if this page has been deployed before
+      console.log('🔍 DEPLOYMENT DECISION LOGIC:');
+      console.log('- pageData.netlify_site_id value:', pageData.netlify_site_id);
+      console.log('- netlify_site_id type:', typeof pageData.netlify_site_id);
+      console.log('- netlify_site_id exists:', !!pageData.netlify_site_id);
+      console.log('- netlify_site_id after trim:', pageData.netlify_site_id ? pageData.netlify_site_id.trim() : 'N/A');
+      console.log('- netlify_site_id is empty string:', pageData.netlify_site_id === '');
+      console.log('- Will update existing site:', !!(pageData.netlify_site_id && pageData.netlify_site_id.trim() !== ''));
+      
+      if (pageData.netlify_site_id && pageData.netlify_site_id.trim() !== '') {
+        console.log('🔄 UPDATING existing Netlify site:', pageData.netlify_site_id);
+        
+        try {
+          // Try to update the existing site
+          deploymentResult = await this.netlifyService.deploySite(
+            pageData.netlify_site_id,
+            files
+          );
+          siteId = pageData.netlify_site_id;
+          console.log('✅ Successfully updated existing site:', siteId);
+        } catch (updateError) {
+          console.warn('⚠️ Failed to update existing site, creating new one:', updateError);
+          
+          // If update fails, create a new site (maybe the old one was deleted)
+          const fallbackBaseName = pageData.slug || 'landing-page';
+          const siteInfo = await this.netlifyService.createSite({
+            site_name: `${fallbackBaseName}-updated`,
+            custom_domain: undefined,
+            build_command: undefined,
+            publish_directory: undefined
+          });
+          
+          deploymentResult = await this.netlifyService.deploySite(
+            siteInfo.site_id,
+            files
+          );
+          siteId = siteInfo.site_id;
+          console.log('🆕 Created new site after update failure:', siteId);
+        }
+      } else {
+        // 6. Create new site for first-time deployment
+        console.log('🆕 CREATING new Netlify site for first deployment...');
+        console.log('📋 Reason: netlify_site_id is', pageData.netlify_site_id ? `"${pageData.netlify_site_id}"` : 'null/undefined');
+        
+        // Ensure we have a valid site name
+        const baseName = pageData.slug || 'landing-page';
+        console.log('📝 Using base name for site:', baseName);
+        
+        const siteInfo = await this.netlifyService.createSite({
+          site_name: baseName,
+          custom_domain: undefined,
+          build_command: undefined,
+          publish_directory: undefined
+        });
+
+        console.log('📡 Deploying to new Netlify site:', siteInfo.site_id);
+        deploymentResult = await this.netlifyService.deploySite(
+          siteInfo.site_id,
+          files
+        );
+        siteId = siteInfo.site_id;
+        console.log('✅ Successfully created and deployed new site:', siteId);
+      }
+
+      // 7. Update the database with deployment info
+      console.log('💾 Updating database with deployment info:', {
+        pageId,
+        siteId,
+        url: deploymentResult.deploy_ssl_url || deploymentResult.deploy_url
+      });
+      
+      await landingPageService.updateDeploymentInfo(pageId, {
+        site_id: siteId,
+        url: deploymentResult.deploy_ssl_url || deploymentResult.deploy_url
       });
 
-      console.log('Deploying to Netlify site:', siteInfo.site_id);
-      const deploymentResult = await this.netlifyService.deploySite(
-        siteInfo.site_id,
-        files
-      );
-
-      console.log('Deployment successful:', deploymentResult.deploy_url);
+      console.log('✅ Database updated successfully');
+      console.log('🎉 Deployment completed:', deploymentResult.deploy_url);
       return {
         url: deploymentResult.deploy_ssl_url || deploymentResult.deploy_url,
-        siteId: deploymentResult.site_id
+        siteId: siteId
       };
 
     } catch (error) {

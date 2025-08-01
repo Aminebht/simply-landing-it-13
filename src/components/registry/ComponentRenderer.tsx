@@ -14,7 +14,7 @@ interface ComponentRendererProps {
   trackingConfig?: any;
   isEditing?: boolean;
   selectedElementId?: string | null;
-  viewport?: 'mobile' | 'tablet' | 'desktop';
+  viewport?: 'mobile' | 'tablet' | 'desktop' | 'responsive';
   globalTheme?: {
     primaryColor: string;
     secondaryColor: string;
