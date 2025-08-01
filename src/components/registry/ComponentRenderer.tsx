@@ -31,25 +31,6 @@ interface ComponentRendererProps {
   customActions?: Record<string, any>; // Add customActions prop
 }
 
-// Helper function to extract component type from a UUID-based component ID
-const extractComponentTypeFromUUID = (uuidString: string): string | null => {
-  // Try to match UUID pattern
-  const uuidRegex = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
-  if (uuidRegex.test(uuidString)) {
-    // This is likely a UUID, return a default component type
-    return null;
-  }
-  
-  // If it contains a hyphen, it might be in the format "type-variation"
-  if (uuidString.includes('-')) {
-    const [typeStr] = uuidString.split('-');
-    // Check if the type part is a valid component type
-    const validTypes = ['hero', 'features', 'testimonials', 'pricing', 'faq', 'cta'];
-    return validTypes.includes(typeStr) ? typeStr : null;
-  }
-  
-  return null;
-}
 
 export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
   type,

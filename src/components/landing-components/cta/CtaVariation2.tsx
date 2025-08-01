@@ -5,6 +5,7 @@ import { DynamicCheckoutForm } from './shared/DynamicCheckoutForm';
 import { handleButtonClick, renderButton } from '../ButtonUtils';
 import { useStyles } from '../useStyles';
 import { getClass, getElementStyles } from '../classUtils';
+import { getCtaVariation2ClassMaps } from './classmaps/cta-variation-2';
 
 interface CtaVariation2Props extends ComponentProps {
   viewport?: 'mobile' | 'tablet' | 'desktop';
@@ -26,62 +27,18 @@ const CtaVariation2: React.FC<CtaVariation2Props> = ({
   const ctaAction = customActions['ctaButton'] || customActions['cta-button'];
   const { primaryColor } = useStyles({ styles, variation: 2 });
 
-
-  // Add local class maps for responsive classes
-  const containerClassMap = {
-    mobile: 'flex flex-col items-center justify-center min-h-screen w-full px-4',
-    tablet: 'flex flex-col items-center justify-center min-h-screen w-full px-8',
-    desktop: 'flex flex-col items-center justify-center min-h-screen w-full px-16',
-    responsive: 'flex flex-col items-center justify-center min-h-screen w-full px-4 md:px-8 lg:px-16'
-  };
-  const headlineClassMap = {
-    mobile: 'font-bold text-2xl mb-4 text-center',
-    tablet: 'font-bold text-4xl mb-4 text-center',
-    desktop: 'font-bold text-5xl mb-4 text-center',
-    responsive: 'font-bold text-2xl mb-4 text-center md:text-4xl lg:text-5xl'
-  };
-  const subheadlineClassMap = {
-    mobile: 'text-gray-400 text-lg mb-6 text-center',
-    tablet: 'text-gray-400 text-xl mb-6 text-center',
-    desktop: 'text-gray-400 text-xl mb-6 text-center',
-    responsive: 'text-gray-400 text-lg mb-6 text-center md:text-xl'
-  };
-  const priceRowClassMap = {
-    mobile: 'flex flex-row items-center justify-center gap-4 mb-6',
-    tablet: 'flex flex-row items-center justify-center gap-6 mb-6',
-    desktop: 'flex flex-row items-center justify-center gap-8 mb-6',
-    responsive: 'flex flex-row items-center justify-center gap-4 mb-6 md:gap-6 lg:gap-8'
-  };
-  const originalPriceClassMap = {
-    mobile: 'text-gray-400 line-through text-lg text-center',
-    tablet: 'text-gray-400 line-through text-xl text-center',
-    desktop: 'text-gray-400 line-through text-xl text-center',
-    responsive: 'text-gray-400 line-through text-lg text-center md:text-xl'
-  };
-  const priceClassMap = {
-    mobile: 'font-bold text-2xl text-primary text-center',
-    tablet: 'font-bold text-3xl text-primary text-center',
-    desktop: 'font-bold text-3xl text-primary text-center',
-    responsive: 'font-bold text-2xl text-primary text-center md:text-3xl'
-  };
-  const formClassMap = {
-    mobile: 'flex flex-col items-center w-full max-w-md mx-auto gap-4',
-    tablet: 'flex flex-col items-center w-full max-w-lg mx-auto gap-4',
-    desktop: 'flex flex-col items-center w-full max-w-lg mx-auto gap-4',
-    responsive: 'flex flex-col items-center w-full max-w-md mx-auto gap-4 md:max-w-lg'
-  };
-  const buttonClassMap = {
-    mobile: 'w-full rounded-full bg-blue-600 text-white font-semibold py-3 mt-2 hover:bg-blue-700 transition text-center transform hover:scale-105 shadow-lg hover:shadow-xl',
-    tablet: 'w-full rounded-full bg-blue-600 text-white font-semibold py-4 mt-2 hover:bg-blue-700 transition text-center transform hover:scale-105 shadow-lg hover:shadow-xl',
-    desktop: 'w-full rounded-full bg-blue-600 text-white font-semibold py-4 mt-2 hover:bg-blue-700 transition text-center transform hover:scale-105 shadow-lg hover:shadow-xl',
-    responsive: 'w-full max-w-md md:max-w-lg rounded-full bg-blue-600 text-white font-semibold py-3 mt-2 hover:bg-blue-700 transition text-center transform hover:scale-105 shadow-lg hover:shadow-xl md:py-4'
-  };
-  const guaranteeTextClassMap = {
-    mobile: 'text-xs text-gray-400 mt-6 text-center',
-    tablet: 'text-xs text-gray-400 mt-6 text-center',
-    desktop: 'text-xs text-gray-400 mt-6 text-center',
-    responsive: 'text-xs text-gray-400 mt-6 text-center'
-  };
+  // Get shared class maps
+  const {
+    container: containerClassMap,
+    headline: headlineClassMap,
+    subheadline: subheadlineClassMap,
+    priceRow: priceRowClassMap,
+    originalPrice: originalPriceClassMap,
+    price: priceClassMap,
+    form: formClassMap,
+    button: buttonClassMap,
+    guaranteeText: guaranteeTextClassMap
+  } = getCtaVariation2ClassMaps();
 
   return (
     <SelectableElement
