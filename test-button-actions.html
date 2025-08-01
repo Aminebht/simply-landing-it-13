@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Button Actions Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        button { margin: 10px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { opacity: 0.9; }
+        .section { height: 600px; margin: 20px 0; padding: 20px; background: #f8f9fa; border: 1px solid #dee2e6; }
+    </style>
+</head>
+<body>
+    <h1>Button Actions Test</h1>
+    
+    <h2>React Click Handler Buttons (Builder Preview Style)</h2>
+    <button onclick="handleButtonAction('open_link', {url: 'https://google.com', newTab: true})">Open Link</button>
+    <button onclick="handleButtonAction('scroll', {targetId: 'target-section'})">Scroll to Section</button>
+    <button onclick="handleButtonAction('checkout', {productId: 'test-product', amount: 99})">Test Checkout</button>
+    
+    <h2>Data Attribute Buttons (Deployed Style)</h2>
+    <button data-action="open_link" data-action-data='{"url": "https://github.com", "newTab": true}'>Open GitHub</button>
+    <button data-action="scroll" data-action-data="target-section">Scroll to Target</button>
+    <button data-action="checkout" data-action-data='{"productId": "test-product-2", "amount": 149}'>Test Checkout 2</button>
+    
+    <div id="target-section" class="section">
+        <h3>Target Section</h3>
+        <p>This is the target section for scroll testing.</p>
+    </div>
+    
+    <script>
+        // Simulate the unified button action handler from ButtonUtils.tsx
+        function handleButtonAction(actionType, actionData) {
+            console.log('React handler called:', actionType, actionData);
+            
+            switch (actionType) {
+                case 'open_link':
+                    if (actionData.url) {
+                        let url = actionData.url;
+                        if (url && !/^https?:\/\//i.test(url)) {
+                            url = 'https://' + url;
+                        }
+                        window.open(url, actionData.newTab ? '_blank' : '_self');
+                    }
+                    break;
+                case 'scroll':
+                    if (actionData.targetId) {
+                        const el = document.getElementById(actionData.targetId);
+                        if (el) {
+                            el.scrollIntoView({ behavior: 'smooth' });
+                        }
+                    }
+                    break;
+                case 'checkout':
+                    alert(`Checkout triggered for product: ${actionData.productId}, amount: ${actionData.amount}`);
+                    break;
+            }
+        }
+        
+        // Simulate the deployed page handler
+        function handleDeployedButtonClick(button) {
+            const action = button.dataset.action;
+            const actionData = button.dataset.actionData;
+            
+            console.log('Data-attribute handler called:', action, actionData);
+            
+            switch (action) {
+                case 'open_link':
+                    try {
+                        const data = JSON.parse(actionData || '{}');
+                        let url = data.url;
+                        if (url && !/^https?:\/\//i.test(url)) {
+                            url = 'https://' + url;
+                        }
+                        if (url) {
+                            window.open(url, data.newTab ? '_blank' : '_self');
+                        }
+                    } catch (e) {
+                        console.error('Error parsing action data:', e);
+                    }
+                    break;
+                case 'scroll':
+                    try {
+                        const data = JSON.parse(actionData || '{}');
+                        const targetId = data.targetId || actionData;
+                        if (targetId) {
+                            const target = document.getElementById(targetId);
+                            if (target) {
+                                target.scrollIntoView({ behavior: 'smooth' });
+                            }
+                        }
+                    } catch (e) {
+                        // Fallback for simple strings
+                        if (actionData) {
+                            const target = document.getElementById(actionData);
+                            if (target) {
+                                target.scrollIntoView({ behavior: 'smooth' });
+                            }
+                        }
+                    }
+                    break;
+                case 'checkout':
+                    try {
+                        const data = JSON.parse(actionData || '{}');
+                        alert(`Deployed checkout for product: ${data.productId}, amount: ${data.amount}`);
+                    } catch (e) {
+                        console.error('Error parsing checkout data:', e);
+                    }
+                    break;
+            }
+        }
+        
+        // Initialize data-attribute button listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('button[data-action]').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    handleDeployedButtonClick(this);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

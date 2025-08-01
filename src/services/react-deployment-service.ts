@@ -339,6 +339,19 @@ export class ReactDeploymentService {
     product_id: '${pageData.product_id || ''}'
   };
   
+  // Utility function to generate UUID
+  function generateUUID() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    // Fallback UUID generation for older browsers
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+  
   // Utility function to generate session ID
   function getSessionId() {
     let sessionId = sessionStorage.getItem('landing_session_id');
@@ -592,7 +605,7 @@ body {
     });
   }
 
-  // Button click handlers
+  // Button click handlers - UNIFIED logic matching ButtonUtils.tsx
   function handleButtonClick(button) {
     const action = button.dataset.action;
     const actionData = button.dataset.actionData;
@@ -650,6 +663,7 @@ body {
         
       case 'scroll':
         try {
+          // First try to parse as JSON
           const data = JSON.parse(actionData || '{}');
           const targetId = data.targetId || actionData;
           if (targetId) {
@@ -724,15 +738,19 @@ body {
         return;
       }
 
-      // Generate order ID - same method as ButtonUtils
-      const orderId = 'order_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      // Generate proper UUID for order ID - same as ButtonUtils.tsx
+      const orderId = generateUUID();
       const buyerName = formData.name || formData.full_name || userEmail.split('@')[0];
+      
+      // Get amount, defaulting to 0 if not provided (same as ButtonUtils)
+      const amount = Number(actionData.amount) || 0;
+      console.log('Processing checkout for productId:', actionData.productId, 'amount:', amount);
       
       // Track initiate checkout event
       if (typeof trackFacebookEvent !== 'undefined') {
         trackFacebookEvent('InitiateCheckout', {
           page_id: PAGE_CONFIG.id,
-          value: parseFloat(actionData.amount) || 0,
+          value: amount,
           currency: 'TND',
           content_ids: [String(actionData.productId)]
         });
@@ -769,7 +787,7 @@ body {
         // Create payment session using Supabase function - EXACT same as ButtonUtils.tsx
         const { data: paymentData, error: paymentError } = await supabase.functions.invoke('create-payment', {
           body: {
-            amount: Math.round(Number(actionData.amount) * 1000), // Convert to millimes
+            amount: Math.round(amount * 1000), // Convert to millimes using validated amount
             orderId,
             successUrl,
             failUrl,
@@ -798,7 +816,7 @@ body {
         if (typeof trackFacebookEvent !== 'undefined') {
           trackFacebookEvent('Purchase', {
             page_id: PAGE_CONFIG.id,
-            value: parseFloat(actionData.amount) || 0,
+            value: amount,
             currency: 'TND',
             content_ids: [String(actionData.productId)]
           });
@@ -916,14 +934,26 @@ body {
     // Initialize forms first
     initializeForms();
     
-    // Button click listeners
+    // Enhanced button click listeners - handle both data-action attributes AND React click handlers
     document.querySelectorAll('button[data-action], [role="button"][data-action]').forEach(button => {
       console.log('Found button with data-action:', button.dataset.action, button);
+      
+      // Add click listener for data-attribute based handling (deployed fallback)
       button.addEventListener('click', function(e) {
-        e.preventDefault();
-        console.log('Button clicked:', this.dataset.action, this.dataset.actionData);
-        handleButtonClick(this);
+        // Only handle if React onClick hasn't already handled it
+        if (!e.defaultPrevented) {
+          e.preventDefault();
+          console.log('Data-attribute button clicked:', this.dataset.action, this.dataset.actionData);
+          handleButtonClick(this);
+        }
       });
+    });
+    
+    // Also look for any buttons without data-action but with click handlers (in case React handles it)
+    document.querySelectorAll('button:not([data-action])').forEach(button => {
+      if (button.onclick) {
+        console.log('Found button with React click handler:', button);
+      }
     });
 
     // Form submission listeners

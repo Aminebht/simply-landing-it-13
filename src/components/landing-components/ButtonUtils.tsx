@@ -2,12 +2,26 @@ import React from 'react';
 import { SelectableElement } from '@/components/builder/SelectableElement';
 import { supabase } from '@/integrations/supabase/client';
 
+// Utility function to generate UUID with fallback
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback UUID generation for older browsers
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 // Shared button click handler
 export function handleButtonClick(action: unknown, isEditing: boolean, e: React.MouseEvent) {
   if (isEditing || !action) return;
   e.preventDefault();
   
   const actionObj = action as Record<string, unknown>;
+  console.log('Button click handler triggered:', { action: actionObj, isEditing });
   
   switch (actionObj.type) {
     case 'open_link':
@@ -28,12 +42,19 @@ export function handleButtonClick(action: unknown, isEditing: boolean, e: React.
       }
       break;
     case 'checkout':
-      // Defensive: treat empty string or null as missing
-      if (actionObj.productId && actionObj.productId !== '' && actionObj.amount != null && actionObj.amount !== '') {
+      // Check if we have a valid productId - amount can be 0 or missing
+      console.log('Checkout action triggered:', actionObj);
+      if (actionObj.productId && actionObj.productId !== '') {
         handleCheckout(action, isEditing);
+      } else {
+        console.warn('Checkout action missing productId:', actionObj);
+        if (!isEditing) {
+          alert('Checkout configuration is incomplete. Please contact support.');
+        }
       }
       break;
     default:
+      console.warn('Unknown action type:', actionObj.type);
       break;
   }
 }
@@ -43,6 +64,7 @@ async function handleCheckout(action: unknown, isEditing: boolean) {
   if (isEditing) return;
   
   const actionObj = action as Record<string, unknown>;
+  console.log('Starting checkout process with action:', actionObj);
   
   try {
     // Get form data from DynamicCheckoutForm if it exists
@@ -59,6 +81,8 @@ async function handleCheckout(action: unknown, isEditing: boolean) {
       }
     });
 
+    console.log('Form data collected:', formData);
+
     // Validate required email
     if (!userEmail) {
       alert("Please enter your email to proceed with checkout.");
@@ -72,9 +96,13 @@ async function handleCheckout(action: unknown, isEditing: boolean) {
       return;
     }
 
-    // Generate order ID
-    const orderId = crypto.randomUUID();
+    // Generate proper UUID for order ID
+    const orderId = generateUUID();
     const buyerName = formData.name || formData.full_name || userEmail.split('@')[0];
+    
+    // Get amount, defaulting to 0 if not provided
+    const amount = Number(actionObj.amount) || 0;
+    console.log('Processing checkout for productId:', actionObj.productId, 'amount:', amount);
     
     // Create pending order first
     const { data: orderData, error: orderError } = await supabase.rpc('create_pending_order', {
@@ -106,7 +134,7 @@ async function handleCheckout(action: unknown, isEditing: boolean) {
     // Create payment session
     const { data: paymentData, error: paymentError } = await supabase.functions.invoke('create-payment', {
       body: {
-        amount: Math.round(Number(actionObj.amount) * 1000), // Convert to millimes
+        amount: Math.round(amount * 1000), // Convert to millimes using validated amount
         orderId,
         successUrl,
         failUrl,
@@ -124,11 +152,16 @@ async function handleCheckout(action: unknown, isEditing: boolean) {
     }
 
     // Redirect to payment gateway
+    console.log('Redirecting to payment URL:', paymentData.payUrl);
     window.location.href = paymentData.payUrl;
 
   } catch (error) {
     console.error('Checkout error:', error);
-    alert("An unexpected error occurred. Please try again.");
+    console.error('Checkout error details:', {
+      actionObj,
+      error: error.message || error
+    });
+    alert(`Checkout failed: ${error.message || 'An unexpected error occurred'}. Please try again.`);
   }
 }
 
@@ -169,18 +202,24 @@ export function renderButton({
     elementId,
     isEditing,
     actionType: actionObj?.type,
-    action: actionObj
+    actionData: actionObj
   });
   
-  // For deployed pages (when not editing), render with data attributes for JavaScript handlers
+  // Unified button rendering for both builder preview AND deployed pages
+  // Always use data attributes + click handlers for consistency
   if (!isEditing && actionObj?.type) {
     const buttonAttributes: Record<string, any> = {
       'data-action': actionObj.type,
       className,
-      style
+      style,
+      onClick: (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleButtonClick(action, isEditing, e);
+      }
     };
 
-    // Add action data based on action type
+    // Add action data based on action type (for fallback JS handlers)
     switch (actionObj.type) {
       case 'open_link':
         buttonAttributes['data-action-data'] = JSON.stringify({
@@ -189,18 +228,20 @@ export function renderButton({
         });
         break;
       case 'scroll':
-        buttonAttributes['data-action-data'] = actionObj.targetId;
+        buttonAttributes['data-action-data'] = String(actionObj.targetId || '');
         break;
       case 'checkout':
-        buttonAttributes['data-action-data'] = JSON.stringify({
+        const checkoutData = {
           productId: actionObj.productId,
           amount: actionObj.amount,
           checkoutUrl: actionObj.checkoutUrl
-        });
+        };
+        console.log('Setting checkout data attributes:', checkoutData);
+        buttonAttributes['data-action-data'] = JSON.stringify(checkoutData);
         break;
     }
 
-    console.log('Rendering deployed button with attributes:', buttonAttributes);
+    console.log('Rendering unified button with attributes and React handler:', buttonAttributes);
     return React.createElement('button', buttonAttributes, content);
   }
   
