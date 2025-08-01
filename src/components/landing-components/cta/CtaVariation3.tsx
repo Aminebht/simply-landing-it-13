@@ -25,7 +25,8 @@ const CtaVariation3: React.FC<CtaVariation3Props> = ({
   onStyleChange,
   onContentChange,
   onElementSelect,
-  customActions
+  customActions,
+  checkoutFields
 }) => {
   // Get primaryColor from styles
   const { primaryColor } = useStyles({ styles, variation: 3 });
@@ -191,6 +192,7 @@ const CtaVariation3: React.FC<CtaVariation3Props> = ({
                   <DynamicCheckoutForm 
                     className="w-full"
                     onSubmit={() => { /* handle form submit */ }}
+                    checkoutFields={checkoutFields}
                   />
                 </SelectableElement>
 

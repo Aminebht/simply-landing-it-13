@@ -20,7 +20,8 @@ const CtaVariation2: React.FC<CtaVariation2Props> = ({
   onElementSelect,
   onContentChange,
   viewport,
-  customActions = {}
+  customActions = {},
+  checkoutFields
 }) => {
 
   // Get the action for the CTA button (like CtaVariation1)
@@ -119,6 +120,7 @@ const CtaVariation2: React.FC<CtaVariation2Props> = ({
         <DynamicCheckoutForm 
           className="w-full flex flex-col gap-4 [&_.field-wrapper]:w-full [&_.field-wrapper]:flex [&_.field-wrapper]:flex-col [&_.field-wrapper]:items-center [&_.label-wrapper]:flex [&_.label-wrapper]:items-center [&_.label-wrapper]:justify-center [&_label]:mb-2 [&_label]:text-center [&_label]:font-medium [&_label]:text-white [&_.required-asterisk]:text-red-500 [&_.required-asterisk]:ml-1 [&_.required-asterisk]:select-none [&_input]:w-full [&_input]:rounded-full [&_input]:px-5 [&_input]:py-3 [&_input]:border [&_input]:border-gray-300 [&_input]:focus:outline-none [&_input]:focus:ring-2 [&_input]:focus:ring-primary [&_input]:text-center [&_select]:w-full [&_select]:rounded-full [&_select]:px-5 [&_select]:py-3 [&_select]:border [&_select]:border-gray-300 [&_select]:focus:outline-none [&_select]:focus:ring-2 [&_select]:focus:ring-primary [&_select]:text-center [&_textarea]:w-full [&_textarea]:rounded-2xl [&_textarea]:px-5 [&_textarea]:py-3 [&_textarea]:border [&_textarea]:border-gray-300 [&_textarea]:focus:outline-none [&_textarea]:focus:ring-2 [&_textarea]:focus:ring-primary [&_textarea]:text-center"
           onSubmit={() => { /* handle form submit */ }}
+          checkoutFields={checkoutFields}
         />
         {
               renderButton({

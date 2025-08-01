@@ -13,6 +13,7 @@ export interface ComponentProps {
   onContentChange?: (field: string, value: any) => void;
   onElementSelect?: (elementId: string) => void;
   customActions?: Record<string, any>; // <-- Add this
+  checkoutFields?: any[]; // Add checkoutFields for SSR form rendering
 }
 
 export interface GoogleFont {

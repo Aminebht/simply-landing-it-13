@@ -29,6 +29,7 @@ interface ComponentRendererProps {
   onContentChange?: (field: string, value: any) => void;
   onElementSelect?: (elementId: string) => void;
   customActions?: Record<string, any>; // Add customActions prop
+  checkoutFields?: any[]; // Add checkoutFields prop for SSR form rendering
 }
 
 
@@ -50,7 +51,8 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
   onStyleChange,
   onContentChange,
   onElementSelect,
-  customActions // <-- Add this to props
+  customActions, // <-- Add this to props
+  checkoutFields // <-- Add checkoutFields prop
 }) => {
   // Handle UUID-based component types
   let componentType = type;
@@ -242,7 +244,8 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     onStyleChange: handleStyleChange,
     onContentChange: handleContentChangeWithDbSync,
     onElementSelect,
-    customActions // <-- Pass down
+    customActions, // <-- Pass down
+    checkoutFields // <-- Pass down checkoutFields for SSR
   };
   
 

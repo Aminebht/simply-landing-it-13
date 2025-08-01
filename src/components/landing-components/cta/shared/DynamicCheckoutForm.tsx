@@ -15,19 +15,32 @@ interface DynamicCheckoutFormProps {
   productId?: string;
   onSubmit?: (data: Record<string, any>) => void;
   className?: string;
+  checkoutFields?: any[]; // Pre-fetched fields for SSR
 }
 
 export const DynamicCheckoutForm: React.FC<DynamicCheckoutFormProps> = ({
   productId,
   onSubmit,
-  className = ''
+  className = '',
+  checkoutFields // Pre-fetched fields for SSR
 }) => {
-  const [fields, setFields] = useState<CheckoutField[]>([]);
+  const [fields, setFields] = useState<CheckoutField[]>(checkoutFields || []);
   const [formData, setFormData] = useState<Record<string, any>>({});
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!checkoutFields); // Skip loading if we have pre-fetched data
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    // Only fetch data if we don't have pre-fetched fields (i.e., during client-side rendering)
+    if (checkoutFields && checkoutFields.length > 0) {
+      // Filter fields by product if productId is provided
+      const filteredFields = checkoutFields.filter(field => 
+        !productId || field.product_ids?.includes(productId)
+      );
+      setFields(filteredFields);
+      setLoading(false);
+      return;
+    }
+
     const fetchCheckoutFields = async () => {
       try {
         const { data, error } = await supabase
@@ -50,10 +63,16 @@ export const DynamicCheckoutForm: React.FC<DynamicCheckoutFormProps> = ({
     };
 
     fetchCheckoutFields();
-  }, [productId]);
+  }, [productId, checkoutFields]);
 
-  // Always ensure a required email field is present
+  // Always ensure a required email field is present, but avoid duplicates
   const fieldsWithEmail = React.useMemo(() => {
+    const hasEmailField = fields.some(field => field.field_key === 'email');
+    
+    if (hasEmailField) {
+      return fields;
+    }
+    
     return [
       {
         id: 'email',
@@ -201,19 +220,7 @@ export const DynamicCheckoutForm: React.FC<DynamicCheckoutFormProps> = ({
     );
   }
 
-  if (fields.length === 0) {
-    return (
-      <div className={`${CtaClassMaps.form.container} ${className}`}>
-        <input
-          type="email"
-          placeholder="Enter your email"
-          className={CtaClassMaps.form.input}
-          onChange={(e) => handleInputChange('email', e.target.value)}
-        />
-      </div>
-    );
-  }
-
+  // Render the complete form
   return (
     <form onSubmit={handleSubmit} className={`${CtaClassMaps.form.container} ${className}`}>
       {fieldsWithEmail.map((field) => (
