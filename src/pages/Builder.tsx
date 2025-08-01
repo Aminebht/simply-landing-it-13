@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Palette, Eye, Edit, Save, Globe, ChevronLeft, ChevronRight, CloudUpload, Database } from 'lucide-react';
 import { useAIGeneration } from '@/hooks/useAIGeneration';
-import { useDeployment } from '@/hooks/useDeployment';
+import { useReactDeployment } from '@/hooks/useReactDeployment';
 import { LandingPageComponent, ComponentVariation } from '@/types/components';
 import { LandingPageService } from '@/services/landing-page';
 import { getComponentVariations } from '@/services/supabase';
@@ -43,6 +43,9 @@ export default function Builder() {
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
   const [selectedComponent, setSelectedComponent] = useState<LandingPageComponent | null>(null);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+
+  // Initialize React deployment hook with Netlify token
+  const { deployLandingPage, isDeploying, deploymentError } = useReactDeployment('nfp_PxSrwC6LMCXfjrSi28pvhSdx9rNKLKyv4a6d');
 
   // Use useUndoRedo for undo/redo and component state
   const {
@@ -779,9 +782,49 @@ export default function Builder() {
   const handlePreview = () => {
     setIsPreviewMode(true);
   };
-  const handleDeploy = () => {
-    // Deployment logic placeholder
-    console.warn('Deploy called');
+  
+  const handleDeploy = async () => {
+    if (!pageId || pageId === 'demo-page-id') {
+      toast({
+        title: "Cannot deploy demo page",
+        description: "Create a new project to deploy your changes",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Force save before deployment
+      await handleForceSave();
+      
+      toast({
+        title: "Deployment started",
+        description: "Your landing page is being deployed...",
+      });
+
+      const result = await deployLandingPage(pageId);
+      
+      if (result) {
+        toast({
+          title: "Deployment successful",
+          description: `Your landing page is live at: ${result.url}`,
+        });
+        
+        // Optionally open the deployed site
+        if (window.confirm('Would you like to view your deployed landing page?')) {
+          window.open(result.url, '_blank');
+        }
+      } else {
+        throw new Error(deploymentError || 'Deployment failed');
+      }
+    } catch (error) {
+      console.error('Deployment failed:', error);
+      toast({
+        title: "Deployment failed", 
+        description: error.message || "There was a problem deploying your landing page.",
+        variant: "destructive"
+      });
+    }
   };
 
   if (isPreviewMode) {
@@ -883,11 +926,11 @@ export default function Builder() {
               
               <Button
                 onClick={handleDeploy}
-                disabled={false}
+                disabled={isDeploying}
                 className="flex items-center gap-2"
               >
                 <Globe className="h-4 w-4" />
-                Deploy
+                {isDeploying ? 'Deploying...' : 'Deploy'}
               </Button>
               
               

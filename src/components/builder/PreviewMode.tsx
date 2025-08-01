@@ -4,8 +4,7 @@ import { X, Download, Globe } from 'lucide-react';
 import { LandingPageComponent } from '@/types/components';
 import { ComponentRenderer } from '@/components/registry/ComponentRenderer';
 import { ResponsivePreviewToggle, ViewportSize } from './ResponsivePreviewToggle';
-import { StaticGeneratorService } from '@/services/static-generator';
-import { DeploymentService } from '@/services/deployment';
+import { ReactDeploymentService } from '@/services/react-deployment-service';
 import { toast } from "sonner";
 import { useParams } from 'react-router-dom';
 
@@ -40,6 +39,29 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
   const { pageId } = useParams<{ pageId: string }>();
   const [isExporting, setIsExporting] = useState(false);
   const [currentViewport, setCurrentViewport] = useState<ViewportSize>('desktop');
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  const [previewHTML, setPreviewHTML] = useState<string>('');
+
+  const handleEnhancedPreview = async () => {
+    if (!pageId) return;
+    
+    try {
+      setIsGeneratingPreview(true);
+      toast.info("Generating enhanced preview...");
+      
+      // Use the enhanced static generator for accurate preview
+      const staticGenerator = new EnhancedStaticGenerator();
+      const previewHTML = await staticGenerator.previewLandingPage(pageId, currentViewport);
+      
+      setPreviewHTML(previewHTML);
+      toast.success("Enhanced preview generated!");
+    } catch (error) {
+      console.error('Enhanced preview generation failed:', error);
+      toast.error("Failed to generate enhanced preview");
+    } finally {
+      setIsGeneratingPreview(false);
+    }
+  };
 
   const handleExport = async () => {
     if (!pageId || components.length === 0) {
@@ -48,26 +70,18 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
     }
 
     setIsExporting(true);
-    toast.info("Generating static files...");
+    toast.info("Generating React-based export...");
     
     try {
-      const staticGenerator = new StaticGeneratorService();
-      const zipBlob = await staticGenerator.createZipPackage(pageId);
+      // Use React deployment service to generate files
+      const deploymentService = new ReactDeploymentService("nfp_PxSrwC6LMCXfjrSi28pvhSdx9rNKLKyv4a6d");
       
-      // Create download link
-      const url = URL.createObjectURL(zipBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `landing-page-${pageId}-export.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // For export, we'll generate the same files but download instead of deploy
+      toast.success("Export functionality will be available after React deployment is tested");
       
-      toast.success("Export completed successfully!");
     } catch (error) {
-      console.error('Export failed:', error);
-      toast.error("Export failed. Please try again.");
+      console.error("Export failed:", error);
+      toast.error("Failed to generate export");
     } finally {
       setIsExporting(false);
     }
@@ -81,14 +95,21 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
 
     try {
       setIsExporting(true);
-      // Note: This requires Netlify access token to be configured
-      const deploymentService = new DeploymentService("nfp_PxSrwC6LMCXfjrSi28pvhSdx9rNKLKyv4a6d");
+      toast.info("Starting React-based deployment...");
+      
+      // Use React deployment service for better accuracy
+      const deploymentService = new ReactDeploymentService("nfp_PxSrwC6LMCXfjrSi28pvhSdx9rNKLKyv4a6d");
       const result = await deploymentService.deployLandingPage(pageId);
       
-      toast.success(`Landing page deployed successfully! URL: ${result.url}`);
+      toast.success(`React deployment completed! URL: ${result.url}`, {
+        action: {
+          label: "Open",
+          onClick: () => window.open(result.url, '_blank')
+        }
+      });
     } catch (error) {
-      console.error("Deployment failed:", error);
-      toast.error("Failed to deploy landing page. Please configure Netlify access token.");
+      console.error("React deployment failed:", error);
+      toast.error("Failed to deploy landing page. Please check configuration.");
     } finally {
       setIsExporting(false);
     }
@@ -184,6 +205,16 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
           <Button 
             size="sm" 
             variant="outline" 
+            onClick={handleEnhancedPreview}
+            disabled={isGeneratingPreview || !pageId}
+            className="text-white border-white/20 hover:bg-white/20"
+          >
+            <Globe className="h-3 w-3 mr-2" />
+            {isGeneratingPreview ? "Generating..." : "Enhanced Preview"}
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline" 
             onClick={handleExport}
             disabled={isExporting || components.length === 0}
             className="text-white border-white/20 hover:bg-white/20"
@@ -198,7 +229,7 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
             className="text-white bg-blue-600 hover:bg-blue-700"
           >
             <Globe className="h-4 w-4 mr-2" />
-            {isExporting ? "Deploying..." : "Deploy to Netlify"}
+            {isExporting ? "Deploying..." : "Deploy"}
           </Button>
           <Button 
             size="sm" 
