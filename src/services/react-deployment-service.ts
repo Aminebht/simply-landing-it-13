@@ -171,7 +171,7 @@ export class ReactDeploymentService {
             visibility: component.visibility || {},
             mediaUrls: component.media_urls || {},
             isEditing: false, // Critical: set to false for deployed version
-            viewport: 'desktop',
+            viewport: 'responsive', // Use responsive classes for deployed version
             globalTheme: pageData.global_theme || {
               primaryColor: '#3b82f6',
               secondaryColor: '#f3f4f6',
@@ -272,6 +272,49 @@ export class ReactDeploymentService {
   private generateTailwindCSS(): string {
     // Include Tailwind CSS via CDN for consistent styling
     return `<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  // Configure Tailwind to include all responsive utilities and ensure proper breakpoints
+  tailwind.config = {
+    theme: {
+      screens: {
+        'sm': '640px',
+        'md': '768px',
+        'lg': '1024px',
+        'xl': '1280px',
+        '2xl': '1536px',
+      },
+      extend: {
+        // Ensure all spacing, sizing, and layout utilities are available
+        spacing: {
+          '72': '18rem',
+          '84': '21rem',
+          '96': '24rem',
+        }
+      }
+    },
+    // Include all responsive variants
+    variants: {
+      extend: {
+        display: ['responsive'],
+        flexDirection: ['responsive'],
+        gridTemplateColumns: ['responsive'],
+        gridTemplateRows: ['responsive'],
+        gap: ['responsive'],
+        padding: ['responsive'],
+        margin: ['responsive'],
+        fontSize: ['responsive'],
+        lineHeight: ['responsive'],
+        textAlign: ['responsive'],
+        justifyContent: ['responsive'],
+        alignItems: ['responsive'],
+        width: ['responsive'],
+        height: ['responsive'],
+        maxWidth: ['responsive'],
+        maxHeight: ['responsive'],
+      }
+    }
+  }
+</script>
 <style>
   /* Custom styles for deployed landing page */
   * {
@@ -303,11 +346,84 @@ export class ReactDeploymentService {
     font-size: inherit;
   }
   
-  /* Responsive utilities */
-  @media (max-width: 768px) {
+  /* Enhanced responsive utilities */
+  @media (max-width: 640px) {
     .container {
       padding-left: 1rem;
       padding-right: 1rem;
+    }
+    /* Ensure mobile-first responsive design */
+    .responsive-text {
+      font-size: 0.875rem;
+      line-height: 1.25rem;
+    }
+  }
+  
+  @media (min-width: 641px) and (max-width: 768px) {
+    .container {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+    .responsive-text {
+      font-size: 1rem;
+      line-height: 1.5rem;
+    }
+  }
+  
+  @media (min-width: 769px) {
+    .container {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+    .responsive-text {
+      font-size: 1.125rem;
+      line-height: 1.75rem;
+    }
+  }
+  
+  /* Ensure grid and flexbox responsive utilities work properly */
+  .grid {
+    display: grid;
+  }
+  
+  .flex {
+    display: flex;
+  }
+  
+  /* Force responsive grid columns to work */
+  @media (max-width: 768px) {
+    .md\\:grid-cols-1 {
+      grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+    }
+    .md\\:grid-cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+  }
+  
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .lg\\:grid-cols-1 {
+      grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+    }
+    .lg\\:grid-cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+    .lg\\:grid-cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+  }
+  
+  @media (min-width: 1025px) {
+    .xl\\:grid-cols-1 {
+      grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+    }
+    .xl\\:grid-cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+    .xl\\:grid-cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+    .xl\\:grid-cols-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
     }
   }
 </style>`;
@@ -934,6 +1050,9 @@ body {
     // Initialize forms first
     initializeForms();
     
+    // Initialize responsive behavior
+    initializeResponsiveFeatures();
+    
     // Enhanced button click listeners - handle both data-action attributes AND React click handlers
     document.querySelectorAll('button[data-action], [role="button"][data-action]').forEach(button => {
       console.log('Found button with data-action:', button.dataset.action, button);
@@ -982,6 +1101,51 @@ body {
     document.querySelectorAll('[data-section-id]').forEach(section => {
       observer.observe(section);
     });
+    
+  // Initialize responsive features and ensure proper viewport handling
+  function initializeResponsiveFeatures() {
+    console.log('Initializing responsive features for deployed page...');
+    
+    // Force update viewport-dependent elements
+    function updateResponsiveElements() {
+      const windowWidth = window.innerWidth;
+      let currentBreakpoint = 'mobile';
+      
+      if (windowWidth >= 1024) {
+        currentBreakpoint = 'desktop';
+      } else if (windowWidth >= 768) {
+        currentBreakpoint = 'tablet';
+      } else {
+        currentBreakpoint = 'mobile';
+      }
+      
+      console.log('Current breakpoint:', currentBreakpoint, 'Width:', windowWidth);
+      
+      // Update body class for breakpoint-specific styling
+      document.body.className = document.body.className.replace(/\\b(mobile|tablet|desktop)-breakpoint\\b/g, '');
+      document.body.classList.add(currentBreakpoint + '-breakpoint');
+      
+      // Trigger any custom responsive behaviors
+      document.dispatchEvent(new CustomEvent('breakpointChange', { 
+        detail: { breakpoint: currentBreakpoint, width: windowWidth } 
+      }));
+    }
+    
+    // Update on load and resize
+    updateResponsiveElements();
+    
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(updateResponsiveElements, 100);
+    });
+    
+    // Ensure Tailwind responsive classes are working
+    // Force re-evaluation of responsive utilities
+    if (window.tailwind && window.tailwind.refresh) {
+      window.tailwind.refresh();
+    }
+  }
 
     // Basic analytics tracking
     
