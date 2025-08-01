@@ -182,7 +182,10 @@ export class ReactDeploymentService {
             },
             customStyles: component.custom_styles,
             componentId: component.id,
-            customActions: component.custom_actions || {},
+            customActions: (() => {
+              console.log('Passing customActions for component', component.id, ':', component.custom_actions);
+              return component.custom_actions || {};
+            })(),
             // Pass pre-fetched data for SSR form rendering
             checkoutFields: checkoutFields
           }));
@@ -596,6 +599,8 @@ body {
     
     if (!action) return;
 
+    console.log('Button clicked:', action, actionData);
+
     // Track button click analytics
     if (supabase) {
       supabase.from('page_analytics').insert({
@@ -651,6 +656,9 @@ body {
             const target = document.getElementById(targetId);
             if (target) {
               target.scrollIntoView({ behavior: 'smooth' });
+              console.log('Scrolled to target:', targetId);
+            } else {
+              console.warn('Scroll target not found:', targetId);
             }
           }
         } catch (e) {
@@ -659,6 +667,9 @@ body {
             const target = document.getElementById(actionData);
             if (target) {
               target.scrollIntoView({ behavior: 'smooth' });
+              console.log('Scrolled to target (fallback):', actionData);
+            } else {
+              console.warn('Scroll target not found (fallback):', actionData);
             }
           }
         }
@@ -667,14 +678,20 @@ body {
       case 'checkout':
         try {
           const data = JSON.parse(actionData || '{}');
+          console.log('Processing checkout with data:', data);
           handleCheckout(data, button);
         } catch (e) {
           console.error('Invalid checkout data:', e);
+          // Try to handle as simple object
+          if (actionData) {
+            console.log('Retrying checkout with raw actionData:', actionData);
+            handleCheckout({ productId: actionData }, button);
+          }
         }
         break;
         
       default:
-        console.log('Button action:', action, actionData);
+        console.log('Unknown button action:', action, actionData);
     }
   }
 
@@ -901,8 +918,10 @@ body {
     
     // Button click listeners
     document.querySelectorAll('button[data-action], [role="button"][data-action]').forEach(button => {
+      console.log('Found button with data-action:', button.dataset.action, button);
       button.addEventListener('click', function(e) {
         e.preventDefault();
+        console.log('Button clicked:', this.dataset.action, this.dataset.actionData);
         handleButtonClick(this);
       });
     });

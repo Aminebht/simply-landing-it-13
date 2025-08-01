@@ -164,23 +164,47 @@ export function renderButton({
 }: RenderButtonProps) {
   const actionObj = action as Record<string, unknown>;
   
-  if (actionObj?.type === 'open_link' && !isEditing) {
-    let url = String(actionObj.url || '#');
-    if (url && !/^https?:\/\//i.test(url)) {
-      url = 'https://' + url;
+  // Debug logging for button actions
+  console.log('Rendering button:', {
+    elementId,
+    isEditing,
+    actionType: actionObj?.type,
+    action: actionObj
+  });
+  
+  // For deployed pages (when not editing), render with data attributes for JavaScript handlers
+  if (!isEditing && actionObj?.type) {
+    const buttonAttributes: Record<string, any> = {
+      'data-action': actionObj.type,
+      className,
+      style
+    };
+
+    // Add action data based on action type
+    switch (actionObj.type) {
+      case 'open_link':
+        buttonAttributes['data-action-data'] = JSON.stringify({
+          url: actionObj.url,
+          newTab: actionObj.newTab
+        });
+        break;
+      case 'scroll':
+        buttonAttributes['data-action-data'] = actionObj.targetId;
+        break;
+      case 'checkout':
+        buttonAttributes['data-action-data'] = JSON.stringify({
+          productId: actionObj.productId,
+          amount: actionObj.amount,
+          checkoutUrl: actionObj.checkoutUrl
+        });
+        break;
     }
-    return (
-      <a
-        href={url}
-        target={actionObj.newTab ? '_blank' : '_self'}
-        rel={actionObj.newTab ? 'noopener noreferrer' : undefined}
-        className={className}
-        style={style}
-      >
-        {content}
-      </a>
-    );
+
+    console.log('Rendering deployed button with attributes:', buttonAttributes);
+    return React.createElement('button', buttonAttributes, content);
   }
+  
+  // Builder mode - use SelectableElement with click handlers
   return (
     <SelectableElement
       elementId={elementId}
