@@ -1,8 +1,0 @@
-project_id = "ijrisuqixfqzmlomlgjb"
-
-[auth]
-enabled = true
-site_url = "https://ijrisuqixfqzmlomlgjb.supabase.co"
-
-[functions.create-payment]
-verify_jwt = false
