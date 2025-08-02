@@ -309,6 +309,7 @@ export class ReactDeploymentService {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${pageData.seo_config?.title || pageData.slug}</title>
+  ${this.generateSEOMetaTags(pageData)}
   <link rel="stylesheet" href="styles.css">
   ${this.generateGoogleFontsLink(pageData)}
   ${this.generateTailwindCSS()}
@@ -331,6 +332,107 @@ export class ReactDeploymentService {
       console.error('Failed to generate React HTML:', error);
       throw new Error(`React HTML generation failed: ${error.message}`);
     }
+  }
+
+  private generateSEOMetaTags(pageData: any, deploymentUrl?: string): string {
+    const seoConfig = pageData.seo_config || {};
+    const currentUrl = deploymentUrl || seoConfig.canonical || `https://${pageData.slug || 'landing-page'}.netlify.app`;
+    
+    console.log('📝 Applying SEO configuration:', {
+      title: seoConfig.title,
+      description: seoConfig.description,
+      keywords: seoConfig.keywords,
+      ogImage: seoConfig.ogImage,
+      canonical: seoConfig.canonical,
+      deploymentUrl
+    });
+    
+    let metaTags = '';
+    
+    // Basic SEO meta tags
+    if (seoConfig.description) {
+      metaTags += `  <meta name="description" content="${this.escapeHtml(seoConfig.description)}">\n`;
+    }
+    
+    if (seoConfig.keywords && Array.isArray(seoConfig.keywords) && seoConfig.keywords.length > 0) {
+      metaTags += `  <meta name="keywords" content="${seoConfig.keywords.join(', ')}">\n`;
+    }
+    
+    if (seoConfig.canonical) {
+      metaTags += `  <link rel="canonical" href="${seoConfig.canonical}">\n`;
+    } else if (deploymentUrl) {
+      metaTags += `  <link rel="canonical" href="${deploymentUrl}">\n`;
+    }
+    
+    // Open Graph meta tags for social media sharing
+    metaTags += `  <meta property="og:title" content="${this.escapeHtml(seoConfig.title || pageData.slug)}">\n`;
+    
+    if (seoConfig.description) {
+      metaTags += `  <meta property="og:description" content="${this.escapeHtml(seoConfig.description)}">\n`;
+    }
+    
+    metaTags += `  <meta property="og:type" content="website">\n`;
+    metaTags += `  <meta property="og:url" content="${currentUrl}">\n`;
+    
+    if (seoConfig.ogImage) {
+      metaTags += `  <meta property="og:image" content="${seoConfig.ogImage}">\n`;
+      metaTags += `  <meta property="og:image:alt" content="${this.escapeHtml(seoConfig.title || pageData.slug)}">\n`;
+      metaTags += `  <meta property="og:image:width" content="1200">\n`;
+      metaTags += `  <meta property="og:image:height" content="630">\n`;
+    }
+    
+    // Twitter Card meta tags
+    metaTags += `  <meta name="twitter:card" content="summary_large_image">\n`;
+    metaTags += `  <meta name="twitter:title" content="${this.escapeHtml(seoConfig.title || pageData.slug)}">\n`;
+    
+    if (seoConfig.description) {
+      metaTags += `  <meta name="twitter:description" content="${this.escapeHtml(seoConfig.description)}">\n`;
+    }
+    
+    if (seoConfig.ogImage) {
+      metaTags += `  <meta name="twitter:image" content="${seoConfig.ogImage}">\n`;
+    }
+    
+    // Additional SEO meta tags
+    metaTags += `  <meta name="robots" content="index, follow">\n`;
+    metaTags += `  <meta name="author" content="Landing Page Builder">\n`;
+    metaTags += `  <meta name="generator" content="Landing Page Builder">\n`;
+    
+    // Favicon and app icons (using og:image as fallback)
+    if (seoConfig.ogImage) {
+      metaTags += `  <link rel="icon" type="image/x-icon" href="${seoConfig.ogImage}">\n`;
+      metaTags += `  <link rel="apple-touch-icon" href="${seoConfig.ogImage}">\n`;
+    }
+    
+    // Structured data for better SEO
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": seoConfig.title || pageData.slug,
+      "description": seoConfig.description || "",
+      "url": currentUrl,
+      "image": seoConfig.ogImage || "",
+      "inLanguage": pageData.global_theme?.language || "en",
+      "datePublished": pageData.created_at || new Date().toISOString(),
+      "dateModified": pageData.updated_at || new Date().toISOString()
+    };
+    
+    metaTags += `  <script type="application/ld+json">\n`;
+    metaTags += `    ${JSON.stringify(structuredData, null, 2)}\n`;
+    metaTags += `  </script>\n`;
+    
+    console.log('✅ Generated SEO meta tags for deployment');
+    return metaTags;
+  }
+
+  private escapeHtml(text: string): string {
+    if (!text) return '';
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;');
   }
 
   private generateGoogleFontsLink(pageData: any): string {
