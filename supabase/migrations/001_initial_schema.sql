@@ -75,13 +75,7 @@ CREATE TABLE landing_pages (
     "canonical": ""
   }',
   
-  -- MARKETPLACE INTEGRATION (Page-level)
-  -- This connects the page to a product for checkout
-  marketplace_integration JSONB DEFAULT '{
-    "checkout_url": "",
-    "currency": "TND",
-    "seller_commission": 100
-  }',
+
   
   -- TRACKING & ANALYTICS (Page-level)
   tracking_config JSONB DEFAULT '{

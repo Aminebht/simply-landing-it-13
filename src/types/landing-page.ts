@@ -43,7 +43,6 @@ export interface LandingPage {
   global_theme: ThemeConfig;
   seo_config: SEOConfig;
   language: 'en' | 'fr' | 'ar';
-  marketplace_integration: MarketplaceIntegration;
   tracking_config: TrackingConfig;
   status: 'draft' | 'published' | 'deploying';
   last_deployed_at?: string;

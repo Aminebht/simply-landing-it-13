@@ -76,11 +76,6 @@ export interface LandingPage {
     ogImage: string;
     canonical: string;
   };
-  marketplace_integration: {
-    checkout_url: string;
-    currency: string;
-    seller_commission: number;
-  };
   tracking_config: {
     facebook_pixel_id: string;
     facebook_access_token: string;

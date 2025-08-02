@@ -34,7 +34,6 @@ const mockLandingPageData = {
     ogImage: 'https://example.com/og-image.jpg',
     canonical: 'https://example.com/test-landing-page'
   },
-  marketplace_integration: {},
   tracking_config: {
     facebook_pixel_id: '1234567890',
     google_analytics_id: 'UA-XXXXX-Y',

@@ -239,7 +239,6 @@ export type Database = {
           global_theme: Json | null
           id: string
           last_deployed_at: string | null
-          marketplace_integration: Json | null
           netlify_site_id: string | null
           product_id: string | null
           seo_config: Json | null
@@ -255,7 +254,6 @@ export type Database = {
           global_theme?: Json | null
           id?: string
           last_deployed_at?: string | null
-          marketplace_integration?: Json | null
           netlify_site_id?: string | null
           product_id?: string | null
           seo_config?: Json | null
@@ -271,7 +269,6 @@ export type Database = {
           global_theme?: Json | null
           id?: string
           last_deployed_at?: string | null
-          marketplace_integration?: Json | null
           netlify_site_id?: string | null
           product_id?: string | null
           seo_config?: Json | null

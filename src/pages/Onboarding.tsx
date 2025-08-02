@@ -257,11 +257,6 @@ const Onboarding = () => {
             ogImage: onboardingData.selectedProduct.preview_image_url || '',
             canonical: ''
           },
-          marketplace_integration: {
-            checkout_url: `https://example.com/checkout/${onboardingData.selectedProduct.id}`,
-            currency: 'TND',
-            seller_commission: 100
-          },
           status: 'draft'
         }])
         .select()
