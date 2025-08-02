@@ -24,7 +24,18 @@ interface DomainSetupSteps {
     reachable: boolean;
     ssl_enabled: boolean;
     redirects_properly: boolean;
+    dns_configured: boolean;
+    certificate_issued: boolean;
   } | null;
+  dnsRecords: {
+    type: string;
+    hostname: string;
+    value: string;
+    ttl?: number;
+  }[] | null;
+  dnsZoneId: string | null;
+  nameservers?: string[];
+  setupMethod?: 'nameservers' | 'dns_records';
 }
 
 export const LandingPageSettings: React.FC<LandingPageSettingsProps> = ({
@@ -40,7 +51,11 @@ export const LandingPageSettings: React.FC<LandingPageSettingsProps> = ({
   const [domainSetup, setDomainSetup] = useState<DomainSetupSteps>({
     isValidating: false,
     dnsInstructions: '',
-    verificationStatus: null
+    verificationStatus: null,
+    dnsRecords: null,
+    dnsZoneId: null,
+    nameservers: [],
+    setupMethod: 'dns_records'
   });
 
   // Tracking settings
@@ -129,43 +144,116 @@ export const LandingPageSettings: React.FC<LandingPageSettingsProps> = ({
     setDomainSetup(prev => ({ ...prev, isValidating: true }));
 
     try {
-      // Initialize domain manager (you'll need to get the Netlify token from environment or user settings)
+      // Initialize domain manager
       const domainManager = new DomainManagerService('nfp_PxSrwC6LMCXfjrSi28pvhSdx9rNKLKyv4a6d');
       
-      // Get DNS records needed
-      const netlifyUrl = `https://${landingPage.netlify_site_id}.netlify.app`;
-      const dnsRecords = await domainManager.getRequiredDNSRecords(customDomain, netlifyUrl);
+      // Setup domain with Netlify API integration
+      const setupResult = await domainManager.setupCustomDomain(landingPage.netlify_site_id, customDomain);
       
-      // Generate DNS instructions
-      const instructions = domainManager.generateDNSInstructions(customDomain, dnsRecords);
-      
-      // Check current domain status
-      const status = await domainManager.checkDomainStatus(customDomain);
+      // Generate DNS instructions based on setup method
+      const instructions = domainManager.generateDNSInstructions(
+        customDomain, 
+        setupResult.required_dns_records,
+        setupResult.nameservers,
+        setupResult.setup_method
+      );
       
       setDomainSetup({
         isValidating: false,
         dnsInstructions: instructions,
-        verificationStatus: status
+        verificationStatus: {
+          reachable: setupResult.verification_status.verified,
+          ssl_enabled: setupResult.verification_status.ssl_enabled,
+          redirects_properly: false, // Will be checked separately if needed
+          dns_configured: setupResult.verification_status.dns_records_configured,
+          certificate_issued: setupResult.verification_status.certificate_issued
+        },
+        dnsRecords: setupResult.required_dns_records,
+        dnsZoneId: setupResult.dns_zone_id,
+        nameservers: setupResult.nameservers,
+        setupMethod: setupResult.setup_method
       });
 
-      if (status.reachable && status.ssl_enabled) {
+      if (setupResult.verification_status.verified && setupResult.verification_status.ssl_enabled) {
         toast({
-          title: "Domain configured",
-          description: "Your custom domain is working correctly!",
+          title: "Domain configured successfully!",
+          description: "Your custom domain is now active with SSL enabled.",
         });
       } else {
         toast({
-          title: "DNS setup required",
-          description: "Please follow the DNS instructions below to complete domain setup.",
-          variant: "default"
+          title: "Domain setup ready!",
+          description: "Please configure the DNS settings shown below with your domain provider.",
         });
       }
     } catch (error) {
       console.error('Error setting up domain:', error);
+      setDomainSetup(prev => ({ 
+        ...prev, 
+        isValidating: false,
+        verificationStatus: {
+          reachable: false,
+          ssl_enabled: false,
+          redirects_properly: false,
+          dns_configured: false,
+          certificate_issued: false
+        }
+      }));
+      toast({
+        title: "Domain setup failed",
+        description: error instanceof Error ? error.message : "Failed to configure domain. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const refreshDomainStatus = async () => {
+    if (!customDomain.trim() || !landingPage?.netlify_site_id) {
+      return;
+    }
+
+    setDomainSetup(prev => ({ ...prev, isValidating: true }));
+
+    try {
+      const domainManager = new DomainManagerService('nfp_PxSrwC6LMCXfjrSi28pvhSdx9rNKLKyv4a6d');
+      const domainStatus = await domainManager.getDomainStatus(landingPage.netlify_site_id, customDomain);
+      
+      setDomainSetup(prev => ({
+        ...prev,
+        isValidating: false,
+        verificationStatus: {
+          ...domainStatus.details,
+          redirects_properly: domainStatus.details.ssl_enabled && domainStatus.details.reachable
+        }
+      }));
+
+      // Provide user feedback based on status
+      if (domainStatus.status === 'active') {
+        toast({
+          title: "Domain fully configured! 🎉",
+          description: "Your custom domain is now active with SSL.",
+        });
+      } else if (domainStatus.status === 'ssl_pending') {
+        toast({
+          title: "Domain configured, SSL pending",
+          description: "DNS is configured. SSL certificate is being activated (this can take a few minutes).",
+        });
+      } else if (domainStatus.status === 'dns_pending') {
+        toast({
+          title: "DNS configuration needed",
+          description: "Please configure the DNS records shown below with your domain provider.",
+        });
+      } else {
+        toast({
+          title: "Status updated",
+          description: domainStatus.next_steps.join('. '),
+        });
+      }
+    } catch (error) {
+      console.error('Error refreshing domain status:', error);
       setDomainSetup(prev => ({ ...prev, isValidating: false }));
       toast({
-        title: "Domain setup error",
-        description: "There was a problem setting up your custom domain.",
+        title: "Status check failed",
+        description: "Could not verify domain status. Please try again.",
         variant: "destructive"
       });
     }
@@ -245,7 +333,7 @@ export const LandingPageSettings: React.FC<LandingPageSettingsProps> = ({
                     disabled={!customDomain.trim() || domainSetup.isValidating}
                     size="sm"
                   >
-                    {domainSetup.isValidating ? 'Checking...' : 'Setup Domain'}
+                    {domainSetup.isValidating ? 'Setting up...' : 'Setup Domain'}
                   </Button>
                   
                   {landingPage?.netlify_site_id && (
@@ -260,23 +348,67 @@ export const LandingPageSettings: React.FC<LandingPageSettingsProps> = ({
                   )}
                 </div>
 
-                {/* Domain Status */}
-                {domainSetup.verificationStatus && (
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <h4 className="font-medium mb-2">Domain Status</h4>
-                    <div className="space-y-1 text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${domainSetup.verificationStatus.reachable ? 'bg-green-500' : 'bg-red-500'}`} />
-                        <span>Domain Reachable: {domainSetup.verificationStatus.reachable ? 'Yes' : 'No'}</span>
+                {/* Name Servers Section (Preferred Method) */}
+                {domainSetup.nameservers && domainSetup.nameservers.length > 0 && domainSetup.setupMethod === 'nameservers' && (
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <h4 className="font-medium mb-3 text-blue-900 flex items-center gap-2">
+                      🌐 Netlify Name Servers (Recommended Method)
+                    </h4>
+                    <div className="space-y-2 mb-4">
+                      <p className="text-sm text-blue-800">
+                        Configure these name servers with your domain provider for complete automatic management:
+                      </p>
+                      <div className="bg-white p-3 rounded border">
+                        {domainSetup.nameservers.map((ns, index) => (
+                          <div key={index} className="flex justify-between items-center py-1">
+                            <span className="font-medium text-sm">NS{index + 1}:</span>
+                            <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">{ns}</code>
+                          </div>
+                        ))}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${domainSetup.verificationStatus.ssl_enabled ? 'bg-green-500' : 'bg-red-500'}`} />
-                        <span>SSL Enabled: {domainSetup.verificationStatus.ssl_enabled ? 'Yes' : 'No'}</span>
+                      <div className="text-xs text-blue-700 space-y-1">
+                        <p>✅ Automatic SSL</p>
+                        <p>✅ Automatic DNS configuration</p>
+                        <p>✅ Simplified management</p>
+                        <p>⚠️  All your DNS records will be managed by Netlify</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${domainSetup.verificationStatus.redirects_properly ? 'bg-green-500' : 'bg-orange-500'}`} />
-                        <span>Redirects: {domainSetup.verificationStatus.redirects_properly ? 'Working' : 'Check needed'}</span>
-                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* DNS Records Table */}
+                {domainSetup.dnsRecords && domainSetup.dnsRecords.length > 0 && (domainSetup.setupMethod === 'dns_records' || !domainSetup.nameservers?.length) && (
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <h4 className="font-medium mb-3">
+                      {domainSetup.setupMethod === 'dns_records' ? 'Manual DNS Configuration' : 'Required DNS Records'}
+                    </h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-2">Type</th>
+                            <th className="text-left py-2">Name/Host</th>
+                            <th className="text-left py-2">Value/Points to</th>
+                            <th className="text-left py-2">TTL</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {domainSetup.dnsRecords.map((record, index) => (
+                            <tr key={index} className="border-b">
+                              <td className="py-2 font-mono text-xs">{record.type}</td>
+                              <td className="py-2 font-mono text-xs">{record.hostname}</td>
+                              <td className="py-2 font-mono text-xs break-all">{record.value}</td>
+                              <td className="py-2 font-mono text-xs">{record.ttl || '3600'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="mt-3 text-xs text-gray-600">
+                      <p><strong>Note:</strong> Add these records to your domain provider's DNS settings. Changes may take up to 48 hours to propagate.</p>
+                      {domainSetup.setupMethod === 'dns_records' && (
+                        <p className="mt-1">This method preserves your existing DNS records.</p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -284,7 +416,7 @@ export const LandingPageSettings: React.FC<LandingPageSettingsProps> = ({
                 {/* DNS Instructions */}
                 {domainSetup.dnsInstructions && (
                   <div className="bg-blue-50 p-4 rounded-lg">
-                    <h4 className="font-medium mb-2">DNS Setup Instructions</h4>
+                    <h4 className="font-medium mb-2">Setup Guide</h4>
                     <div className="text-sm whitespace-pre-wrap text-gray-700">
                       {domainSetup.dnsInstructions}
                     </div>

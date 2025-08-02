@@ -33,3 +33,28 @@ export interface DomainConfig {
   dns_verified: boolean;
   certificate_state?: string;
 }
+
+export interface DomainSetupResult {
+  dns_zone_id: string;
+  dns_records: any[];
+  verification_status: {
+    verified: boolean;
+    ssl_enabled: boolean;
+    dns_records_configured: boolean;
+    certificate_issued: boolean;
+  };
+  required_dns_records: {
+    type: 'A' | 'CNAME' | 'TXT';
+    hostname: string;
+    value: string;
+    ttl?: number;
+  }[];
+}
+
+export interface DomainVerificationStatus {
+  reachable: boolean;
+  ssl_enabled: boolean;
+  redirects_properly: boolean;
+  dns_configured: boolean;
+  certificate_issued: boolean;
+}
