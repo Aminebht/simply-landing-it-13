@@ -104,7 +104,6 @@ export interface ComponentVariation {
   character_limits: Record<string, any>;
   required_images: number;
   supports_video: boolean;
-  button_actions: Record<string, any>;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -181,7 +180,6 @@ export const getLandingPageComponents = async (pageId: string): Promise<LandingP
     ...v,
     default_content: typeof v.default_content === 'string' ? JSON.parse(v.default_content) : v.default_content,
     character_limits: typeof v.character_limits === 'string' ? JSON.parse(v.character_limits) : v.character_limits,
-    button_actions: typeof v.button_actions === 'string' ? JSON.parse(v.button_actions) : v.button_actions,
     visibility_keys: typeof v.visibility_keys === 'string' ? JSON.parse(v.visibility_keys) : v.visibility_keys,
     required_images: typeof v.required_images === 'string' ? parseInt(v.required_images, 10) : v.required_images,
     supports_video: typeof v.supports_video === 'string' ? v.supports_video === 'true' : !!v.supports_video,
@@ -229,7 +227,6 @@ export const getComponentVariations = async (): Promise<ComponentVariation[]> =>
     ...v,
     default_content: typeof v.default_content === 'string' ? JSON.parse(v.default_content) : v.default_content,
     character_limits: typeof v.character_limits === 'string' ? JSON.parse(v.character_limits) : v.character_limits,
-    button_actions: typeof v.button_actions === 'string' ? JSON.parse(v.button_actions) : v.button_actions,
     visibility_keys: typeof v.visibility_keys === 'string' ? JSON.parse(v.visibility_keys) : v.visibility_keys,
     required_images: typeof v.required_images === 'string' ? parseInt(v.required_images, 10) : v.required_images,
     supports_video: typeof v.supports_video === 'string' ? v.supports_video === 'true' : !!v.supports_video,

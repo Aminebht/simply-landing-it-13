@@ -68,7 +68,6 @@ const mockComponentsData = [
       character_limits: {},
       required_images: 0,
       supports_video: false,
-      button_actions: {},
     },
   },
   {
@@ -93,7 +92,6 @@ const mockComponentsData = [
       character_limits: {},
       required_images: 0,
       supports_video: false,
-      button_actions: {},
     },
   },
 ];

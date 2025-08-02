@@ -88,7 +88,6 @@ export type Database = {
       }
       component_variations: {
         Row: {
-          button_actions: Json | null
           character_limits: Json | null
           component_type: string
           created_at: string | null
@@ -104,7 +103,6 @@ export type Database = {
           visibility_keys: Json | null
         }
         Insert: {
-          button_actions?: Json | null
           character_limits?: Json | null
           component_type: string
           created_at?: string | null
@@ -120,7 +118,6 @@ export type Database = {
           visibility_keys?: Json | null
         }
         Update: {
-          button_actions?: Json | null
           character_limits?: Json | null
           component_type?: string
           created_at?: string | null
