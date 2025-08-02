@@ -7,6 +7,7 @@ import { PreviewMode } from '@/components/builder/PreviewMode';
 import { DirectionToggle } from '@/components/builder/DirectionToggle';
 import { ResponsivePreviewToggle, ViewportSize } from '@/components/builder/ResponsivePreviewToggle';
 import { UndoRedoStatus } from '@/components/builder/UndoRedoStatus';
+import { LandingPageSettings } from '@/components/builder/LandingPageSettings';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Palette, Eye, Edit, Save, Globe, ChevronLeft, ChevronRight, CloudUpload, Database } from 'lucide-react';
@@ -20,7 +21,6 @@ import { supabase } from '@/services/supabase';
 import { useToast } from "@/hooks/use-toast";
 import PageSyncService from '@/services/page-sync';
 import { ThemeConfig, LandingPage } from '@/types/landing-page';
-import { StaticGeneratorService } from '@/services/static-generator';
 import { toast as sonnerToast } from "sonner";
 
 export default function Builder() {
@@ -827,6 +827,23 @@ export default function Builder() {
     }
   };
 
+  const handleSettingsUpdate = (updates: Partial<LandingPage>) => {
+    if (page) {
+      const updatedPage = { ...page, ...updates };
+      setPage(updatedPage);
+      
+      // Update global theme if provided
+      if (updates.global_theme) {
+        setGlobalTheme(updates.global_theme);
+      }
+      
+      toast({
+        title: "Settings updated",
+        description: "Your landing page settings have been saved.",
+      });
+    }
+  };
+
   if (isPreviewMode) {
     return (
       <PreviewMode 
@@ -923,6 +940,11 @@ export default function Builder() {
                 <CloudUpload className="h-4 w-4" />
                 Save
               </Button>
+              
+              <LandingPageSettings
+                landingPage={page}
+                onSettingsUpdate={handleSettingsUpdate}
+              />
               
               <Button
                 onClick={handleDeploy}

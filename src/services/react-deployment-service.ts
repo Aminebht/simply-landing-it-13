@@ -318,14 +318,14 @@ export class ReactDeploymentService {
   <meta http-equiv="X-Frame-Options" content="DENY">
   <meta http-equiv="X-XSS-Protection" content="1; mode=block">
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.tailwindcss.com https://connect.facebook.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co https://*.netlify.app; frame-src 'none';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.tailwindcss.com https://connect.facebook.net https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co https://*.netlify.app https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com https://www.clarity.ms https://k.clarity.ms; frame-src 'none';">
   
   ${this.generateSEOMetaTags(pageData)}
   <link rel="stylesheet" href="styles.css">
   ${this.generateGoogleFontsLink(pageData)}
   ${this.generateTailwindCSS()}
   ${this.generateSupabaseSDK(pageData)}
-  ${this.generateFacebookPixel(pageData)}
+  ${this.generateTrackingScripts(pageData)}
 </head>
 <body>
   ${cleanedHTML}
@@ -963,16 +963,41 @@ window.addEventListener('load',function(){trackEvent('page_view',{page_title:PAG
   }
 
   private generateFacebookPixel(pageData: any): string {
-    // Only include Facebook Pixel if it's configured in environment variables
-    // Avoid exposing tracking_config from database for security
-    const pixelId = import.meta.env.VITE_FACEBOOK_PIXEL_ID;
+    // Legacy method - now redirects to new tracking system
+    return this.generateTrackingScripts(pageData);
+  }
 
-    if (!pixelId) {
-      return '<!-- Facebook Pixel not configured -->';
+  private generateTrackingScripts(pageData: any): string {
+    let scripts = '';
+
+    // Check if we have tracking config
+    const trackingConfig = pageData.tracking_config;
+    if (!trackingConfig) {
+      return '<!-- No tracking configuration -->';
     }
 
-    // Validate pixel ID format for additional security
-    if (!/^\d{15,16}$/.test(pixelId)) {
+    // Facebook Pixel
+    if (trackingConfig.facebook_pixel_id) {
+      scripts += this.generateFacebookPixelScript(trackingConfig);
+    }
+
+    // Google Analytics
+    if (trackingConfig.google_analytics_id) {
+      scripts += this.generateGoogleAnalyticsScript(trackingConfig);
+    }
+
+    // Microsoft Clarity
+    if (trackingConfig.clarity_id) {
+      scripts += this.generateClarityScript(trackingConfig);
+    }
+
+    return scripts;
+  }
+
+  private generateFacebookPixelScript(trackingConfig: any): string {
+    const pixelId = trackingConfig.facebook_pixel_id;
+
+    if (!pixelId || !/^\d{15,16}$/.test(pixelId)) {
       console.warn('Invalid Facebook Pixel ID format');
       return '<!-- Facebook Pixel ID invalid -->';
     }
@@ -990,12 +1015,11 @@ window.addEventListener('load',function(){trackEvent('page_view',{page_title:PAG
   'https://connect.facebook.net/en_US/fbevents.js');
   
   fbq('init', '${pixelId}');
-  fbq('track', 'PageView');
+  ${trackingConfig.conversion_events?.page_view ? "fbq('track', 'PageView');" : ''}
   
-  // Store pixel functions for later use (secure implementation)
+  // Store pixel functions for later use
   window.trackFacebookEvent = function(eventName, eventData) {
     if (typeof fbq !== 'undefined') {
-      // Filter out any sensitive data before tracking
       const safeEventData = {
         value: eventData.value || 0,
         currency: eventData.currency || 'TND',
@@ -1009,6 +1033,56 @@ window.addEventListener('load',function(){trackEvent('page_view',{page_title:PAG
   <img height="1" width="1" style="display:none"
        src="https://www.facebook.com/tr?id=${pixelId}&ev=PageView&noscript=1"/>
 </noscript>`;
+  }
+
+  private generateGoogleAnalyticsScript(trackingConfig: any): string {
+    const gaId = trackingConfig.google_analytics_id;
+
+    if (!gaId || !gaId.startsWith('G-')) {
+      console.warn('Invalid Google Analytics ID format');
+      return '<!-- Google Analytics ID invalid -->';
+    }
+
+    return `
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=${gaId}"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', '${gaId}', {
+    page_title: document.title,
+    page_location: window.location.href
+  });
+
+  // Store GA function for later use
+  window.trackGoogleEvent = function(eventName, eventData) {
+    gtag('event', eventName, {
+      event_category: 'Landing Page',
+      event_label: eventData.label || '',
+      value: eventData.value || 0
+    });
+  };
+</script>`;
+  }
+
+  private generateClarityScript(trackingConfig: any): string {
+    const clarityId = trackingConfig.clarity_id;
+
+    if (!clarityId || clarityId.length < 8) {
+      console.warn('Invalid Clarity ID format');
+      return '<!-- Clarity ID invalid -->';
+    }
+
+    return `
+<!-- Microsoft Clarity -->
+<script type="text/javascript">
+  (function(c,l,a,r,i,t,y){
+    c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+    t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+    y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+  })(window, document, "clarity", "script", "${clarityId}");
+</script>`;
   }
 
   private generateAssets(pageData: any): { css: string; js: string } {

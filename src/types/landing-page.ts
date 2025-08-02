@@ -31,6 +31,7 @@ export interface TrackingConfig {
     add_to_cart: boolean;
     purchase: boolean;
   };
+  [key: string]: unknown;
 }
 
 export interface LandingPage {

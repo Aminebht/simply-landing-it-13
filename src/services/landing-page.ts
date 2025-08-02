@@ -448,6 +448,18 @@ export class LandingPageService {
 
     if (error) throw error;
   }
+
+  async updateTrackingConfig(id: string, trackingConfig: Record<string, unknown>): Promise<void> {
+    const { error } = await supabase
+      .from('landing_pages')
+      .update({
+        tracking_config: trackingConfig,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+  }
 }
 
 export const landingPageService = LandingPageService.getInstance();
