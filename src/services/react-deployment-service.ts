@@ -764,6 +764,103 @@ export class ReactDeploymentService {
     font-size: inherit;
   }
   
+  /* Toast notification styles */
+  .toast-container {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 400px;
+    width: 100%;
+    pointer-events: none;
+  }
+  
+  .toast {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    pointer-events: auto;
+    transform: translateX(100%);
+    opacity: 0;
+    transition: all 0.3s ease;
+  }
+  
+  .toast.show {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  
+  .toast.success {
+    border-left: 4px solid #10b981;
+  }
+  
+  .toast.error {
+    border-left: 4px solid #ef4444;
+  }
+  
+  .toast.warning {
+    border-left: 4px solid #f59e0b;
+  }
+  
+  .toast.info {
+    border-left: 4px solid #3b82f6;
+  }
+  
+  .toast-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+  }
+  
+  .toast-content {
+    flex: 1;
+  }
+  
+  .toast-title {
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.25rem;
+    font-size: 0.875rem;
+  }
+  
+  .toast-message {
+    color: #6b7280;
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+  
+  .toast-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 0.5rem;
+    color: #9ca3af;
+    font-size: 1.125rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  
+  .toast-close:hover {
+    color: #6b7280;
+  }
+  
+  @media (max-width: 640px) {
+    .toast-container {
+      left: 1rem;
+      right: 1rem;
+      max-width: none;
+    }
+  }
+
   /* Enhanced responsive utilities */
   @media (max-width: 640px) {
     .container {
@@ -958,7 +1055,604 @@ window.addEventListener('load',function(){trackEvent('page_view',{page_title:PAG
   }
 
   private generateInteractivityJS(pageData: any): string {
-    // Enhanced production JavaScript with improved scroll functionality
-    return `(function(){'use strict';function initializeForms(){console.log('Initializing forms...');const defaultCheckoutFields=[{id:'email',label:'Email',field_key:'email',is_required:true,display_order:0,product_ids:[]},{id:'full_name',label:'Full Name',field_key:'full_name',is_required:true,display_order:1,product_ids:[]},{id:'phone',label:'Phone Number',field_key:'phone',is_required:false,display_order:2,product_ids:[]}];const formContainers=document.querySelectorAll('[data-component="cta"],form:empty,[class*="form-container"]:empty,[data-element="checkout-form"]');console.log('Found form containers:',formContainers.length);formContainers.forEach(function(container,index){if(container.dataset.formInitialized){return;}if(container.children.length===0||(container.children.length===1&&container.querySelector('input[type="email"]:only-child'))){container.innerHTML='';}let form=container.tagName==='FORM'?container:container.querySelector('form');if(!form){form=document.createElement('form');form.className='space-y-4';container.appendChild(form);}if(container.getAttribute('data-element')==='checkout-form'){form.dataset.formType='checkout';}else{form.dataset.formType='contact';}defaultCheckoutFields.forEach(function(field){if(form.querySelector('input[name="'+field.field_key+'"]')){return;}const fieldDiv=document.createElement('div');fieldDiv.className='space-y-2';const label=document.createElement('label');label.htmlFor=field.field_key;label.className='block text-sm font-medium text-foreground mb-2';label.textContent=field.label+(field.is_required?' *':'');const input=document.createElement('input');input.id=field.field_key;input.name=field.field_key;input.required=field.is_required;input.className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';switch(field.field_key){case 'email':input.type='email';input.placeholder='Enter your email';break;case 'phone':input.type='tel';input.placeholder='Enter your phone number';break;default:input.type='text';input.placeholder='Enter your '+field.label.toLowerCase();break;}fieldDiv.appendChild(label);fieldDiv.appendChild(input);form.appendChild(fieldDiv);});if(!form.querySelector('button[type="submit"]')){const submitBtn=document.createElement('button');submitBtn.type='submit';submitBtn.className='inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full';submitBtn.textContent='Submit';form.appendChild(submitBtn);}container.dataset.formInitialized='true';console.log('Initialized form container',index+1,'with',defaultCheckoutFields.length,'fields');});}function findScrollTarget(targetId){console.log('Looking for scroll target:',targetId);let target=null;let cleanId=targetId;if(targetId.startsWith('section-')){cleanId=targetId.replace('section-','');}target=document.getElementById(targetId);if(target){console.log('Found direct ID match:',targetId);return target;}if(!targetId.startsWith('section-')){target=document.getElementById('section-'+targetId);if(target){console.log('Found section ID match: section-'+targetId);return target;}}const sectionWithDataId=document.querySelector('[data-section-id="'+cleanId+'"]');if(sectionWithDataId){console.log('Found data-section-id match:',cleanId);return sectionWithDataId;}const possibleSelectors=[targetId,'section-'+cleanId,cleanId,'#'+targetId,'#section-'+cleanId,'#'+cleanId];for(let i=0;i<possibleSelectors.length;i++){try{if(!possibleSelectors[i])continue;target=document.querySelector('[id="'+possibleSelectors[i]+'"]');if(target){console.log('Found with ID selector:',possibleSelectors[i]);return target;}}catch(e){continue;}}console.warn('No scroll target found for:',targetId,'(cleaned:',cleanId,')');console.log('Available sections:',[...document.querySelectorAll('[data-section-id]')].map(el=>({id:el.id,dataId:el.getAttribute('data-section-id')})));return null;}function handleButtonClick(button){const action=button.dataset.action;const actionData=button.dataset.actionData;if(!action)return;console.log('Button clicked:',action,actionData);switch(action){case 'open_link':try{const data=JSON.parse(actionData||'{}');let url=data.url||actionData;if(url&&!/^https?:\\/\\//i.test(url)){url='https://'+url;}if(url){window.open(url,data.newTab?'_blank':'_self');if(typeof trackFacebookEvent!=='undefined'){trackFacebookEvent('ClickButton',{button_text:button.textContent,destination_url:url});}}}catch(e){let url=actionData;if(url&&!/^https?:\\/\\//i.test(url)){url='https://'+url;}if(url){window.open(url,'_blank');}}break;case 'scroll':try{const data=JSON.parse(actionData||'{}');const targetId=data.targetId||actionData;if(targetId){const target=findScrollTarget(targetId);if(target){target.scrollIntoView({behavior:'smooth',block:'start'});console.log('✅ Successfully scrolled to:',targetId);}else{console.warn('❌ Scroll target not found:',targetId);}}}catch(e){if(actionData){const target=findScrollTarget(actionData);if(target){target.scrollIntoView({behavior:'smooth',block:'start'});console.log('✅ Successfully scrolled to (fallback):',actionData);}else{console.warn('❌ Scroll target not found (fallback):',actionData);}}}break;case 'checkout':try{const data=JSON.parse(actionData||'{}');console.log('Processing checkout with data:',data);handleCheckout(data,button);}catch(e){console.error('Invalid checkout data:',e);if(actionData){console.log('Retrying checkout with raw actionData:',actionData);handleCheckout({productId:actionData},button);}}break;default:console.log('Unknown button action:',action,actionData);}}async function handleCheckout(actionData,button){try{const formElements=document.querySelectorAll('form input,form select,form textarea');const formData={};let userEmail='';formElements.forEach(function(element){if(element.name||element.id){const key=element.name||element.id;formData[key]=element.value;if(key==='email')userEmail=element.value;}});if(!userEmail){alert("Please enter your email to proceed with checkout.");return;}const emailRegex=/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;if(!emailRegex.test(userEmail)){alert("Please enter a valid email address.");return;}const orderId=generateUUID();const buyerName=formData.name||formData.full_name||userEmail.split('@')[0];const amount=Number(actionData.amount)||0;console.log('Processing secure checkout for productId:',actionData.productId);if(typeof trackFacebookEvent!=='undefined'){trackFacebookEvent('InitiateCheckout',{value:amount,currency:'TND',content_ids:[String(actionData.productId)]});}try{const checkoutResponse=await fetch('https://ijrisuqixfqzmlomlgjb.supabase.co/functions/v1/secure-checkout',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_ANON_KEY},body:JSON.stringify({orderId:orderId,productId:actionData.productId,amount:amount,buyerEmail:userEmail,buyerName:buyerName,formData:formData,pageSlug:PAGE_CONFIG.slug})});if(!checkoutResponse.ok){throw new Error('Checkout service unavailable');}const checkoutData=await checkoutResponse.json();if(checkoutData.success&&checkoutData.paymentUrl){trackEvent('checkout_initiated',{order_id:orderId,amount:amount,user_email:userEmail});if(typeof trackFacebookEvent!=='undefined'){trackFacebookEvent('Purchase',{value:amount,currency:'TND',content_ids:[String(actionData.productId)]});}window.location.href=checkoutData.paymentUrl;}else{throw new Error(checkoutData.error||'Failed to initialize payment');}}catch(serverError){console.warn('Server-side checkout failed, falling back to direct approach:',serverError);if(actionData.checkoutUrl){window.open(actionData.checkoutUrl,'_blank');}else if(actionData.productId){const checkoutUrl=\`https://demarky.tn/checkout/\${actionData.productId}?email=\${encodeURIComponent(userEmail)}&name=\${encodeURIComponent(buyerName)}\`;window.open(checkoutUrl,'_blank');}else{alert("Checkout is temporarily unavailable. Please try again later.");}}}catch(error){console.error('Checkout error:',error);alert("An unexpected error occurred. Please try again.");}}function handleFormSubmit(form){console.log('Form submission triggered for form:',form);console.log('Form type:',form.dataset.formType);const formData=new FormData(form);const data=Object.fromEntries(formData.entries());console.log('Form data collected:',Object.keys(data));const submissionData={form_only:true,form_data:data,page_slug:PAGE_CONFIG.slug,utm_data:{utm_source:new URLSearchParams(window.location.search).get('utm_source'),utm_medium:new URLSearchParams(window.location.search).get('utm_medium'),utm_campaign:new URLSearchParams(window.location.search).get('utm_campaign')},session_id:getSessionId(),user_agent:navigator.userAgent,page_url:window.location.href,created_at:new Date().toISOString()};console.log('Submitting form data to secure-checkout endpoint:',{form_only:submissionData.form_only,page_slug:submissionData.page_slug,field_count:Object.keys(submissionData.form_data).length});fetch('https://ijrisuqixfqzmlomlgjb.supabase.co/functions/v1/secure-checkout',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_ANON_KEY},body:JSON.stringify(submissionData)}).then(function(response){if(response.ok){return response.json();}throw new Error('Server error');}).then(function(result){console.log('Form submission processed securely');alert('Thank you for your message! We have received your submission.');form.reset();if(typeof trackFacebookEvent!=='undefined'){trackFacebookEvent('Contact',{form_type:submissionData.form_type});}trackEvent('form_submission',{form_type:submissionData.form_type,success:true,timestamp:submissionData.created_at});}).catch(function(error){console.warn('Server-side form submission failed, using fallback:',error);try{const existingSubmissions=JSON.parse(localStorage.getItem('landingPageSubmissions')||'[]');existingSubmissions.push({...submissionData,local_storage:true,timestamp:Date.now()});localStorage.setItem('landingPageSubmissions',JSON.stringify(existingSubmissions.slice(-10)));}catch(e){console.warn('LocalStorage not available');}alert('Thank you for your message! We have received your submission.');form.reset();trackEvent('form_submission',{form_type:submissionData.form_type,success:true,method:'fallback',timestamp:submissionData.created_at});});}document.addEventListener('DOMContentLoaded',function(){initializeForms();initializeResponsiveFeatures();document.querySelectorAll('button[data-action],[role="button"][data-action]').forEach(button=>{console.log('Found button with data-action:',button.dataset.action,button);button.addEventListener('click',function(e){if(!e.defaultPrevented){e.preventDefault();console.log('Data-attribute button clicked:',this.dataset.action,this.dataset.actionData);handleButtonClick(this);}});});document.querySelectorAll('button:not([data-action])').forEach(button=>{if(button.onclick){console.log('Found button with React click handler:',button);}});const forms=document.querySelectorAll('form');console.log('Binding form submission handlers to',forms.length,'forms');forms.forEach((form,index)=>{console.log('Binding handler to form',index+1,'with type:',form.dataset.formType);form.addEventListener('submit',function(e){e.preventDefault();console.log('Form submission event captured for form',index+1);handleFormSubmit(this);});});const observerOptions={threshold:0.1,rootMargin:'0px 0px -50px 0px'};const observer=new IntersectionObserver(function(entries){entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('animate-fade-in');}});},observerOptions);document.querySelectorAll('[data-section-id]').forEach(section=>{observer.observe(section);});function initializeResponsiveFeatures(){console.log('Initializing responsive features...');function updateResponsiveElements(){const windowWidth=window.innerWidth;let currentBreakpoint='mobile';if(windowWidth>=1024){currentBreakpoint='desktop';}else if(windowWidth>=768){currentBreakpoint='tablet';}else{currentBreakpoint='mobile';}console.log('Current breakpoint:',currentBreakpoint,'Width:',windowWidth);document.body.className=document.body.className.replace(/\\b(mobile|tablet|desktop)-breakpoint\\b/g,'');document.body.classList.add(currentBreakpoint+'-breakpoint');document.dispatchEvent(new CustomEvent('breakpointChange',{detail:{breakpoint:currentBreakpoint,width:windowWidth}}));}updateResponsiveElements();let resizeTimeout;window.addEventListener('resize',function(){clearTimeout(resizeTimeout);resizeTimeout=setTimeout(updateResponsiveElements,100);});if(window.tailwind&&window.tailwind.refresh){window.tailwind.refresh();}}let maxScrollDepth=0;window.addEventListener('scroll',function(){const scrollTop=window.pageYOffset||document.documentElement.scrollTop;const documentHeight=document.documentElement.scrollHeight-window.innerHeight;const scrollPercent=Math.round((scrollTop/documentHeight)*100);if(scrollPercent>maxScrollDepth){maxScrollDepth=scrollPercent;if([25,50,75,90].includes(scrollPercent)){trackEvent('scroll_depth',{scroll_percent:scrollPercent,timestamp:new Date().toISOString()});}}});const startTime=Date.now();window.addEventListener('beforeunload',function(){const timeOnPage=Math.round((Date.now()-startTime)/1000);if(timeOnPage>5){trackEvent('time_on_page',{time_seconds:timeOnPage,max_scroll_depth:maxScrollDepth});}});document.querySelectorAll('input,textarea,select').forEach(function(field){field.addEventListener('focus',function(){trackEvent('form_field_focus',{field_name:this.name||this.id,field_type:this.type||this.tagName.toLowerCase()});});});setTimeout(function(){initializeForms();console.log('Re-initialized forms after delay');},1000);if(window.MutationObserver){const observer=new MutationObserver(function(mutations){let shouldReinitialize=false;mutations.forEach(function(mutation){if(mutation.type==='childList'&&mutation.addedNodes.length>0){shouldReinitialize=true;}});if(shouldReinitialize){setTimeout(initializeForms,100);}});observer.observe(document.body,{childList:true,subtree:true});}});const style=document.createElement('style');style.textContent=\`.animate-fade-in{animation:fadeIn 0.6s ease-out forwards;}@keyframes fadeIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}\`;document.head.appendChild(style);})();`;
+    // Enhanced production JavaScript with toast notifications instead of alerts
+    return `(function(){'use strict';
+// Toast notification system
+function createToastContainer(){
+  if(document.getElementById('toast-container'))return;
+  const container=document.createElement('div');
+  container.id='toast-container';
+  container.className='toast-container';
+  document.body.appendChild(container);
+}
+
+function showToast(message,type='info',title=''){
+  createToastContainer();
+  const container=document.getElementById('toast-container');
+  const toast=document.createElement('div');
+  toast.className='toast '+type;
+  
+
+  
+  // Create toast structure programmatically to avoid HTML injection issues
+  const toastIcon=document.createElement('div');
+  toastIcon.className='toast-icon';
+  
+  const toastContent=document.createElement('div');
+  toastContent.className='toast-content';
+  
+  if(title){
+    const toastTitle=document.createElement('div');
+    toastTitle.className='toast-title';
+    toastTitle.textContent=title;
+    toastContent.appendChild(toastTitle);
+  }
+  
+  const toastMessage=document.createElement('div');
+  toastMessage.className='toast-message';
+  toastMessage.textContent=message;
+  toastContent.appendChild(toastMessage);
+  
+  const closeButton=document.createElement('button');
+  closeButton.className='toast-close';
+  closeButton.textContent='×';
+  closeButton.onclick=function(){toast.remove();};
+  
+  // Assemble toast
+  toast.appendChild(toastIcon);
+  toast.appendChild(toastContent);
+  toast.appendChild(closeButton);
+  
+  container.appendChild(toast);
+  
+  // Trigger animation
+  setTimeout(()=>toast.classList.add('show'),100);
+  
+  // Auto remove after 5 seconds
+  setTimeout(()=>{
+    if(toast.parentNode){
+      toast.classList.remove('show');
+      setTimeout(()=>{
+        if(toast.parentNode){
+          toast.remove();
+        }
+      },300);
+    }
+  },5000);
+}
+
+function initializeForms(){
+  console.log('Initializing forms...');
+  const defaultCheckoutFields=[
+    {id:'email',label:'Email',field_key:'email',is_required:true,display_order:0,product_ids:[]},
+    {id:'full_name',label:'Full Name',field_key:'full_name',is_required:true,display_order:1,product_ids:[]},
+    {id:'phone',label:'Phone Number',field_key:'phone',is_required:false,display_order:2,product_ids:[]}
+  ];
+  
+  const formContainers=document.querySelectorAll('[data-component="cta"],form:empty,[class*="form-container"]:empty,[data-element="checkout-form"]');
+  console.log('Found form containers:',formContainers.length);
+  
+  formContainers.forEach(function(container,index){
+    if(container.dataset.formInitialized)return;
+    
+    if(container.children.length===0||(container.children.length===1&&container.querySelector('input[type="email"]:only-child'))){
+      container.innerHTML='';
+    }
+    
+    let form=container.tagName==='FORM'?container:container.querySelector('form');
+    if(!form){
+      form=document.createElement('form');
+      form.className='space-y-4';
+      container.appendChild(form);
+    }
+    
+    if(container.getAttribute('data-element')==='checkout-form'){
+      form.dataset.formType='checkout';
+    }else{
+      form.dataset.formType='contact';
+    }
+    
+    defaultCheckoutFields.forEach(function(field){
+      if(form.querySelector('input[name="'+field.field_key+'"]'))return;
+      
+      const fieldDiv=document.createElement('div');
+      fieldDiv.className='space-y-2';
+      
+      const label=document.createElement('label');
+      label.htmlFor=field.field_key;
+      label.className='block text-sm font-medium text-foreground mb-2';
+      label.textContent=field.label+(field.is_required?' *':'');
+      
+      const input=document.createElement('input');
+      input.id=field.field_key;
+      input.name=field.field_key;
+      input.required=field.is_required;
+      input.className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+      
+      switch(field.field_key){
+        case 'email':
+          input.type='email';
+          input.placeholder='Enter your email';
+          break;
+        case 'phone':
+          input.type='tel';
+          input.placeholder='Enter your phone number';
+          break;
+        default:
+          input.type='text';
+          input.placeholder='Enter your '+field.label.toLowerCase();
+      }
+      
+      fieldDiv.appendChild(label);
+      fieldDiv.appendChild(input);
+      form.appendChild(fieldDiv);
+    });
+    
+    if(!form.querySelector('button[type="submit"]')){
+      const submitBtn=document.createElement('button');
+      submitBtn.type='submit';
+      submitBtn.className='inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full';
+      submitBtn.textContent='Submit';
+      form.appendChild(submitBtn);
+    }
+    
+    container.dataset.formInitialized='true';
+    console.log('Initialized form container',index+1,'with',defaultCheckoutFields.length,'fields');
+  });
+}
+
+function findScrollTarget(targetId){
+  console.log('Looking for scroll target:',targetId);
+  let target=null;
+  let cleanId=targetId;
+  
+  if(targetId.startsWith('section-')){
+    cleanId=targetId.replace('section-','');
+  }
+  
+  target=document.getElementById(targetId);
+  if(target){
+    console.log('Found direct ID match:',targetId);
+    return target;
+  }
+  
+  if(!targetId.startsWith('section-')){
+    target=document.getElementById('section-'+targetId);
+    if(target){
+      console.log('Found section ID match: section-'+targetId);
+      return target;
+    }
+  }
+  
+  const sectionWithDataId=document.querySelector('[data-section-id="'+cleanId+'"]');
+  if(sectionWithDataId){
+    console.log('Found data-section-id match:',cleanId);
+    return sectionWithDataId;
+  }
+  
+  const possibleSelectors=[targetId,'section-'+cleanId,cleanId,'#'+targetId,'#section-'+cleanId,'#'+cleanId];
+  for(let i=0;i<possibleSelectors.length;i++){
+    try{
+      if(!possibleSelectors[i])continue;
+      target=document.querySelector('[id="'+possibleSelectors[i]+'"]');
+      if(target){
+        console.log('Found with ID selector:',possibleSelectors[i]);
+        return target;
+      }
+    }catch(e){continue;}
+  }
+  
+  console.warn('No scroll target found for:',targetId,'(cleaned:',cleanId,')');
+  console.log('Available sections:',[...document.querySelectorAll('[data-section-id]')].map(el=>({id:el.id,dataId:el.getAttribute('data-section-id')})));
+  return null;
+}
+
+function handleButtonClick(button){
+  const action=button.dataset.action;
+  const actionData=button.dataset.actionData;
+  if(!action)return;
+  
+  console.log('Button clicked:',action,actionData);
+  
+  switch(action){
+    case 'open_link':
+      try{
+        const data=JSON.parse(actionData||'{}');
+        let url=data.url||actionData;
+        if(url&&!/^https?:\\/\\//i.test(url)){
+          url='https://'+url;
+        }
+        if(url){
+          window.open(url,data.newTab?'_blank':'_self');
+          if(typeof trackFacebookEvent!=='undefined'){
+            trackFacebookEvent('ClickButton',{button_text:button.textContent,destination_url:url});
+          }
+        }
+      }catch(e){
+        let url=actionData;
+        if(url&&!/^https?:\\/\\//i.test(url)){
+          url='https://'+url;
+        }
+        if(url){
+          window.open(url,'_blank');
+        }
+      }
+      break;
+      
+    case 'scroll':
+      try{
+        const data=JSON.parse(actionData||'{}');
+        const targetId=data.targetId||actionData;
+        if(targetId){
+          const target=findScrollTarget(targetId);
+          if(target){
+            target.scrollIntoView({behavior:'smooth',block:'start'});
+            console.log('✅ Successfully scrolled to:',targetId);
+          }else{
+            console.warn('❌ Scroll target not found:',targetId);
+          }
+        }
+      }catch(e){
+        if(actionData){
+          const target=findScrollTarget(actionData);
+          if(target){
+            target.scrollIntoView({behavior:'smooth',block:'start'});
+            console.log('✅ Successfully scrolled to (fallback):',actionData);
+          }else{
+            console.warn('❌ Scroll target not found (fallback):',actionData);
+          }
+        }
+      }
+      break;
+      
+    case 'checkout':
+      try{
+        const data=JSON.parse(actionData||'{}');
+        console.log('Processing checkout with data:',data);
+        handleCheckout(data,button);
+      }catch(e){
+        console.error('Invalid checkout data:',e);
+        if(actionData){
+          console.log('Retrying checkout with raw actionData:',actionData);
+          handleCheckout({productId:actionData},button);
+        }
+      }
+      break;
+      
+    default:
+      console.log('Unknown button action:',action,actionData);
+  }
+}
+
+async function handleCheckout(actionData,button){
+  try{
+    const formElements=document.querySelectorAll('form input,form select,form textarea');
+    const formData={};
+    let userEmail='';
+    
+    formElements.forEach(function(element){
+      if(element.name||element.id){
+        const key=element.name||element.id;
+        formData[key]=element.value;
+        if(key==='email')userEmail=element.value;
+      }
+    });
+    
+    if(!userEmail){
+      showToast('Please enter your email to proceed with checkout.','error','Email Required');
+      return;
+    }
+    
+    const emailRegex=/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+    if(!emailRegex.test(userEmail)){
+      showToast('Please enter a valid email address.','error','Invalid Email');
+      return;
+    }
+    
+    const orderId=generateUUID();
+    const buyerName=formData.name||formData.full_name||userEmail.split('@')[0];
+    const amount=Number(actionData.amount)||0;
+    
+    console.log('Processing secure checkout for productId:',actionData.productId);
+    
+    if(typeof trackFacebookEvent!=='undefined'){
+      trackFacebookEvent('InitiateCheckout',{value:amount,currency:'TND',content_ids:[String(actionData.productId)]});
+    }
+    
+    // Show processing toast
+    showToast('Processing your checkout...','info','Please Wait');
+    
+    try{
+      const checkoutResponse=await fetch('https://ijrisuqixfqzmlomlgjb.supabase.co/functions/v1/secure-checkout',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':'Bearer '+SUPABASE_ANON_KEY
+        },
+        body:JSON.stringify({
+          orderId:orderId,
+          productId:actionData.productId,
+          amount:amount,
+          buyerEmail:userEmail,
+          buyerName:buyerName,
+          formData:formData,
+          pageSlug:PAGE_CONFIG.slug
+        })
+      });
+      
+      if(!checkoutResponse.ok){
+        throw new Error('Checkout service unavailable');
+      }
+      
+      const checkoutData=await checkoutResponse.json();
+      
+      if(checkoutData.success&&checkoutData.paymentUrl){
+        trackEvent('checkout_initiated',{order_id:orderId,amount:amount,user_email:userEmail});
+        
+        if(typeof trackFacebookEvent!=='undefined'){
+          trackFacebookEvent('Purchase',{value:amount,currency:'TND',content_ids:[String(actionData.productId)]});
+        }
+        
+        showToast('Redirecting to secure payment...','success','Checkout Ready');
+        setTimeout(()=>window.location.href=checkoutData.paymentUrl,1000);
+      }else{
+        throw new Error(checkoutData.error||'Failed to initialize payment');
+      }
+    }catch(serverError){
+      console.warn('Server-side checkout failed, falling back to direct approach:',serverError);
+      
+      if(actionData.checkoutUrl){
+        showToast('Redirecting to checkout...','info','Opening Checkout');
+        setTimeout(()=>window.open(actionData.checkoutUrl,'_blank'),1000);
+      }else if(actionData.productId){
+        const checkoutUrl=\`https://demarky.tn/checkout/\${actionData.productId}?email=\${encodeURIComponent(userEmail)}&name=\${encodeURIComponent(buyerName)}\`;
+        showToast('Redirecting to checkout...','info','Opening Checkout');
+        setTimeout(()=>window.open(checkoutUrl,'_blank'),1000);
+      }else{
+        showToast('Checkout is temporarily unavailable. Please try again later.','error','Service Unavailable');
+      }
+    }
+  }catch(error){
+    console.error('Checkout error:',error);
+    showToast('An unexpected error occurred. Please try again.','error','Checkout Error');
+  }
+}
+
+function handleFormSubmit(form){
+  console.log('Form submission triggered for form:',form);
+  console.log('Form type:',form.dataset.formType);
+  
+  const formData=new FormData(form);
+  const data=Object.fromEntries(formData.entries());
+  console.log('Form data collected:',Object.keys(data));
+  
+  const submissionData={
+    form_only:true,
+    form_data:data,
+    page_slug:PAGE_CONFIG.slug,
+    utm_data:{
+      utm_source:new URLSearchParams(window.location.search).get('utm_source'),
+      utm_medium:new URLSearchParams(window.location.search).get('utm_medium'),
+      utm_campaign:new URLSearchParams(window.location.search).get('utm_campaign')
+    },
+    session_id:getSessionId(),
+    user_agent:navigator.userAgent,
+    page_url:window.location.href,
+    created_at:new Date().toISOString()
+  };
+  
+  console.log('Submitting form data to secure-checkout endpoint:',{
+    form_only:submissionData.form_only,
+    page_slug:submissionData.page_slug,
+    field_count:Object.keys(submissionData.form_data).length
+  });
+  
+  // Show processing toast
+  showToast('Submitting your message...','info','Processing');
+  
+  fetch('https://ijrisuqixfqzmlomlgjb.supabase.co/functions/v1/secure-checkout',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'Authorization':'Bearer '+SUPABASE_ANON_KEY
+    },
+    body:JSON.stringify(submissionData)
+  })
+  .then(function(response){
+    if(response.ok){
+      return response.json();
+    }
+    throw new Error('Server error');
+  })
+  .then(function(result){
+    console.log('Form submission processed securely');
+    showToast('We have received your submission and will get back to you soon!','success','Thank You!');
+    form.reset();
+    
+    if(typeof trackFacebookEvent!=='undefined'){
+      trackFacebookEvent('Contact',{form_type:submissionData.form_type});
+    }
+    
+    trackEvent('form_submission',{
+      form_type:submissionData.form_type,
+      success:true,
+      timestamp:submissionData.created_at
+    });
+  })
+  .catch(function(error){
+    console.warn('Server-side form submission failed, using fallback:',error);
+    
+    try{
+      const existingSubmissions=JSON.parse(localStorage.getItem('landingPageSubmissions')||'[]');
+      existingSubmissions.push({...submissionData,local_storage:true,timestamp:Date.now()});
+      localStorage.setItem('landingPageSubmissions',JSON.stringify(existingSubmissions.slice(-10)));
+    }catch(e){
+      console.warn('LocalStorage not available');
+    }
+    
+    showToast('We have received your submission and will get back to you soon!','success','Thank You!');
+    form.reset();
+    
+    trackEvent('form_submission',{
+      form_type:submissionData.form_type,
+      success:true,
+      method:'fallback',
+      timestamp:submissionData.created_at
+    });
+  });
+}
+
+// Initialize everything when DOM is ready
+document.addEventListener('DOMContentLoaded',function(){
+  initializeForms();
+  initializeResponsiveFeatures();
+  
+  // Bind button click handlers
+  document.querySelectorAll('button[data-action],[role="button"][data-action]').forEach(button=>{
+    console.log('Found button with data-action:',button.dataset.action,button);
+    button.addEventListener('click',function(e){
+      if(!e.defaultPrevented){
+        e.preventDefault();
+        console.log('Data-attribute button clicked:',this.dataset.action,this.dataset.actionData);
+        handleButtonClick(this);
+      }
+    });
+  });
+  
+  document.querySelectorAll('button:not([data-action])').forEach(button=>{
+    if(button.onclick){
+      console.log('Found button with React click handler:',button);
+    }
+  });
+  
+  // Bind form submission handlers
+  const forms=document.querySelectorAll('form');
+  console.log('Binding form submission handlers to',forms.length,'forms');
+  
+  forms.forEach((form,index)=>{
+    console.log('Binding handler to form',index+1,'with type:',form.dataset.formType);
+    form.addEventListener('submit',function(e){
+      e.preventDefault();
+      console.log('Form submission event captured for form',index+1);
+      handleFormSubmit(this);
+    });
+  });
+  
+  // Intersection observer for animations
+  const observerOptions={threshold:0.1,rootMargin:'0px 0px -50px 0px'};
+  const observer=new IntersectionObserver(function(entries){
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        entry.target.classList.add('animate-fade-in');
+      }
+    });
+  },observerOptions);
+  
+  document.querySelectorAll('[data-section-id]').forEach(section=>{
+    observer.observe(section);
+  });
+  
+  function initializeResponsiveFeatures(){
+    console.log('Initializing responsive features...');
+    
+    function updateResponsiveElements(){
+      const windowWidth=window.innerWidth;
+      let currentBreakpoint='mobile';
+      
+      if(windowWidth>=1024){
+        currentBreakpoint='desktop';
+      }else if(windowWidth>=768){
+        currentBreakpoint='tablet';
+      }else{
+        currentBreakpoint='mobile';
+      }
+      
+      console.log('Current breakpoint:',currentBreakpoint,'Width:',windowWidth);
+      
+      document.body.className=document.body.className.replace(/\\b(mobile|tablet|desktop)-breakpoint\\b/g,'');
+      document.body.classList.add(currentBreakpoint+'-breakpoint');
+      
+      document.dispatchEvent(new CustomEvent('breakpointChange',{
+        detail:{breakpoint:currentBreakpoint,width:windowWidth}
+      }));
+    }
+    
+    updateResponsiveElements();
+    
+    let resizeTimeout;
+    window.addEventListener('resize',function(){
+      clearTimeout(resizeTimeout);
+      resizeTimeout=setTimeout(updateResponsiveElements,100);
+    });
+    
+    if(window.tailwind&&window.tailwind.refresh){
+      window.tailwind.refresh();
+    }
+  }
+  
+  // Scroll depth tracking
+  let maxScrollDepth=0;
+  window.addEventListener('scroll',function(){
+    const scrollTop=window.pageYOffset||document.documentElement.scrollTop;
+    const documentHeight=document.documentElement.scrollHeight-window.innerHeight;
+    const scrollPercent=Math.round((scrollTop/documentHeight)*100);
+    
+    if(scrollPercent>maxScrollDepth){
+      maxScrollDepth=scrollPercent;
+      if([25,50,75,90].includes(scrollPercent)){
+        trackEvent('scroll_depth',{scroll_percent:scrollPercent,timestamp:new Date().toISOString()});
+      }
+    }
+  });
+  
+  // Time on page tracking
+  const startTime=Date.now();
+  window.addEventListener('beforeunload',function(){
+    const timeOnPage=Math.round((Date.now()-startTime)/1000);
+    if(timeOnPage>5){
+      trackEvent('time_on_page',{time_seconds:timeOnPage,max_scroll_depth:maxScrollDepth});
+    }
+  });
+  
+  // Form field focus tracking
+  document.querySelectorAll('input,textarea,select').forEach(function(field){
+    field.addEventListener('focus',function(){
+      trackEvent('form_field_focus',{
+        field_name:this.name||this.id,
+        field_type:this.type||this.tagName.toLowerCase()
+      });
+    });
+  });
+  
+  // Re-initialize forms after delay for dynamic content
+  setTimeout(function(){
+    initializeForms();
+    console.log('Re-initialized forms after delay');
+  },1000);
+  
+  // Watch for dynamic content changes
+  if(window.MutationObserver){
+    const observer=new MutationObserver(function(mutations){
+      let shouldReinitialize=false;
+      mutations.forEach(function(mutation){
+        if(mutation.type==='childList'&&mutation.addedNodes.length>0){
+          shouldReinitialize=true;
+        }
+      });
+      if(shouldReinitialize){
+        setTimeout(initializeForms,100);
+      }
+    });
+    
+    observer.observe(document.body,{childList:true,subtree:true});
+  }
+});
+
+// Add fade-in animation styles
+const style=document.createElement('style');
+style.textContent=\`.animate-fade-in{animation:fadeIn 0.6s ease-out forwards;}@keyframes fadeIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}\`;
+document.head.appendChild(style);
+
+})();`;
   }
 }
