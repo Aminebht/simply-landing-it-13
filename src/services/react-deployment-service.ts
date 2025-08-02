@@ -1183,6 +1183,15 @@ function initializeForms(){
           input.placeholder='Enter your '+field.label.toLowerCase();
       }
       
+      // Add real-time validation
+      input.addEventListener('input',function(){
+        validateField(this);
+      });
+      
+      input.addEventListener('blur',function(){
+        validateField(this);
+      });
+      
       fieldDiv.appendChild(label);
       fieldDiv.appendChild(input);
       form.appendChild(fieldDiv);
@@ -1199,6 +1208,74 @@ function initializeForms(){
     container.dataset.formInitialized='true';
     console.log('Initialized form container',index+1,'with',defaultCheckoutFields.length,'fields');
   });
+  
+  // Add validation for existing form fields
+  document.querySelectorAll('form input,form select,form textarea').forEach(function(field){
+    if(!field.dataset.validationAdded){
+      field.addEventListener('input',function(){
+        validateField(this);
+      });
+      
+      field.addEventListener('blur',function(){
+        validateField(this);
+      });
+      
+      field.dataset.validationAdded='true';
+    }
+  });
+}
+
+// Real-time field validation function
+function validateField(field){
+  const fieldValue=(field.value||'').trim();
+  const isRequired=field.required||field.hasAttribute('required');
+  let isValid=true;
+  let errorMessage='';
+  
+  // Remove existing error styling first
+  field.classList.remove('border-red-500','ring-red-500');
+  field.classList.add('border-input');
+  
+  // Remove any existing error message
+  const existingError=field.parentElement.querySelector('.field-error');
+  if(existingError){
+    existingError.remove();
+  }
+  
+  // Check if required field is empty
+  if(isRequired&&!fieldValue){
+    isValid=false;
+    errorMessage='This field is required';
+  }else if(fieldValue){
+    // Validate specific field types
+    if(field.type==='email'){
+      const emailRegex=/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+      if(!emailRegex.test(fieldValue)){
+        isValid=false;
+        errorMessage='Please enter a valid email address';
+      }
+    }else if(field.type==='tel'&&isRequired){
+      const phoneRegex=/^[\\+]?[1-9]?[0-9]{7,15}$/;
+      if(!phoneRegex.test(fieldValue.replace(/[\\s\\-\\(\\)]/g,''))){
+        isValid=false;
+        errorMessage='Please enter a valid phone number';
+      }
+    }
+  }
+  
+  // Apply error styling and message if invalid
+  if(!isValid){
+    field.classList.add('border-red-500','ring-red-500');
+    field.classList.remove('border-input');
+    
+    // Add error message
+    const errorDiv=document.createElement('div');
+    errorDiv.className='field-error text-red-500 text-xs mt-1';
+    errorDiv.textContent=errorMessage;
+    field.parentElement.appendChild(errorDiv);
+  }
+  
+  return isValid;
 }
 
 function findScrollTarget(targetId){
@@ -1326,10 +1403,14 @@ function handleButtonClick(button){
 
 async function handleCheckout(actionData,button){
   try{
+    // COMPREHENSIVE CHECKOUT VALIDATION
     const formElements=document.querySelectorAll('form input,form select,form textarea');
     const formData={};
     let userEmail='';
+    const validationErrors=[];
+    let firstInvalidField=null;
     
+    // Collect all form data
     formElements.forEach(function(element){
       if(element.name||element.id){
         const key=element.name||element.id;
@@ -1338,16 +1419,79 @@ async function handleCheckout(actionData,button){
       }
     });
     
+    // Validate all required fields in forms
+    const requiredFields=document.querySelectorAll('form input[required],form select[required],form textarea[required]');
+    requiredFields.forEach(function(field){
+      const fieldName=field.name||field.id||'Unknown field';
+      const fieldValue=(field.value||'').trim();
+      
+      if(!fieldValue){
+        const fieldLabel=field.previousElementSibling&&field.previousElementSibling.tagName==='LABEL'
+          ?field.previousElementSibling.textContent.replace(' *','')
+          :fieldName;
+        validationErrors.push(fieldLabel);
+        field.classList.add('border-red-500','ring-red-500');
+        field.classList.remove('border-input');
+        if(!firstInvalidField){
+          firstInvalidField=field;
+        }
+      }else{
+        field.classList.remove('border-red-500','ring-red-500');
+        field.classList.add('border-input');
+      }
+    });
+    
+    // Show validation errors if any
+    if(validationErrors.length>0){
+      const errorMessage=validationErrors.length===1
+        ?\`Please fill in the required field: \${validationErrors[0]}\`
+        :\`Please fill in the following required fields: \${validationErrors.join(', ')}\`;
+      
+      showToast(errorMessage,'error','Complete Required Fields');
+      
+      if(firstInvalidField){
+        firstInvalidField.focus();
+        firstInvalidField.scrollIntoView({behavior:'smooth',block:'center'});
+      }
+      return;
+    }
+    
+    // Specific email validation
     if(!userEmail){
       showToast('Please enter your email to proceed with checkout.','error','Email Required');
+      const emailField=document.querySelector('input[name="email"],input[type="email"]');
+      if(emailField){
+        emailField.focus();
+        emailField.classList.add('border-red-500','ring-red-500');
+      }
       return;
     }
     
     const emailRegex=/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
     if(!emailRegex.test(userEmail)){
       showToast('Please enter a valid email address.','error','Invalid Email');
+      const emailField=document.querySelector('input[name="email"],input[type="email"]');
+      if(emailField){
+        emailField.focus();
+        emailField.classList.add('border-red-500','ring-red-500');
+      }
       return;
     }
+    
+    // Validate full name if required
+    const fullNameField=document.querySelector('input[name="full_name"],input[name="name"]');
+    if(fullNameField&&fullNameField.required&&(!formData.full_name&&!formData.name)){
+      showToast('Please enter your full name to proceed with checkout.','error','Name Required');
+      fullNameField.focus();
+      fullNameField.classList.add('border-red-500','ring-red-500');
+      return;
+    }
+    
+    // All validations passed - clear any error styling
+    document.querySelectorAll('form .border-red-500').forEach(field=>{
+      field.classList.remove('border-red-500','ring-red-500');
+      field.classList.add('border-input');
+    });
     
     const orderId=generateUUID();
     const buyerName=formData.name||formData.full_name||userEmail.split('@')[0];
@@ -1361,6 +1505,21 @@ async function handleCheckout(actionData,button){
     
     // Show processing toast
     showToast('Processing your checkout...','info','Please Wait');
+    
+    // Disable checkout button during processing
+    if(button){
+      button.disabled=true;
+      const originalText=button.textContent;
+      button.textContent='Processing...';
+      
+      // Re-enable button after timeout
+      setTimeout(()=>{
+        if(button){
+          button.disabled=false;
+          button.textContent=originalText;
+        }
+      },10000);
+    }
     
     try{
       const checkoutResponse=await fetch('https://ijrisuqixfqzmlomlgjb.supabase.co/functions/v1/secure-checkout',{
@@ -1422,9 +1581,92 @@ function handleFormSubmit(form){
   console.log('Form submission triggered for form:',form);
   console.log('Form type:',form.dataset.formType);
   
+  // COMPREHENSIVE FORM VALIDATION
+  const requiredFields=form.querySelectorAll('input[required],select[required],textarea[required]');
+  const validationErrors=[];
+  let firstInvalidField=null;
+  
+  // Validate each required field
+  requiredFields.forEach(function(field){
+    const fieldName=field.name||field.id||'Unknown field';
+    const fieldValue=(field.value||'').trim();
+    
+    // Check if field is empty
+    if(!fieldValue){
+      validationErrors.push(fieldName);
+      field.classList.add('border-red-500','ring-red-500');
+      field.classList.remove('border-input');
+      if(!firstInvalidField){
+        firstInvalidField=field;
+      }
+    }else{
+      // Field has value, remove error styling
+      field.classList.remove('border-red-500','ring-red-500');
+      field.classList.add('border-input');
+      
+      // Specific validation for email fields
+      if(field.type==='email'){
+        const emailRegex=/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+        if(!emailRegex.test(fieldValue)){
+          validationErrors.push(fieldName+' (invalid format)');
+          field.classList.add('border-red-500','ring-red-500');
+          field.classList.remove('border-input');
+          if(!firstInvalidField){
+            firstInvalidField=field;
+          }
+        }
+      }
+      
+      // Specific validation for phone fields
+      if(field.type==='tel'&&field.required){
+        const phoneRegex=/^[\\+]?[1-9]?[0-9]{7,15}$/;
+        if(!phoneRegex.test(fieldValue.replace(/[\\s\\-\\(\\)]/g,''))){
+          validationErrors.push(fieldName+' (invalid format)');
+          field.classList.add('border-red-500','ring-red-500');
+          field.classList.remove('border-input');
+          if(!firstInvalidField){
+            firstInvalidField=field;
+          }
+        }
+      }
+    }
+  });
+  
+  // If there are validation errors, show them and stop submission
+  if(validationErrors.length>0){
+    const errorMessage=validationErrors.length===1
+      ?\`Please fill in the required field: \${validationErrors[0]}\`
+      :\`Please fill in the following required fields: \${validationErrors.join(', ')}\`;
+    
+    showToast(errorMessage,'error','Form Validation');
+    
+    // Focus on the first invalid field
+    if(firstInvalidField){
+      firstInvalidField.focus();
+      firstInvalidField.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+    
+    return; // Stop form submission
+  }
+  
+  // All validations passed, proceed with form submission
   const formData=new FormData(form);
   const data=Object.fromEntries(formData.entries());
   console.log('Form data collected:',Object.keys(data));
+  
+  // Additional validation for form data completeness
+  const essentialFields=['email'];
+  const missingEssentialFields=essentialFields.filter(field=>!data[field]||!data[field].trim());
+  
+  if(missingEssentialFields.length>0){
+    showToast('Email address is required for all form submissions.','error','Missing Required Information');
+    const emailField=form.querySelector('input[name="email"],input[type="email"]');
+    if(emailField){
+      emailField.focus();
+      emailField.classList.add('border-red-500','ring-red-500');
+    }
+    return;
+  }
   
   const submissionData={
     form_only:true,
@@ -1441,14 +1683,22 @@ function handleFormSubmit(form){
     created_at:new Date().toISOString()
   };
   
-  console.log('Submitting form data to secure-checkout endpoint:',{
+  console.log('Submitting validated form data to secure-checkout endpoint:',{
     form_only:submissionData.form_only,
     page_slug:submissionData.page_slug,
-    field_count:Object.keys(submissionData.form_data).length
+    field_count:Object.keys(submissionData.form_data).length,
+    required_fields_count:requiredFields.length
   });
   
   // Show processing toast
   showToast('Submitting your message...','info','Processing');
+  
+  // Disable submit button during submission
+  const submitButton=form.querySelector('button[type="submit"]');
+  if(submitButton){
+    submitButton.disabled=true;
+    submitButton.textContent='Submitting...';
+  }
   
   fetch('https://ijrisuqixfqzmlomlgjb.supabase.co/functions/v1/secure-checkout',{
     method:'POST',
@@ -1468,6 +1718,12 @@ function handleFormSubmit(form){
     console.log('Form submission processed securely');
     showToast('We have received your submission and will get back to you soon!','success','Thank You!');
     form.reset();
+    
+    // Clear any validation error styling
+    form.querySelectorAll('.border-red-500').forEach(field=>{
+      field.classList.remove('border-red-500','ring-red-500');
+      field.classList.add('border-input');
+    });
     
     if(typeof trackFacebookEvent!=='undefined'){
       trackFacebookEvent('Contact',{form_type:submissionData.form_type});
@@ -1493,12 +1749,25 @@ function handleFormSubmit(form){
     showToast('We have received your submission and will get back to you soon!','success','Thank You!');
     form.reset();
     
+    // Clear any validation error styling
+    form.querySelectorAll('.border-red-500').forEach(field=>{
+      field.classList.remove('border-red-500','ring-red-500');
+      field.classList.add('border-input');
+    });
+    
     trackEvent('form_submission',{
       form_type:submissionData.form_type,
       success:true,
       method:'fallback',
       timestamp:submissionData.created_at
     });
+  })
+  .finally(function(){
+    // Re-enable submit button
+    if(submitButton){
+      submitButton.disabled=false;
+      submitButton.textContent='Submit';
+    }
   });
 }
 
