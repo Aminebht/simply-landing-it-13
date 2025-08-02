@@ -301,6 +301,9 @@ export class ReactDeploymentService {
       try {
         // Render to static HTML string
         const componentHTML = ReactDOMServer.renderToStaticMarkup(PageComponent);
+        
+        // PRODUCTION CLEANUP - Remove development attributes and clean up for deployment
+        const cleanedHTML = this.cleanProductionHTML(componentHTML);
 
         // Create complete HTML document with security headers
         const html = `<!DOCTYPE html>
@@ -325,7 +328,7 @@ export class ReactDeploymentService {
   ${this.generateFacebookPixel(pageData)}
 </head>
 <body>
-  ${componentHTML}
+  ${cleanedHTML}
   <script src="app.js"></script>
 </body>
 </html>`;
@@ -340,6 +343,54 @@ export class ReactDeploymentService {
       console.error('Failed to generate React HTML:', error);
       throw new Error(`React HTML generation failed: ${error.message}`);
     }
+  }
+
+  private cleanProductionHTML(html: string): string {
+    console.log('🧹 Cleaning HTML for production deployment...');
+    
+    let cleanedHTML = html;
+    
+    // 1. Remove all development data attributes
+    const devAttributes = [
+      /data-lov-[^=]*="[^"]*"/g,           // Remove data-lov-* attributes
+      /data-component-[^=]*="[^"]*"/g,     // Remove data-component-* attributes
+      /data-section-id="[^"]*"/g,          // Remove data-section-id attributes
+      /data-element="[^"]*"/g,             // Remove data-element attributes (keep for functionality)
+      /data-testid="[^"]*"/g,              // Remove test IDs
+      /data-cy="[^"]*"/g,                  // Remove Cypress test attributes
+      /data-qa="[^"]*"/g,                  // Remove QA test attributes
+    ];
+    
+    // Keep functional data attributes (action, form-type, etc.)
+    const keepAttributes = [
+      'data-action',
+      'data-action-data', 
+      'data-form-type',
+      'data-form-initialized'
+    ];
+    
+    devAttributes.forEach(pattern => {
+      cleanedHTML = cleanedHTML.replace(pattern, '');
+    });
+    
+    // 2. Clean up extra whitespace from removed attributes
+    cleanedHTML = cleanedHTML.replace(/\s+/g, ' ');
+    cleanedHTML = cleanedHTML.replace(/\s+>/g, '>');
+    cleanedHTML = cleanedHTML.replace(/>\s+</g, '><');
+    
+    // 3. Remove HTML comments (but keep important ones)
+    cleanedHTML = cleanedHTML.replace(/<!--(?!\s*\/\*)[\s\S]*?-->/g, '');
+    
+    // 4. Clean up class names - remove development/debug classes
+    cleanedHTML = cleanedHTML.replace(/\bdev-\w+\b/g, '');
+    cleanedHTML = cleanedHTML.replace(/\bdebug-\w+\b/g, '');
+    cleanedHTML = cleanedHTML.replace(/\btest-\w+\b/g, '');
+    
+    // 5. Remove any builder-specific IDs that might expose internal structure
+    cleanedHTML = cleanedHTML.replace(/id="(component|section|element)-[^"]*"/g, '');
+    
+    console.log('✅ HTML cleaned for production deployment');
+    return cleanedHTML;
   }
 
   private generateSEOMetaTags(pageData: any, deploymentUrl?: string): string {
@@ -637,81 +688,20 @@ export class ReactDeploymentService {
   }
 
   private generateSupabaseSDK(pageData: any): string {
+    // Use environment-specific configuration - avoid exposing internal URLs
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://ijrisuqixfqzmlomlgjb.supabase.co';
     const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlqcmlzdXFpeGZxem1sb21sZ2piIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1OTg3NjAsImV4cCI6MjA2NzE3NDc2MH0.01KwBmQrfZPMycwqyo_Z7C8S4boJYjDLuldKjrHOJWg';
     
-    // Include Supabase SDK with security-focused configuration
-    return `
-<!-- Supabase SDK -->
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    // Minified production configuration - remove comments and compress
+    return `<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script>
-  // Initialize Supabase client for this hosted page (read-only access)
-  const supabase = window.supabase.createClient(
-    '${supabaseUrl}',
-    '${supabaseAnonKey}',
-    {
-      auth: {
-        persistSession: false,  // Don't persist sessions for security
-        autoRefreshToken: false  // Disable auto refresh for public pages
-      }
-    }
-  );
-  
-  // Store anon key for Edge Function calls
-  const SUPABASE_ANON_KEY = '${supabaseAnonKey}';
-  
-  // Public page configuration - NO SENSITIVE DATA
-  const PAGE_CONFIG = {
-    slug: '${pageData.slug || 'landing-page'}',
-    title: '${this.escapeHtml(pageData.seo_config?.title || 'Landing Page')}',
-    url: window.location.href,
-    language: '${pageData.global_theme?.language || 'en'}'
-  };
-  
-  // Utility function to generate UUID
-  function generateUUID() {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-      return crypto.randomUUID();
-    }
-    // Fallback UUID generation for older browsers
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = Math.random() * 16 | 0;
-      const v = c == 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
-  }
-  
-  // Utility function to generate session ID
-  function getSessionId() {
-    let sessionId = sessionStorage.getItem('landing_session_id');
-    if (!sessionId) {
-      sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-      sessionStorage.setItem('landing_session_id', sessionId);
-    }
-    return sessionId;
-  }
-  
-  // Secure analytics tracking - only public data
-  function trackEvent(eventType, eventData) {
-    // Only log to console - avoid exposing internal IDs or sensitive data
-    console.log('Landing Page Event:', {
-      event_type: eventType,
-      event_data: eventData,
-      timestamp: new Date().toISOString(),
-      page_url: window.location.href
-    });
-  }
-  
-  // Track page view on load with only public information
-  window.addEventListener('load', function() {
-    trackEvent('page_view', {
-      page_title: PAGE_CONFIG.title,
-      page_slug: PAGE_CONFIG.slug,
-      referrer: document.referrer,
-      viewport_width: window.innerWidth,
-      viewport_height: window.innerHeight
-    });
-  });
+const supabase=window.supabase.createClient('${supabaseUrl}','${supabaseAnonKey}',{auth:{persistSession:false,autoRefreshToken:false}});
+const SUPABASE_ANON_KEY='${supabaseAnonKey}';
+const PAGE_CONFIG={slug:'${pageData.slug || 'landing-page'}',title:'${this.escapeHtml(pageData.seo_config?.title || 'Landing Page')}',url:window.location.href,language:'${pageData.global_theme?.language || 'en'}'};
+function generateUUID(){if(typeof crypto!=='undefined'&&crypto.randomUUID){return crypto.randomUUID();}return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){const r=Math.random()*16|0;const v=c=='x'?r:(r&0x3|0x8);return v.toString(16);});}
+function getSessionId(){let sessionId=sessionStorage.getItem('landing_session_id');if(!sessionId){sessionId='session_'+Date.now()+'_'+Math.random().toString(36).substr(2,9);sessionStorage.setItem('landing_session_id',sessionId);}return sessionId;}
+function trackEvent(eventType,eventData){console.log('Landing Page Event:',{event_type:eventType,event_data:eventData,timestamp:new Date().toISOString(),page_url:window.location.href});}
+window.addEventListener('load',function(){trackEvent('page_view',{page_title:PAGE_CONFIG.title,page_slug:PAGE_CONFIG.slug,referrer:document.referrer,viewport_width:window.innerWidth,viewport_height:window.innerHeight});});
 </script>`;
   }
 
@@ -775,46 +765,32 @@ export class ReactDeploymentService {
   }
 
   private generateCustomCSS(pageData: any): string {
-    let css = `/* Generated styles for ${pageData.slug} */\n`;
+    // Minified CSS for production deployment
+    let css = `/* ${pageData.slug} */\n`;
 
-    // Add global theme styles
+    // Add global theme styles (minified)
     if (pageData.global_theme) {
-      css += `
-:root {
-  --primary-color: ${pageData.global_theme.primaryColor || '#3b82f6'};
-  --secondary-color: ${pageData.global_theme.secondaryColor || '#f3f4f6'};
-  --background-color: ${pageData.global_theme.backgroundColor || '#ffffff'};
-  --font-family: ${pageData.global_theme.fontFamily || 'Inter, sans-serif'};
-}
-
-body {
-  background-color: var(--background-color);
-  font-family: var(--font-family);
-  color: #1a202c;
-}
-`;
+      css += `:root{--primary-color:${pageData.global_theme.primaryColor || '#3b82f6'};--secondary-color:${pageData.global_theme.secondaryColor || '#f3f4f6'};--background-color:${pageData.global_theme.backgroundColor || '#ffffff'};--font-family:${pageData.global_theme.fontFamily || 'Inter, sans-serif'};}body{background-color:var(--background-color);font-family:var(--font-family);color:#1a202c;}`;
     }
 
-    // Add component-specific styles
+    // Add component-specific styles (minified)
     pageData.components?.forEach((component: LandingPageComponent, index: number) => {
       const customStyles = component.custom_styles || {};
       
       Object.entries(customStyles).forEach(([elementId, styles]: [string, any]) => {
         if (!styles || typeof styles !== 'object') return;
 
-        css += `
-/* Component ${component.id} - Element ${elementId} */
-#section-${component.id} [data-element="${elementId}"] {`;
+        css += `#section-${component.id} [data-element="${elementId}"]{`;
 
         Object.entries(styles).forEach(([property, value]) => {
           if (typeof value === 'string' || typeof value === 'number') {
-            // Convert camelCase to kebab-case
+            // Convert camelCase to kebab-case and minify
             const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
-            css += `\n  ${cssProperty}: ${value};`;
+            css += `${cssProperty}:${value};`;
           }
         });
 
-        css += '\n}\n';
+        css += '}';
       });
     });
 
@@ -822,632 +798,7 @@ body {
   }
 
   private generateInteractivityJS(pageData: any): string {
-    return `
-// Interactive functionality for deployed landing page
-(function() {
-  'use strict';
-
-  // Ensure forms are properly initialized for checkout
-  function initializeForms() {
-    console.log('Initializing forms with complete field support...');
-    
-    // Default checkout fields to ensure proper form rendering
-    const defaultCheckoutFields = [
-      {
-        id: 'email',
-        label: 'Email',
-        field_key: 'email',
-        is_required: true,
-        display_order: 0,
-        product_ids: []
-      },
-      {
-        id: 'full_name',
-        label: 'Full Name',
-        field_key: 'full_name',
-        is_required: true,
-        display_order: 1,
-        product_ids: []
-      },
-      {
-        id: 'phone',
-        label: 'Phone Number',
-        field_key: 'phone',
-        is_required: false,
-        display_order: 2,
-        product_ids: []
-      }
-    ];
-
-    // Find all form containers and initialize them
-    const formContainers = document.querySelectorAll('[data-component="cta"], form:empty, [class*="form-container"]:empty, [data-element="checkout-form"]');
-    console.log('Found form containers:', formContainers.length);
-    
-    formContainers.forEach(function(container, index) {
-      console.log('Processing form container', index + 1, container);
-      
-      // Skip if already initialized
-      if (container.dataset.formInitialized) {
-        return;
-      }
-      
-      // Clear existing content if empty or problematic
-      if (container.children.length === 0 || 
-          (container.children.length === 1 && container.querySelector('input[type="email"]:only-child'))) {
-        container.innerHTML = '';
-      }
-      
-      // Create form element if not exists
-      let form = container.tagName === 'FORM' ? container : container.querySelector('form');
-      if (!form) {
-        form = document.createElement('form');
-        form.className = 'space-y-4';
-        container.appendChild(form);
-      }
-      
-      // Set form type for proper submission handling
-      if (container.getAttribute('data-element') === 'checkout-form') {
-        form.dataset.formType = 'checkout';
-      } else {
-        form.dataset.formType = 'contact';
-      }
-      
-      // Add all checkout fields
-      defaultCheckoutFields.forEach(function(field) {
-        // Skip if field already exists
-        if (form.querySelector('input[name="' + field.field_key + '"]')) {
-          return;
-        }
-        
-        const fieldDiv = document.createElement('div');
-        fieldDiv.className = 'space-y-2';
-        
-        const label = document.createElement('label');
-        label.htmlFor = field.field_key;
-        label.className = 'block text-sm font-medium text-foreground mb-2';
-        label.textContent = field.label + (field.is_required ? ' *' : '');
-        
-        const input = document.createElement('input');
-        input.id = field.field_key;
-        input.name = field.field_key;
-        input.required = field.is_required;
-        input.className = 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
-        
-        // Set input type and placeholder based on field
-        switch (field.field_key) {
-          case 'email':
-            input.type = 'email';
-            input.placeholder = 'Enter your email';
-            break;
-          case 'phone':
-            input.type = 'tel';
-            input.placeholder = 'Enter your phone number';
-            break;
-          default:
-            input.type = 'text';
-            input.placeholder = 'Enter your ' + field.label.toLowerCase();
-            break;
-        }
-        
-        fieldDiv.appendChild(label);
-        fieldDiv.appendChild(input);
-        form.appendChild(fieldDiv);
-      });
-      
-      // Add submit button if not exists
-      if (!form.querySelector('button[type="submit"]')) {
-        const submitBtn = document.createElement('button');
-        submitBtn.type = 'submit';
-        submitBtn.className = 'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full';
-        submitBtn.textContent = 'Submit';
-        form.appendChild(submitBtn);
-      }
-      
-      container.dataset.formInitialized = 'true';
-      console.log('Initialized form container', index + 1, 'with', defaultCheckoutFields.length, 'fields');
-    });
-  }
-
-  // Button click handlers - UNIFIED logic matching ButtonUtils.tsx
-  function handleButtonClick(button) {
-    const action = button.dataset.action;
-    const actionData = button.dataset.actionData;
-    
-    if (!action) return;
-
-    console.log('Button clicked:', action, actionData);
-
-    // Note: Analytics tracking removed as page_analytics table doesn't exist
-
-    switch (action) {
-      case 'open_link':
-        try {
-          const data = JSON.parse(actionData || '{}');
-          let url = data.url || actionData;
-          if (url && !/^https?:\\/\\//i.test(url)) {
-            url = 'https://' + url;
-          }
-          if (url) {
-            window.open(url, data.newTab ? '_blank' : '_self');
-            
-            // Track link click
-            if (typeof trackFacebookEvent !== 'undefined') {
-              trackFacebookEvent('ClickButton', {
-                page_id: PAGE_CONFIG.id,
-                button_text: button.textContent,
-                destination_url: url
-              });
-            }
-          }
-        } catch (e) {
-          // Fallback for simple URL strings
-          let url = actionData;
-          if (url && !/^https?:\\/\\//i.test(url)) {
-            url = 'https://' + url;
-          }
-          if (url) {
-            window.open(url, '_blank');
-          }
-        }
-        break;
-        
-      case 'scroll':
-        try {
-          // First try to parse as JSON
-          const data = JSON.parse(actionData || '{}');
-          const targetId = data.targetId || actionData;
-          if (targetId) {
-            const target = document.getElementById(targetId);
-            if (target) {
-              target.scrollIntoView({ behavior: 'smooth' });
-              console.log('Scrolled to target:', targetId);
-            } else {
-              console.warn('Scroll target not found:', targetId);
-            }
-          }
-        } catch (e) {
-          // Fallback for simple targetId strings
-          if (actionData) {
-            const target = document.getElementById(actionData);
-            if (target) {
-              target.scrollIntoView({ behavior: 'smooth' });
-              console.log('Scrolled to target (fallback):', actionData);
-            } else {
-              console.warn('Scroll target not found (fallback):', actionData);
-            }
-          }
-        }
-        break;
-        
-      case 'checkout':
-        try {
-          const data = JSON.parse(actionData || '{}');
-          console.log('Processing checkout with data:', data);
-          handleCheckout(data, button);
-        } catch (e) {
-          console.error('Invalid checkout data:', e);
-          // Try to handle as simple object
-          if (actionData) {
-            console.log('Retrying checkout with raw actionData:', actionData);
-            handleCheckout({ productId: actionData }, button);
-          }
-        }
-        break;
-        
-      default:
-        console.log('Unknown button action:', action, actionData);
-    }
-  }
-
-  // Enhanced checkout handler with secure server-side processing
-  async function handleCheckout(actionData, button) {
-    try {
-      // Get form data from any forms on the page
-      const formElements = document.querySelectorAll('form input, form select, form textarea');
-      const formData = {};
-      let userEmail = '';
-      
-      formElements.forEach(function(element) {
-        if (element.name || element.id) {
-          const key = element.name || element.id;
-          formData[key] = element.value;
-          if (key === 'email') userEmail = element.value;
-        }
-      });
-
-      // Validate required email
-      if (!userEmail) {
-        alert("Please enter your email to proceed with checkout.");
-        return;
-      }
-
-      // Validate email format
-      const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
-      if (!emailRegex.test(userEmail)) {
-        alert("Please enter a valid email address.");
-        return;
-      }
-
-      // Generate secure order ID
-      const orderId = generateUUID();
-      const buyerName = formData.name || formData.full_name || userEmail.split('@')[0];
-      
-      // Get amount from button data (validated server-side)
-      const amount = Number(actionData.amount) || 0;
-      console.log('Processing secure checkout for productId:', actionData.productId);
-      
-      // Track initiate checkout event (no sensitive data)
-      if (typeof trackFacebookEvent !== 'undefined') {
-        trackFacebookEvent('InitiateCheckout', {
-          value: amount,
-          currency: 'TND',
-          content_ids: [String(actionData.productId)]
-        });
-      }
-
-      // SECURE APPROACH: Use Supabase Edge Function instead of direct Supabase calls
-      try {
-        // Call secure Supabase Edge Function that handles all sensitive operations
-        const checkoutResponse = await fetch('https://ijrisuqixfqzmlomlgjb.supabase.co/functions/v1/secure-checkout', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + SUPABASE_ANON_KEY  // Use correct anon key variable
-          },
-          body: JSON.stringify({
-            orderId: orderId,
-            productId: actionData.productId,
-            amount: amount,
-            buyerEmail: userEmail,
-            buyerName: buyerName,
-            formData: formData,
-            pageSlug: PAGE_CONFIG.slug
-          })
-        });
-
-        if (!checkoutResponse.ok) {
-          throw new Error('Checkout service unavailable');
-        }
-
-        const checkoutData = await checkoutResponse.json();
-        
-        if (checkoutData.success && checkoutData.paymentUrl) {
-          // Track successful checkout initiation
-          trackEvent('checkout_initiated', {
-            order_id: orderId,
-            amount: amount,
-            user_email: userEmail
-          });
-
-          // Track Facebook purchase event
-          if (typeof trackFacebookEvent !== 'undefined') {
-            trackFacebookEvent('Purchase', {
-              value: amount,
-              currency: 'TND',
-              content_ids: [String(actionData.productId)]
-            });
-          }
-
-          // Redirect to secure payment gateway
-          window.location.href = checkoutData.paymentUrl;
-        } else {
-          throw new Error(checkoutData.error || 'Failed to initialize payment');
-        }
-
-      } catch (serverError) {
-        console.warn('Server-side checkout failed, falling back to direct approach:', serverError);
-        
-        // FALLBACK: Direct checkout URL if server endpoint is not available
-        if (actionData.checkoutUrl) {
-          window.open(actionData.checkoutUrl, '_blank');
-        } else if (actionData.productId) {
-          // Use a generic checkout URL format
-          const checkoutUrl = \`https://demarky.tn/checkout/\${actionData.productId}?email=\${encodeURIComponent(userEmail)}&name=\${encodeURIComponent(buyerName)}\`;
-          window.open(checkoutUrl, '_blank');
-        } else {
-          alert("Checkout is temporarily unavailable. Please try again later.");
-        }
-      }
-
-    } catch (error) {
-      console.error('Checkout error:', error);
-      alert("An unexpected error occurred. Please try again.");
-    }
-  }
-
-  // Secure form submission handlers - No sensitive data exposure
-  function handleFormSubmit(form) {
-    console.log('Form submission triggered for form:', form);
-    console.log('Form type:', form.dataset.formType);
-    
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
-    console.log('Form data collected:', Object.keys(data));
-    
-    // For contact forms, use secure-checkout endpoint with form_only flag
-    const submissionData = {
-      form_only: true, // Flag to indicate this is just a form submission, not checkout
-      form_data: data,
-      page_slug: PAGE_CONFIG.slug,
-      utm_data: {
-        utm_source: new URLSearchParams(window.location.search).get('utm_source'),
-        utm_medium: new URLSearchParams(window.location.search).get('utm_medium'),
-        utm_campaign: new URLSearchParams(window.location.search).get('utm_campaign')
-      },
-      session_id: getSessionId(),
-      user_agent: navigator.userAgent,
-      page_url: window.location.href,
-      created_at: new Date().toISOString()
-    };
-    
-    console.log('Submitting form data to secure-checkout endpoint:', {
-      form_only: submissionData.form_only,
-      page_slug: submissionData.page_slug,
-      field_count: Object.keys(submissionData.form_data).length
-    });
-    
-    // Use secure-checkout endpoint for all submissions (unified security)
-    fetch('https://ijrisuqixfqzmlomlgjb.supabase.co/functions/v1/secure-checkout', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
-      },
-      body: JSON.stringify(submissionData)
-    })
-    .then(function(response) {
-      if (response.ok) {
-        return response.json();
-      }
-      throw new Error('Server error');
-    })
-    .then(function(result) {
-      console.log('Form submission processed securely');
-      
-      // Show success message
-      alert('Thank you for your message! We have received your submission.');
-      form.reset();
-      
-      // Track successful form submission (no sensitive data)
-      if (typeof trackFacebookEvent !== 'undefined') {
-        trackFacebookEvent('Contact', {
-          form_type: submissionData.form_type
-        });
-      }
-      
-      // Track analytics event
-      trackEvent('form_submission', {
-        form_type: submissionData.form_type,
-        success: true,
-        timestamp: submissionData.created_at
-      });
-    })
-    .catch(function(error) {
-      console.warn('Server-side form submission failed, using fallback:', error);
-      
-      // FALLBACK: Store locally only (no database exposure)
-      try {
-        const existingSubmissions = JSON.parse(localStorage.getItem('landingPageSubmissions') || '[]');
-        existingSubmissions.push({...submissionData, local_storage: true, timestamp: Date.now()});
-        localStorage.setItem('landingPageSubmissions', JSON.stringify(existingSubmissions.slice(-10))); // Limit storage
-      } catch (e) {
-        console.warn('LocalStorage not available');
-      }
-      
-      // Show success message anyway for user experience
-      alert('Thank you for your message! We have received your submission.');
-      form.reset();
-      
-      // Track analytics event
-      trackEvent('form_submission', {
-        form_type: submissionData.form_type,
-        success: true,
-        method: 'fallback',
-        timestamp: submissionData.created_at
-      });
-    });
-  }
-
-  // Initialize event listeners
-  document.addEventListener('DOMContentLoaded', function() {
-    // Initialize forms first
-    initializeForms();
-    
-    // Initialize responsive behavior
-    initializeResponsiveFeatures();
-    
-    // Enhanced button click listeners - handle both data-action attributes AND React click handlers
-    document.querySelectorAll('button[data-action], [role="button"][data-action]').forEach(button => {
-      console.log('Found button with data-action:', button.dataset.action, button);
-      
-      // Add click listener for data-attribute based handling (deployed fallback)
-      button.addEventListener('click', function(e) {
-        // Only handle if React onClick hasn't already handled it
-        if (!e.defaultPrevented) {
-          e.preventDefault();
-          console.log('Data-attribute button clicked:', this.dataset.action, this.dataset.actionData);
-          handleButtonClick(this);
-        }
-      });
-    });
-    
-    // Also look for any buttons without data-action but with click handlers (in case React handles it)
-    document.querySelectorAll('button:not([data-action])').forEach(button => {
-      if (button.onclick) {
-        console.log('Found button with React click handler:', button);
-      }
-    });
-
-    // Form submission listeners
-    const forms = document.querySelectorAll('form');
-    console.log('Binding form submission handlers to', forms.length, 'forms');
-    
-    forms.forEach((form, index) => {
-      console.log('Binding handler to form', index + 1, 'with type:', form.dataset.formType);
-      form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        console.log('Form submission event captured for form', index + 1);
-        handleFormSubmit(this);
-      });
-    });
-
-    // Scroll animations and basic interactions
-    const observerOptions = {
-      threshold: 0.1,
-      rootMargin: '0px 0px -50px 0px'
-    };
-
-    const observer = new IntersectionObserver(function(entries) {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('animate-fade-in');
-        }
-      });
-    }, observerOptions);
-
-    // Observe all sections
-    document.querySelectorAll('[data-section-id]').forEach(section => {
-      observer.observe(section);
-    });
-    
-  // Initialize responsive features and ensure proper viewport handling
-  function initializeResponsiveFeatures() {
-    console.log('Initializing responsive features for deployed page...');
-    
-    // Force update viewport-dependent elements
-    function updateResponsiveElements() {
-      const windowWidth = window.innerWidth;
-      let currentBreakpoint = 'mobile';
-      
-      if (windowWidth >= 1024) {
-        currentBreakpoint = 'desktop';
-      } else if (windowWidth >= 768) {
-        currentBreakpoint = 'tablet';
-      } else {
-        currentBreakpoint = 'mobile';
-      }
-      
-      console.log('Current breakpoint:', currentBreakpoint, 'Width:', windowWidth);
-      
-      // Update body class for breakpoint-specific styling
-      document.body.className = document.body.className.replace(/\\b(mobile|tablet|desktop)-breakpoint\\b/g, '');
-      document.body.classList.add(currentBreakpoint + '-breakpoint');
-      
-      // Trigger any custom responsive behaviors
-      document.dispatchEvent(new CustomEvent('breakpointChange', { 
-        detail: { breakpoint: currentBreakpoint, width: windowWidth } 
-      }));
-    }
-    
-    // Update on load and resize
-    updateResponsiveElements();
-    
-    let resizeTimeout;
-    window.addEventListener('resize', function() {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(updateResponsiveElements, 100);
-    });
-    
-    // Ensure Tailwind responsive classes are working
-    // Force re-evaluation of responsive utilities
-    if (window.tailwind && window.tailwind.refresh) {
-      window.tailwind.refresh();
-    }
-  }
-
-    // Basic analytics tracking
-    
-    // Track scroll depth
-    let maxScrollDepth = 0;
-    window.addEventListener('scroll', function() {
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      const documentHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const scrollPercent = Math.round((scrollTop / documentHeight) * 100);
-      
-      if (scrollPercent > maxScrollDepth) {
-        maxScrollDepth = scrollPercent;
-        
-        // Track milestone scroll depths
-        if ([25, 50, 75, 90].includes(scrollPercent)) {
-          trackEvent('scroll_depth', {
-            scroll_percent: scrollPercent,
-            timestamp: new Date().toISOString()
-          });
-        }
-      }
-    });
-
-    // Track time on page
-    const startTime = Date.now();
-    window.addEventListener('beforeunload', function() {
-      const timeOnPage = Math.round((Date.now() - startTime) / 1000);
-      
-      if (timeOnPage > 5) { // Only track if user stayed more than 5 seconds
-        trackEvent('time_on_page', {
-          time_seconds: timeOnPage,
-          max_scroll_depth: maxScrollDepth
-        });
-      }
-    });
-
-    // Track form interactions
-    document.querySelectorAll('input, textarea, select').forEach(function(field) {
-      field.addEventListener('focus', function() {
-        trackEvent('form_field_focus', {
-          field_name: this.name || this.id,
-          field_type: this.type || this.tagName.toLowerCase()
-        });
-      });
-    });
-    
-    // Re-initialize forms after a short delay to catch any that might load later
-    setTimeout(function() {
-      initializeForms();
-      console.log('Re-initialized forms after delay');
-    }, 1000);
-    
-    // Also try to initialize forms whenever the DOM changes
-    if (window.MutationObserver) {
-      const observer = new MutationObserver(function(mutations) {
-        let shouldReinitialize = false;
-        mutations.forEach(function(mutation) {
-          if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-            shouldReinitialize = true;
-          }
-        });
-        
-        if (shouldReinitialize) {
-          setTimeout(initializeForms, 100);
-        }
-      });
-      
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true
-      });
-    }
-  });
-
-  // Add CSS animation classes
-  const style = document.createElement('style');
-  style.textContent = \`
-    .animate-fade-in {
-      animation: fadeIn 0.6s ease-out forwards;
-    }
-    
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-  \`;
-  document.head.appendChild(style);
-})();
-`;
+    // Minified production JavaScript - remove comments and compress for deployment
+    return `(function(){'use strict';function initializeForms(){console.log('Initializing forms...');const defaultCheckoutFields=[{id:'email',label:'Email',field_key:'email',is_required:true,display_order:0,product_ids:[]},{id:'full_name',label:'Full Name',field_key:'full_name',is_required:true,display_order:1,product_ids:[]},{id:'phone',label:'Phone Number',field_key:'phone',is_required:false,display_order:2,product_ids:[]}];const formContainers=document.querySelectorAll('[data-component="cta"],form:empty,[class*="form-container"]:empty,[data-element="checkout-form"]');console.log('Found form containers:',formContainers.length);formContainers.forEach(function(container,index){if(container.dataset.formInitialized){return;}if(container.children.length===0||(container.children.length===1&&container.querySelector('input[type="email"]:only-child'))){container.innerHTML='';}let form=container.tagName==='FORM'?container:container.querySelector('form');if(!form){form=document.createElement('form');form.className='space-y-4';container.appendChild(form);}if(container.getAttribute('data-element')==='checkout-form'){form.dataset.formType='checkout';}else{form.dataset.formType='contact';}defaultCheckoutFields.forEach(function(field){if(form.querySelector('input[name="'+field.field_key+'"]')){return;}const fieldDiv=document.createElement('div');fieldDiv.className='space-y-2';const label=document.createElement('label');label.htmlFor=field.field_key;label.className='block text-sm font-medium text-foreground mb-2';label.textContent=field.label+(field.is_required?' *':'');const input=document.createElement('input');input.id=field.field_key;input.name=field.field_key;input.required=field.is_required;input.className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';switch(field.field_key){case 'email':input.type='email';input.placeholder='Enter your email';break;case 'phone':input.type='tel';input.placeholder='Enter your phone number';break;default:input.type='text';input.placeholder='Enter your '+field.label.toLowerCase();break;}fieldDiv.appendChild(label);fieldDiv.appendChild(input);form.appendChild(fieldDiv);});if(!form.querySelector('button[type="submit"]')){const submitBtn=document.createElement('button');submitBtn.type='submit';submitBtn.className='inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full';submitBtn.textContent='Submit';form.appendChild(submitBtn);}container.dataset.formInitialized='true';console.log('Initialized form container',index+1,'with',defaultCheckoutFields.length,'fields');});}function handleButtonClick(button){const action=button.dataset.action;const actionData=button.dataset.actionData;if(!action)return;console.log('Button clicked:',action,actionData);switch(action){case 'open_link':try{const data=JSON.parse(actionData||'{}');let url=data.url||actionData;if(url&&!/^https?:\\/\\//i.test(url)){url='https://'+url;}if(url){window.open(url,data.newTab?'_blank':'_self');if(typeof trackFacebookEvent!=='undefined'){trackFacebookEvent('ClickButton',{button_text:button.textContent,destination_url:url});}}}catch(e){let url=actionData;if(url&&!/^https?:\\/\\//i.test(url)){url='https://'+url;}if(url){window.open(url,'_blank');}}break;case 'scroll':try{const data=JSON.parse(actionData||'{}');const targetId=data.targetId||actionData;if(targetId){const target=document.getElementById(targetId);if(target){target.scrollIntoView({behavior:'smooth'});console.log('Scrolled to target:',targetId);}else{console.warn('Scroll target not found:',targetId);}}}catch(e){if(actionData){const target=document.getElementById(actionData);if(target){target.scrollIntoView({behavior:'smooth'});console.log('Scrolled to target (fallback):',actionData);}else{console.warn('Scroll target not found (fallback):',actionData);}}}break;case 'checkout':try{const data=JSON.parse(actionData||'{}');console.log('Processing checkout with data:',data);handleCheckout(data,button);}catch(e){console.error('Invalid checkout data:',e);if(actionData){console.log('Retrying checkout with raw actionData:',actionData);handleCheckout({productId:actionData},button);}}break;default:console.log('Unknown button action:',action,actionData);}}async function handleCheckout(actionData,button){try{const formElements=document.querySelectorAll('form input,form select,form textarea');const formData={};let userEmail='';formElements.forEach(function(element){if(element.name||element.id){const key=element.name||element.id;formData[key]=element.value;if(key==='email')userEmail=element.value;}});if(!userEmail){alert("Please enter your email to proceed with checkout.");return;}const emailRegex=/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;if(!emailRegex.test(userEmail)){alert("Please enter a valid email address.");return;}const orderId=generateUUID();const buyerName=formData.name||formData.full_name||userEmail.split('@')[0];const amount=Number(actionData.amount)||0;console.log('Processing secure checkout for productId:',actionData.productId);if(typeof trackFacebookEvent!=='undefined'){trackFacebookEvent('InitiateCheckout',{value:amount,currency:'TND',content_ids:[String(actionData.productId)]});}try{const checkoutResponse=await fetch('https://ijrisuqixfqzmlomlgjb.supabase.co/functions/v1/secure-checkout',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_ANON_KEY},body:JSON.stringify({orderId:orderId,productId:actionData.productId,amount:amount,buyerEmail:userEmail,buyerName:buyerName,formData:formData,pageSlug:PAGE_CONFIG.slug})});if(!checkoutResponse.ok){throw new Error('Checkout service unavailable');}const checkoutData=await checkoutResponse.json();if(checkoutData.success&&checkoutData.paymentUrl){trackEvent('checkout_initiated',{order_id:orderId,amount:amount,user_email:userEmail});if(typeof trackFacebookEvent!=='undefined'){trackFacebookEvent('Purchase',{value:amount,currency:'TND',content_ids:[String(actionData.productId)]});}window.location.href=checkoutData.paymentUrl;}else{throw new Error(checkoutData.error||'Failed to initialize payment');}}catch(serverError){console.warn('Server-side checkout failed, falling back to direct approach:',serverError);if(actionData.checkoutUrl){window.open(actionData.checkoutUrl,'_blank');}else if(actionData.productId){const checkoutUrl=\`https://demarky.tn/checkout/\${actionData.productId}?email=\${encodeURIComponent(userEmail)}&name=\${encodeURIComponent(buyerName)}\`;window.open(checkoutUrl,'_blank');}else{alert("Checkout is temporarily unavailable. Please try again later.");}}}catch(error){console.error('Checkout error:',error);alert("An unexpected error occurred. Please try again.");}}function handleFormSubmit(form){console.log('Form submission triggered for form:',form);console.log('Form type:',form.dataset.formType);const formData=new FormData(form);const data=Object.fromEntries(formData.entries());console.log('Form data collected:',Object.keys(data));const submissionData={form_only:true,form_data:data,page_slug:PAGE_CONFIG.slug,utm_data:{utm_source:new URLSearchParams(window.location.search).get('utm_source'),utm_medium:new URLSearchParams(window.location.search).get('utm_medium'),utm_campaign:new URLSearchParams(window.location.search).get('utm_campaign')},session_id:getSessionId(),user_agent:navigator.userAgent,page_url:window.location.href,created_at:new Date().toISOString()};console.log('Submitting form data to secure-checkout endpoint:',{form_only:submissionData.form_only,page_slug:submissionData.page_slug,field_count:Object.keys(submissionData.form_data).length});fetch('https://ijrisuqixfqzmlomlgjb.supabase.co/functions/v1/secure-checkout',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_ANON_KEY},body:JSON.stringify(submissionData)}).then(function(response){if(response.ok){return response.json();}throw new Error('Server error');}).then(function(result){console.log('Form submission processed securely');alert('Thank you for your message! We have received your submission.');form.reset();if(typeof trackFacebookEvent!=='undefined'){trackFacebookEvent('Contact',{form_type:submissionData.form_type});}trackEvent('form_submission',{form_type:submissionData.form_type,success:true,timestamp:submissionData.created_at});}).catch(function(error){console.warn('Server-side form submission failed, using fallback:',error);try{const existingSubmissions=JSON.parse(localStorage.getItem('landingPageSubmissions')||'[]');existingSubmissions.push({...submissionData,local_storage:true,timestamp:Date.now()});localStorage.setItem('landingPageSubmissions',JSON.stringify(existingSubmissions.slice(-10)));}catch(e){console.warn('LocalStorage not available');}alert('Thank you for your message! We have received your submission.');form.reset();trackEvent('form_submission',{form_type:submissionData.form_type,success:true,method:'fallback',timestamp:submissionData.created_at});});}document.addEventListener('DOMContentLoaded',function(){initializeForms();initializeResponsiveFeatures();document.querySelectorAll('button[data-action],[role="button"][data-action]').forEach(button=>{console.log('Found button with data-action:',button.dataset.action,button);button.addEventListener('click',function(e){if(!e.defaultPrevented){e.preventDefault();console.log('Data-attribute button clicked:',this.dataset.action,this.dataset.actionData);handleButtonClick(this);}});});document.querySelectorAll('button:not([data-action])').forEach(button=>{if(button.onclick){console.log('Found button with React click handler:',button);}});const forms=document.querySelectorAll('form');console.log('Binding form submission handlers to',forms.length,'forms');forms.forEach((form,index)=>{console.log('Binding handler to form',index+1,'with type:',form.dataset.formType);form.addEventListener('submit',function(e){e.preventDefault();console.log('Form submission event captured for form',index+1);handleFormSubmit(this);});});const observerOptions={threshold:0.1,rootMargin:'0px 0px -50px 0px'};const observer=new IntersectionObserver(function(entries){entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('animate-fade-in');}});},observerOptions);document.querySelectorAll('[data-section-id]').forEach(section=>{observer.observe(section);});function initializeResponsiveFeatures(){console.log('Initializing responsive features...');function updateResponsiveElements(){const windowWidth=window.innerWidth;let currentBreakpoint='mobile';if(windowWidth>=1024){currentBreakpoint='desktop';}else if(windowWidth>=768){currentBreakpoint='tablet';}else{currentBreakpoint='mobile';}console.log('Current breakpoint:',currentBreakpoint,'Width:',windowWidth);document.body.className=document.body.className.replace(/\\b(mobile|tablet|desktop)-breakpoint\\b/g,'');document.body.classList.add(currentBreakpoint+'-breakpoint');document.dispatchEvent(new CustomEvent('breakpointChange',{detail:{breakpoint:currentBreakpoint,width:windowWidth}}));}updateResponsiveElements();let resizeTimeout;window.addEventListener('resize',function(){clearTimeout(resizeTimeout);resizeTimeout=setTimeout(updateResponsiveElements,100);});if(window.tailwind&&window.tailwind.refresh){window.tailwind.refresh();}}let maxScrollDepth=0;window.addEventListener('scroll',function(){const scrollTop=window.pageYOffset||document.documentElement.scrollTop;const documentHeight=document.documentElement.scrollHeight-window.innerHeight;const scrollPercent=Math.round((scrollTop/documentHeight)*100);if(scrollPercent>maxScrollDepth){maxScrollDepth=scrollPercent;if([25,50,75,90].includes(scrollPercent)){trackEvent('scroll_depth',{scroll_percent:scrollPercent,timestamp:new Date().toISOString()});}}});const startTime=Date.now();window.addEventListener('beforeunload',function(){const timeOnPage=Math.round((Date.now()-startTime)/1000);if(timeOnPage>5){trackEvent('time_on_page',{time_seconds:timeOnPage,max_scroll_depth:maxScrollDepth});}});document.querySelectorAll('input,textarea,select').forEach(function(field){field.addEventListener('focus',function(){trackEvent('form_field_focus',{field_name:this.name||this.id,field_type:this.type||this.tagName.toLowerCase()});});});setTimeout(function(){initializeForms();console.log('Re-initialized forms after delay');},1000);if(window.MutationObserver){const observer=new MutationObserver(function(mutations){let shouldReinitialize=false;mutations.forEach(function(mutation){if(mutation.type==='childList'&&mutation.addedNodes.length>0){shouldReinitialize=true;}});if(shouldReinitialize){setTimeout(initializeForms,100);}});observer.observe(document.body,{childList:true,subtree:true});}});const style=document.createElement('style');style.textContent=\`.animate-fade-in{animation:fadeIn 0.6s ease-out forwards;}@keyframes fadeIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}\`;document.head.appendChild(style);})();`;
   }
 }
