@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { ColorPicker } from "@/components/builder/ColorPicker";
 import { mediaService } from '@/services/media';
+import { useAIGeneration } from '@/hooks/useAIGeneration';
 
 interface OnboardingData {
   selectedProduct?: Product;
@@ -72,6 +73,7 @@ const Onboarding = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [componentVariations, setComponentVariations] = useState<ComponentVariation[]>([]);
   const [loading, setLoading] = useState(false);
+  const { selectComponentVariations, generateComponentContent, isGenerating } = useAIGeneration();
   
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({
     language: 'en',
@@ -215,7 +217,7 @@ const Onboarding = () => {
     return imageUrls;
   };
 
-  const generateLandingPage = async () => {
+  const generateLandingPageWithAI = async () => {
     if (!onboardingData.selectedProduct) {
       toast({
         title: "Error",
@@ -227,17 +229,76 @@ const Onboarding = () => {
 
     setLoading(true);
     try {
+      // Step 1: AI selects component variations
+      toast({
+        title: "AI is working...",
+        description: "Selecting the best components for your product",
+      });
+
+      const componentSelections = await selectComponentVariations({
+        productName: onboardingData.selectedProduct.title,
+        productDescription: onboardingData.selectedProduct.description || '',
+        language: onboardingData.language
+      });
+
+      if (!componentSelections) {
+        throw new Error('Failed to select component variations');
+      }
+
+      console.log('AI selected components:', componentSelections);
+
+      // Get the selected variations
+      const heroVariation = componentVariations.find(v => v.id === componentSelections.hero);
+      const ctaVariation = componentVariations.find(v => v.id === componentSelections.cta);
+
+      if (!heroVariation || !ctaVariation) {
+        throw new Error('Selected component variations not found');
+      }
+
+      // Step 2: AI generates content for selected components
+      toast({
+        title: "AI is working...",
+        description: "Generating compelling content for your landing page",
+      });
+
+      const selectedVariations = [heroVariation, ctaVariation];
+      const generatedContent = await generateComponentContent({
+        productName: onboardingData.selectedProduct.title,
+        productDescription: onboardingData.selectedProduct.description || '',
+        language: onboardingData.language,
+        componentVariations: selectedVariations.map(v => ({
+          id: v.id,
+          component_type: v.component_type,
+          character_limits: v.character_limits || {},
+          default_content: v.default_content || {}
+        }))
+      });
+
+      if (!generatedContent) {
+        throw new Error('Failed to generate component content');
+      }
+
+      console.log('AI generated content:', generatedContent);
+
+      // Step 3: Create landing page with AI-generated content
+      toast({
+        title: "AI is working...",
+        description: "Creating your landing page",
+      });
+
       // Pick a random color palette
       const palette = COLOR_PALETTES[Math.floor(Math.random() * COLOR_PALETTES.length)];
-      // Create landing page
-      // Generate slug from product title, optimized for URL
+      
+      // Generate slug from product title
       const rawTitle = onboardingData.selectedProduct.title || '';
       const slug = rawTitle
         .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
-        .replace(/\s+/g, '-')         // Replace spaces with hyphens
-        .replace(/-+/g, '-')           // Collapse multiple hyphens
-        .replace(/^-+|-+$/g, '');      // Trim hyphens from start/end
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+      // Create landing page
       const { data: landingPage, error: pageError } = await supabase
         .from('landing_pages')
         .insert([{
@@ -264,55 +325,39 @@ const Onboarding = () => {
 
       if (pageError) throw pageError;
 
-      // Create components
-      for (let i = 0; i < onboardingData.selectedComponents.length; i++) {
-        const componentId = onboardingData.selectedComponents[i];
-        const componentContent = onboardingData.componentContent[componentId] || {};
+      // Create components with AI-generated content
+      for (let i = 0; i < generatedContent.length; i++) {
+        const contentItem = generatedContent[i];
+        const variation = selectedVariations[i];
         
-        // Find the component variation info
-        const variation = componentVariations.find(v => v.id === componentId);
-        
-        // Use the mapping function to get the correctly named image fields
-        const imageUrls = mapImageKeysToFieldNames(componentContent, componentId, variation);
-        
-        // Clean content (remove image URLs)
-        const cleanContent: Record<string, any> = {};
-        Object.keys(componentContent).forEach(key => {
-          if (!key.startsWith('image') || !(typeof componentContent[key] === 'string' && componentContent[key].startsWith('http'))) {
-            cleanContent[key] = componentContent[key];
-          }
-        });
-
-        // Insert product price and original_price as default content if not present
+        // Add product pricing to content if applicable
+        const finalContent = { ...contentItem.content };
         if (onboardingData.selectedProduct) {
-          if (cleanContent.price === undefined) {
-            cleanContent.price = onboardingData.selectedProduct.price;
+          if (!finalContent.price) {
+            finalContent.price = onboardingData.selectedProduct.price;
           }
-          if (cleanContent.originalPrice === undefined && onboardingData.selectedProduct.original_price !== undefined) {
-            if (onboardingData.selectedProduct.price === onboardingData.selectedProduct.original_price) {
-              cleanContent.originalPrice = '';
-            } else {
-              cleanContent.originalPrice = onboardingData.selectedProduct.original_price;
-            }
+          if (!finalContent.originalPrice && onboardingData.selectedProduct.original_price) {
+            finalContent.originalPrice = onboardingData.selectedProduct.original_price !== onboardingData.selectedProduct.price 
+              ? onboardingData.selectedProduct.original_price 
+              : '';
           }
         }
 
         // Alternate background gradient direction for each component
         let componentBackground = palette.backgroundColor;
-        if (onboardingData.selectedComponents.length > 1) {
-          // Odd index (i=0,2,4...) => 135deg, Even index (i=1,3,5...) => 45deg
+        if (generatedContent.length > 1) {
           const angle = (i % 2 === 0) ? '135deg' : '45deg';
           componentBackground = palette.backgroundColor.replace(/linear-gradient\(([^,]+),/, `linear-gradient(${angle},`);
         }
 
-        // Create the component with clean content (no image URLs)
+        // Create the component
         const { data: newComponent, error: componentError } = await supabase
           .from('landing_page_components')
           .insert([{
             page_id: landingPage.id,
-            component_variation_id: componentId,
-            order_index: i + 1, // Use increments of 1 instead of 10
-            content: cleanContent, // Content without image URLs
+            component_variation_id: contentItem.variationId,
+            order_index: i + 1,
+            content: finalContent,
             custom_styles: {
               container: {
                 backgroundColor: componentBackground,
@@ -321,28 +366,27 @@ const Onboarding = () => {
             },
             visibility: {
               secondaryButton: false
-            },
-            media_urls: imageUrls // Save image URLs to media_urls column with correct field names
+            }
           }])
           .select()
           .single();
 
         if (componentError) throw componentError;
         
-        console.log(`Created component ${newComponent.id} with ${Object.keys(imageUrls).length} images in media_urls:`, imageUrls);
+        console.log(`Created AI component ${newComponent.id} of type ${contentItem.componentType}`);
       }
 
       toast({
         title: "Success!",
-        description: "Landing page created successfully",
+        description: "AI-powered landing page created successfully",
       });
 
       navigate('/');
     } catch (error) {
-      console.error('Error creating landing page:', error);
+      console.error('Error creating AI landing page:', error);
       toast({
         title: "Error",
-        description: "Failed to create landing page",
+        description: `Failed to create landing page: ${error.message}`,
         variant: "destructive"
       });
     } finally {
@@ -412,10 +456,10 @@ const Onboarding = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Globe className="mr-2 h-5 w-5" />
-                Language & Direction
+                Language & AI Setup
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               <div>
                 <Label>Select Language</Label>
                 <Select 
@@ -434,135 +478,26 @@ const Onboarding = () => {
                   </SelectContent>
                 </Select>
               </div>
+              
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <div className="flex items-center mb-2">
+                  <Wand2 className="h-5 w-5 text-blue-600 mr-2" />
+                  <h3 className="font-semibold text-blue-900">AI-Powered Landing Page</h3>
+                </div>
+                <p className="text-blue-700 text-sm">
+                  Our AI will automatically:
+                </p>
+                <ul className="text-blue-700 text-sm mt-2 space-y-1">
+                  <li>• Select the most suitable components for your product</li>
+                  <li>• Generate compelling content in your chosen language</li>
+                  <li>• Create a professional color scheme</li>
+                  <li>• Optimize for conversions</li>
+                </ul>
+              </div>
             </CardContent>
           </Card>
         );
 
-      case 3:
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Select Components</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {['hero', 'features', 'testimonials', 'pricing', 'faq', 'cta'].map((componentType) => {
-                const variations = componentVariations.filter(v => v.component_type === componentType);
-                
-                if (variations.length === 0) {
-                  return (
-                    <div key={componentType}>
-                      <h3 className="font-semibold capitalize mb-3">{componentType} Components</h3>
-                      <p className="text-sm text-gray-500">No variations available for this component type.</p>
-                    </div>
-                  );
-                }
-                
-                return (
-                  <div key={componentType}>
-                    <h3 className="font-semibold capitalize mb-3">{componentType} Components</h3>
-                    <div className="grid gap-3">
-                      {variations.map((variation) => (
-                        <div key={variation.id} className="flex items-center space-x-3 p-3 border rounded">
-                          <Checkbox
-                            checked={onboardingData.selectedComponents.includes(variation.id)}
-                            onCheckedChange={(checked) => 
-                              handleComponentToggle(variation.id, checked as boolean)
-                            }
-                          />
-                          <div className="flex-1">
-                            <p className="font-medium">{variation.variation_name}</p>
-                            <p className="text-sm text-gray-600">{variation.description || 'No description available'}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        );
-
-      case 4:
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Component Content</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {onboardingData.selectedComponents.map((componentId) => {
-                const variation = componentVariations.find(v => v.id === componentId);
-                if (!variation) return null;
-
-                const partLabels = variation.visibility_keys || {};
-                const characterLimits = variation.character_limits || {};
-                const availableParts = Object.keys(characterLimits);
-
-                return (
-                  <div key={componentId} className="border rounded p-4">
-                    <h3 className="font-semibold mb-4">{variation.variation_name}</h3>
-                    <div className="space-y-4">
-                      {availableParts.map((part) => {
-                        const limit = characterLimits[part];
-                        const maxChars = limit?.max_characters;
-                        const recommendedChars = limit?.recommended_characters;
-                        
-                        return (
-                          <div key={part}>
-                            <Label>{partLabels[part] || part}</Label>
-                            {maxChars && maxChars > 200 ? (
-                              <Textarea
-                                placeholder={`Enter ${part}...`}
-                                maxLength={maxChars}
-                                value={onboardingData.componentContent[componentId]?.[part] || ''}
-                                onChange={(e) => handleContentChange(componentId, part, e.target.value)}
-                                className="resize-none"
-                                rows={3}
-                              />
-                            ) : (
-                              <Input
-                                placeholder={`Enter ${part}...`}
-                                maxLength={maxChars}
-                                value={onboardingData.componentContent[componentId]?.[part] || ''}
-                                onChange={(e) => handleContentChange(componentId, part, e.target.value)}
-                              />
-                            )}
-                            {maxChars && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                Max {maxChars} characters
-                                {recommendedChars && ` (Recommended: ${recommendedChars})`}
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
-                      
-                      {variation.required_images > 0 && (
-                        <div>
-                          <Label>Images ({variation.required_images} required)</Label>
-                          <div className="grid gap-4 mt-2">
-                            {Array.from({ length: variation.required_images }).map((_, index) => (
-                              <ImageUpload
-                                key={index}
-                                value={onboardingData.componentContent[componentId]?.[`image${index + 1}`] || ''}
-                                onChange={(url) => handleImageChange(componentId, index, url)}
-                                placeholder={`Upload image ${index + 1}`}
-                                // Note: During onboarding, we don't use media service since component doesn't exist yet
-                                // Images will be migrated to media_urls when components are created
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        );
-
-      // No step 5: color selection UI removed
       default:
         return null;
     }
@@ -579,7 +514,7 @@ const Onboarding = () => {
           </Button>
           <div className="text-center">
             <h1 className="text-2xl font-bold">Create Landing Page</h1>
-            <p className="text-gray-600">Step {currentStep} of 4</p>
+            <p className="text-gray-600">Step {currentStep} of 2</p>
           </div>
           <div className="w-24"></div>
         </div>
@@ -588,7 +523,7 @@ const Onboarding = () => {
         <div className="w-full bg-gray-200 rounded-full h-2 mb-8">
           <div 
             className="bg-blue-600 h-2 rounded-full transition-all"
-            style={{ width: `${(currentStep / 4) * 100}%` }}
+            style={{ width: `${(currentStep / 2) * 100}%` }}
           ></div>
         </div>
 
@@ -606,31 +541,28 @@ const Onboarding = () => {
             Previous
           </Button>
           
-          {currentStep < 4 ? (
+          {currentStep < 2 ? (
             <Button 
               onClick={() => setCurrentStep(prev => prev + 1)}
-              disabled={
-                (currentStep === 1 && !onboardingData.selectedProduct) ||
-                (currentStep === 3 && onboardingData.selectedComponents.length === 0)
-              }
+              disabled={currentStep === 1 && !onboardingData.selectedProduct}
             >
               Next
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           ) : (
             <Button 
-              onClick={generateLandingPage}
-              disabled={loading || onboardingData.selectedComponents.length === 0}
+              onClick={generateLandingPageWithAI}
+              disabled={loading || !onboardingData.selectedProduct}
             >
               {loading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Generating...
+                  Creating with AI...
                 </>
               ) : (
                 <>
                   <Wand2 className="mr-2 h-4 w-4" />
-                  Generate Landing Page
+                  Generate with AI
                 </>
               )}
             </Button>
