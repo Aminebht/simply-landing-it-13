@@ -7,6 +7,29 @@ export interface AIGenerationRequest {
   context?: string;
 }
 
+export interface ComponentSelectionRequest {
+  productName: string;
+  productDescription: string;
+  language: 'en' | 'fr' | 'ar';
+}
+
+export interface ComponentSelectionResponse {
+  hero: string;
+  cta: string;
+}
+
+export interface ContentGenerationRequest {
+  productName: string;
+  productDescription: string;
+  language: 'en' | 'fr' | 'ar';
+  componentVariations: Array<{
+    id: string;
+    component_type: string;
+    character_limits: Record<string, any>;
+    default_content: Record<string, any>;
+  }>;
+}
+
 export interface AIGeneratedContent {
   headline?: string;
   subheadline?: string;
@@ -35,6 +58,53 @@ export class AIGenerationService {
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
+  }
+
+  async selectComponentVariations(request: ComponentSelectionRequest): Promise<ComponentSelectionResponse> {
+    const response = await fetch('https://ijrisuqixfqzmlomlgjb.supabase.co/functions/v1/select-component-variations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Component selection failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    if (!data.success) {
+      throw new Error(data.error || 'Component selection failed');
+    }
+
+    return data.selections;
+  }
+
+  async generateComponentContent(request: ContentGenerationRequest): Promise<Array<{
+    variationId: string;
+    componentType: string;
+    content: Record<string, any>;
+    characterLimits: Record<string, any>;
+  }>> {
+    const response = await fetch('https://ijrisuqixfqzmlomlgjb.supabase.co/functions/v1/generate-component-content', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Content generation failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    if (!data.success) {
+      throw new Error(data.error || 'Content generation failed');
+    }
+
+    return data.generatedContent;
   }
 
   async generateContent(request: AIGenerationRequest): Promise<AIGeneratedContent> {

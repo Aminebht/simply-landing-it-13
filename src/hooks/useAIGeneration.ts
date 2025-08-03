@@ -1,5 +1,12 @@
 import { useState } from 'react';
-import { AIGenerationService, AIGenerationRequest, AIGeneratedContent } from '@/services/ai-generation';
+import { 
+  AIGenerationService, 
+  AIGenerationRequest, 
+  AIGeneratedContent,
+  ComponentSelectionRequest,
+  ComponentSelectionResponse,
+  ContentGenerationRequest
+} from '@/services/ai-generation';
 
 export const useAIGeneration = (apiKey?: string) => {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -163,6 +170,42 @@ export const useAIGeneration = (apiKey?: string) => {
     });
   };
 
+  const selectComponentVariations = async (request: ComponentSelectionRequest): Promise<ComponentSelectionResponse | null> => {
+    setIsGenerating(true);
+    setError(null);
+
+    try {
+      // Create a temporary service just for this call since it doesn't need the OpenAI API key
+      const tempService = new AIGenerationService('dummy-key');
+      const selections = await tempService.selectComponentVariations(request);
+      return selections;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to select component variations';
+      setError(errorMessage);
+      return null;
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const generateComponentContent = async (request: ContentGenerationRequest) => {
+    setIsGenerating(true);
+    setError(null);
+
+    try {
+      // Create a temporary service just for this call since it doesn't need the OpenAI API key
+      const tempService = new AIGenerationService('dummy-key');
+      const content = await tempService.generateComponentContent(request);
+      return content;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate component content';
+      setError(errorMessage);
+      return null;
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return {
     // State
     isGenerating,
@@ -180,6 +223,10 @@ export const useAIGeneration = (apiKey?: string) => {
     generateFAQContent,
     generatePricingContent,
     generateCTAContent,
+    
+    // New AI-powered onboarding methods
+    selectComponentVariations,
+    generateComponentContent,
     
     // Utility
     clearError: () => setError(null),
