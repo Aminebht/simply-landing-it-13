@@ -1,3 +1,21 @@
+/**
+ * Onboarding.tsx - AI-Powered Landing Page Creation
+ * 
+ * This component now uses the AIGenerationService and AIImageGenerationService to:
+ * 1. Intelligently select the best component variations for a product
+ * 2. Generate compelling, contextual content using AI
+ * 3. Create custom images tailored to the product and components
+ * 
+ * The flow is:
+ * - Step 1: AI selects optimal component variations based on product characteristics
+ * - Step 2: AI generates content for each selected component (with fallback to default content)
+ * - Step 3: Creates the landing page with the generated content
+ * - Step 4: Optionally generates custom AI images for each component
+ * 
+ * All AI operations include error handling with graceful fallbacks to ensure the
+ * onboarding process always completes successfully.
+ */
+
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +26,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase, Product, ComponentVariation } from '@/services/supabase';
 import { useToast } from "@/hooks/use-toast";
 import { aiImageService } from '@/services/ai-image-generation';
+import { AIGenerationService } from '@/services/ai-generation';
 
 interface OnboardingData {
   selectedProduct?: Product;
@@ -23,45 +42,146 @@ interface OnboardingData {
 // Color palettes for automatic theme selection
 const COLOR_PALETTES = [
   {
-    primaryColor: '#3b82f6', // Blue
-    backgroundColor: 'linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%)',
+    primaryColor: '#ffd700', // Bright gold
+    backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', // Purple-Blue
   },
   {
-    primaryColor: '#ef4444', // Red
-    backgroundColor: 'linear-gradient(135deg, #ef4444 0%, #f59e42 100%)',
+    primaryColor: '#ffeb3b', // Bright yellow
+    backgroundColor: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', // Pink-Red
   },
   {
-    primaryColor: '#10b981', // Green
-    backgroundColor: 'linear-gradient(135deg, #10b981 0%, #3b82f6 100%)',
+    primaryColor: '#ff5722', // Deep orange
+    backgroundColor: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', // Blue-Cyan
   },
   {
-    primaryColor: '#a855f7', // Purple
-    backgroundColor: 'linear-gradient(135deg, #a855f7 0%, #6366f1 100%)',
+    primaryColor: '#1a237e', // Deep navy
+    backgroundColor: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', // Green-Turquoise
   },
   {
-    primaryColor: '#f59e42', // Orange
-    backgroundColor: 'linear-gradient(135deg, #f59e42 0%, #fbbf24 100%)',
+    primaryColor: '#8e24aa', // Deep purple
+    backgroundColor: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', // Pink-Yellow
   },
   {
-    primaryColor: '#6366f1', // Indigo
-    backgroundColor: 'linear-gradient(135deg, #6366f1 0%, #06b6d4 100%)',
+    primaryColor: '#d32f2f', // Deep red
+    backgroundColor: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', // Mint-Pink (soft)
   },
   {
-    primaryColor: '#f43f5e', // Pink
-    backgroundColor: 'linear-gradient(135deg, #f43f5e 0%, #fbbf24 100%)',
+    primaryColor: '#512da8', // Deep purple
+    backgroundColor: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)', // Coral-Pink
   },
   {
-    primaryColor: '#0ea5e9', // Sky
-    backgroundColor: 'linear-gradient(135deg, #0ea5e9 0%, #22d3ee 100%)',
+    primaryColor: '#c62828', // Crimson red
+    backgroundColor: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)', // Peach-Orange
   },
   {
-    primaryColor: '#22d3ee', // Cyan
-    backgroundColor: 'linear-gradient(135deg, #22d3ee 0%, #a7f3d0 100%)',
+    primaryColor: '#f57c00', // Amber orange
+    backgroundColor: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)', // Lavender-Pink
   },
   {
-    primaryColor: '#fbbf24', // Yellow
-    backgroundColor: 'linear-gradient(135deg, #fbbf24 0%, #f59e42 100%)',
+    primaryColor: '#7b1fa2', // Deep violet
+    backgroundColor: 'linear-gradient(135deg, #fad0c4 0%, #ffd1ff 100%)', // Peach-Lavender
   },
+  {
+    primaryColor: '#ffc107', // Amber
+    backgroundColor: 'linear-gradient(135deg, #ff8a80 0%, #ffb74d 100%)', // Coral-Orange
+  },
+  {
+    primaryColor: '#1976d2', // Deep blue
+    backgroundColor: 'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)', // Mint-Sky
+  },
+  {
+    primaryColor: '#ffab00', // Bright orange
+    backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', // Deep Purple-Blue
+  },
+  {
+    primaryColor: '#6a1b9a', // Deep purple
+    backgroundColor: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)', // Golden-Coral
+  },
+  {
+    primaryColor: '#e91e63', // Pink accent
+    backgroundColor: 'linear-gradient(135deg, #5ee7df 0%, #66a6ff 100%)', // Turquoise-Blue
+  },
+  // NEW VARIATIONS
+  {
+    primaryColor: '#2e7d32', // Forest green
+    backgroundColor: 'linear-gradient(135deg, #ff6b6b 0%, #feca57 100%)', // Red-Yellow
+  },
+  {
+    primaryColor: '#f44336', // Vibrant red
+    backgroundColor: 'linear-gradient(135deg, #48cae4 0%, #023e8a 100%)', // Light Blue-Navy
+  },
+  {
+    primaryColor: '#ff9800', // Orange
+    backgroundColor: 'linear-gradient(135deg, #2d1b69 0%, #11998e 100%)', // Purple-Teal
+  },
+  {
+    primaryColor: '#4a148c', // Deep purple
+    backgroundColor: 'linear-gradient(135deg, #96fbc4 0%, #f9f586 100%)', // Mint-Lime
+  },
+  {
+    primaryColor: '#00acc1', // Cyan
+    backgroundColor: 'linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%)', // Orange-Yellow
+  },
+  {
+    primaryColor: '#d81b60', // Rose
+    backgroundColor: 'linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%)', // Turquoise-Green
+  },
+  {
+    primaryColor: '#795548', // Brown
+    backgroundColor: 'linear-gradient(135deg, #74b9ff 0%, #0984e3 100%)', // Light Blue-Blue
+  },
+  {
+    primaryColor: '#ff4081', // Hot pink
+    backgroundColor: 'linear-gradient(135deg, #00b894 0%, #00cec9 100%)', // Green-Cyan
+  },
+  {
+    primaryColor: '#3f51b5', // Indigo
+    backgroundColor: 'linear-gradient(135deg, #fdcb6e 0%, #e17055 100%)', // Yellow-Coral
+  },
+  {
+    primaryColor: '#8bc34a', // Light green
+    backgroundColor: 'linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%)', // Purple-Lavender
+  },
+  {
+    primaryColor: '#ff3d00', // Red-orange
+    backgroundColor: 'linear-gradient(135deg, #00b4db 0%, #0083b0 100%)', // Cyan-Blue
+  },
+  {
+    primaryColor: '#01579b', // Dark blue
+    backgroundColor: 'linear-gradient(135deg, #f8b500 0%, #ffeaa7 100%)', // Orange-Cream
+  },
+  {
+    primaryColor: '#bf360c', // Deep orange-red
+    backgroundColor: 'linear-gradient(135deg, #81ecec 0%, #74b9ff 100%)', // Aqua-Blue
+  },
+  {
+    primaryColor: '#388e3c', // Green
+    backgroundColor: 'linear-gradient(135deg, #fd79a8 0%, #fdcb6e 100%)', // Pink-Yellow
+  },
+  {
+    primaryColor: '#7c4dff', // Purple accent
+    backgroundColor: 'linear-gradient(135deg, #00cec9 0%, #55a3ff 100%)', // Cyan-Blue
+  },
+  {
+    primaryColor: '#ff6f00', // Dark orange
+    backgroundColor: 'linear-gradient(135deg, #6c5ce7 0%, #74b9ff 100%)', // Purple-Blue
+  },
+  {
+    primaryColor: '#c2185b', // Pink-red
+    backgroundColor: 'linear-gradient(135deg, #00b894 0%, #fdcb6e 100%)', // Green-Yellow
+  },
+  {
+    primaryColor: '#1565c0', // Blue
+    backgroundColor: 'linear-gradient(135deg, #fd79a8 0%, #ff7675 100%)', // Pink-Coral
+  },
+  {
+    primaryColor: '#558b2f', // Olive green
+    backgroundColor: 'linear-gradient(135deg, #a29bfe 0%, #74b9ff 100%)', // Lavender-Blue
+  },
+  {
+    primaryColor: '#ad1457', // Deep pink
+    backgroundColor: 'linear-gradient(135deg, #00cec9 0%, #55efc4 100%)', // Cyan-Mint
+  }
 ];
 
 const Onboarding = () => {
@@ -71,6 +191,9 @@ const Onboarding = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [componentVariations, setComponentVariations] = useState<ComponentVariation[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Initialize AI Generation Service
+  const aiGenerationService = new AIGenerationService(''); // API key not needed for Supabase functions
 
   
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({
@@ -231,57 +354,116 @@ const Onboarding = () => {
 
     setLoading(true);
     try {
+      // Determine which description to use
+      const effectiveDescription = onboardingData.useProductDescription 
+        ? onboardingData.selectedProduct.description || ''
+        : onboardingData.customDescription;
+
       // Step 1: AI selects component variations
       toast({
         title: "AI is working...",
         description: "Selecting the best components for your product",
       });
 
-      // Determine which description to use
-      const effectiveDescription = onboardingData.useProductDescription 
-        ? onboardingData.selectedProduct.description || ''
-        : onboardingData.customDescription;
+      console.log('Using AI to select component variations...');
+      
+      let selectedVariations: ComponentVariation[] = [];
+      
+      try {
+        const componentSelectionResponse = await aiGenerationService.selectComponentVariations({
+          productName: onboardingData.selectedProduct.title,
+          productDescription: effectiveDescription,
+          language: onboardingData.language
+        });
 
-      // Use default component variations instead of AI selection
-      // Select hero and CTA components by default
-      const heroVariation = componentVariations.find(v => v.component_type === 'hero');
-      const ctaVariation = componentVariations.find(v => v.component_type === 'cta');
+        console.log('AI selected components:', componentSelectionResponse);
 
-      if (!heroVariation || !ctaVariation) {
-        throw new Error('Default component variations not found');
+        // Get the selected component variations from the database
+        const selectedVariationIds = [
+          componentSelectionResponse.hero,
+          componentSelectionResponse.cta
+        ];
+
+        selectedVariations = componentVariations.filter(v => 
+          selectedVariationIds.includes(v.id)
+        );
+
+        console.log('Found AI-selected variations:', selectedVariations.length);
+      } catch (error) {
+        console.warn('AI component selection failed, using fallback:', error);
       }
 
-      console.log('Using default components:', { hero: heroVariation.id, cta: ctaVariation.id });
+      if (selectedVariations.length === 0) {
+        // Fallback to default components if AI selection fails
+        const heroVariation = componentVariations.find(v => v.component_type === 'hero');
+        const ctaVariation = componentVariations.find(v => v.component_type === 'cta');
+        
+        if (!heroVariation || !ctaVariation) {
+          throw new Error('No component variations available');
+        }
+        
+        selectedVariations = [heroVariation, ctaVariation];
+        console.log('Using fallback components:', { hero: heroVariation.id, cta: ctaVariation.id });
+      }
 
-      // Step 2: Use default content with product information
+      // Step 2: Generate AI content for selected components
       toast({
         title: "Creating content...",
-        description: "Setting up your landing page with product information",
+        description: "Generating compelling content with AI",
       });
 
-      const selectedVariations = [heroVariation, ctaVariation];
+      console.log('Generating AI content for components...');
       
-      // Use default content with basic product substitution
-      const generatedContent: Record<string, any> = {};
-      selectedVariations.forEach(variation => {
-        const defaultContent = variation.default_content || {};
-        const contentWithProduct = { ...defaultContent };
+      let aiGeneratedContent: Array<{
+        variationId: string;
+        componentType: string;
+        content: Record<string, any>;
+        characterLimits: Record<string, any>;
+      }> = [];
+
+      try {
+        aiGeneratedContent = await aiGenerationService.generateComponentContent({
+          productName: onboardingData.selectedProduct.title,
+          productDescription: effectiveDescription,
+          language: onboardingData.language,
+          componentVariations: selectedVariations.map(v => ({
+            id: v.id,
+            component_type: v.component_type,
+            character_limits: v.character_limits || {},
+            default_content: v.default_content || {}
+          }))
+        });
+
+        console.log('AI generated content:', aiGeneratedContent);
+      } catch (error) {
+        console.warn('AI content generation failed, using default content:', error);
         
-        // Simple product name substitution in default content
-        Object.keys(contentWithProduct).forEach(key => {
-          if (typeof contentWithProduct[key] === 'string') {
-            contentWithProduct[key] = contentWithProduct[key]
-              .replace(/\[Product Name\]/g, onboardingData.selectedProduct.title)
-              .replace(/\[Product\]/g, onboardingData.selectedProduct.title);
-          }
+        // Fallback to default content with product substitution
+        aiGeneratedContent = selectedVariations.map(variation => {
+          const defaultContent = variation.default_content || {};
+          const contentWithProduct = { ...defaultContent };
+          
+          // Simple product name substitution in default content
+          Object.keys(contentWithProduct).forEach(key => {
+            if (typeof contentWithProduct[key] === 'string') {
+              contentWithProduct[key] = contentWithProduct[key]
+                .replace(/\[Product Name\]/g, onboardingData.selectedProduct.title)
+                .replace(/\[Product\]/g, onboardingData.selectedProduct.title);
+            }
+          });
+          
+          return {
+            variationId: variation.id,
+            componentType: variation.component_type,
+            content: contentWithProduct,
+            characterLimits: variation.character_limits || {}
+          };
         });
         
-        generatedContent[variation.id] = contentWithProduct;
-      });
+        console.log('Using fallback content:', aiGeneratedContent);
+      }
 
-      console.log('Generated content with product info:', generatedContent);
-
-      // Step 3: Create landing page with generated content
+      // Step 3: Create landing page
       toast({
         title: "Creating your landing page...",
         description: "Setting up components and content",
@@ -326,12 +508,17 @@ const Onboarding = () => {
 
       if (pageError) throw pageError;
 
-      // Create components with AI-generated content
-      for (let i = 0; i < generatedContent.length; i++) {
-        const contentItem = generatedContent[i];
-        const variation = selectedVariations[i];
+      // Step 4: Create components with AI-generated content
+      for (let i = 0; i < aiGeneratedContent.length; i++) {
+        const contentItem = aiGeneratedContent[i];
+        const variation = selectedVariations.find(v => v.id === contentItem.variationId);
         
-        // Add product pricing to content if applicable
+        if (!variation) {
+          console.warn(`Variation not found for content item: ${contentItem.variationId}`);
+          continue;
+        }
+        
+        // Merge AI-generated content with product-specific data
         const finalContent = { ...contentItem.content };
         if (onboardingData.selectedProduct) {
           if (!finalContent.price) {
@@ -404,7 +591,7 @@ const Onboarding = () => {
 
         // Alternate background gradient direction for each component
         let componentBackground = palette.backgroundColor;
-        if (generatedContent.length > 1) {
+        if (aiGeneratedContent.length > 1) {
           const angle = (i % 2 === 0) ? '135deg' : '45deg';
           componentBackground = palette.backgroundColor.replace(/linear-gradient\(([^,]+),/, `linear-gradient(${angle},`);
         }
@@ -1201,5 +1388,4 @@ const Onboarding = () => {
     </div>
   );
 };
-
 export default Onboarding;

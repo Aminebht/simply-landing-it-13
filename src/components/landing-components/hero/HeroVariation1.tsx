@@ -35,9 +35,9 @@ const HeroVariation1: React.FC<HeroVariation1Props> = ({
     initialMediaUrls: mediaUrls
   });
 
-  // Helper function to get media URL - prioritize fresh hook data over potentially stale props
+  // Helper function to get media URL - prioritize prop over hook
   const getImageUrl = (fieldName: string): string | undefined => {
-    return hookMediaUrls[fieldName] || getMediaUrl(fieldName) || mediaUrls?.[fieldName];
+    return mediaUrls?.[fieldName] || hookMediaUrls[fieldName] || getMediaUrl(fieldName);
   };
 
 
