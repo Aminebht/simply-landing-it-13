@@ -30,6 +30,12 @@ import { AIGenerationService } from '@/services/ai-generation';
 
 interface OnboardingData {
   selectedProduct?: Product;
+  selectedProductMedia?: Array<{
+    id: string;
+    media_type: string;
+    file_url: string;
+    display_order: number;
+  }>;
   language: 'en' | 'fr' | 'ar';
   selectedComponents: string[];
   componentContent: Record<string, any>;
@@ -74,7 +80,7 @@ const COLOR_PALETTES = [
     backgroundColor: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)', // Peach-Orange
   },
   {
-    primaryColor: '#f57c00', // Amber orange
+    primaryColor: '#b74040',
     backgroundColor: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)', // Lavender-Pink
   },
   {
@@ -204,6 +210,7 @@ const Onboarding = () => {
     customDescription: '',
     useProductImages: true,
     generateAIImages: false,
+    selectedProductMedia: [],
   });
 
   useEffect(() => {
@@ -249,6 +256,35 @@ const Onboarding = () => {
         description: "Failed to load component variations",
         variant: "destructive"
       });
+    }
+  };
+
+  const fetchProductMedia = async (productId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('product_media')
+        .select('id, media_type, file_url, display_order')
+        .eq('product_id', productId)
+        .eq('media_type', 'image')
+        .order('display_order');
+
+      if (error) throw error;
+      console.log('Fetched product media:', data);
+      
+      setOnboardingData(prev => ({
+        ...prev,
+        selectedProductMedia: data || []
+      }));
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching product media:', error);
+      toast({
+        title: "Warning",
+        description: "Failed to load product media",
+        variant: "destructive"
+      });
+      return [];
     }
   };
 
@@ -531,62 +567,48 @@ const Onboarding = () => {
           }
         }
 
+        // Prepare custom actions based on component type
+        let customActions = {};
+        if (variation.component_type === 'cta') {
+          // CTA components should default to checkout
+          customActions = {
+            "cta-button": {
+              "type": "checkout",
+              "amount": onboardingData.selectedProduct.price,
+              "productId": onboardingData.selectedProduct.id
+            }
+          };
+        } else {
+          // Non-CTA components should default to scroll to CTA section
+          // We'll use a generic target ID that will be updated when CTA component is created
+          customActions = {
+            "cta-button": {
+              "type": "scroll",
+              "targetId": "cta-section"
+            }
+          };
+        }
+
         // Handle images based on user preference
-        if (onboardingData.useProductImages && onboardingData.selectedProduct?.preview_image_url) {
-          // Use product images
+        if (onboardingData.useProductImages && onboardingData.selectedProductMedia && onboardingData.selectedProductMedia.length > 0) {
+          // Use product media images
+          const primaryImage = onboardingData.selectedProductMedia[0]?.file_url;
+          const secondaryImage = onboardingData.selectedProductMedia[1]?.file_url || primaryImage;
+          
+          if (primaryImage) {
+            finalContent.productImage = primaryImage;
+            finalContent.dashboardImage = primaryImage;
+            finalContent.template1Image = primaryImage;
+            finalContent.brandLogoIcon = primaryImage;
+            finalContent.professionalImage = secondaryImage || primaryImage;
+          }
+        } else if (onboardingData.useProductImages && onboardingData.selectedProduct?.preview_image_url) {
+          // Fallback to preview image if no media found
           finalContent.productImage = onboardingData.selectedProduct.preview_image_url;
           finalContent.dashboardImage = onboardingData.selectedProduct.preview_image_url;
           finalContent.template1Image = onboardingData.selectedProduct.preview_image_url;
           finalContent.brandLogoIcon = onboardingData.selectedProduct.preview_image_url;
           finalContent.professionalImage = onboardingData.selectedProduct.preview_image_url;
-        }
-
-        // Store AI generation request for later processing
-        let aiImageGenerationRequest: {
-          productName: string;
-          productDescription: string;
-          imagesToGenerate: Array<'hero' | 'feature' | 'testimonial' | 'product'>;
-          imageMapping: Record<string, string[]>;
-        } | null = null;
-
-        if (onboardingData.generateAIImages) {
-          const productName = onboardingData.selectedProduct?.title || 'Product';
-          const productDescription = effectiveDescription;
-          const componentType = variation.component_type;
-
-          // Determine which images to generate based on component type
-          let imagesToGenerate: Array<'hero' | 'feature' | 'testimonial' | 'product'> = [];
-          let imageMapping: Record<string, string[]> = {};
-          
-          if (componentType === 'hero') {
-            imagesToGenerate = ['hero', 'product'];
-            imageMapping = {
-              hero: ['productImage', 'dashboardImage'],
-              product: ['template1Image', 'brandLogoIcon', 'professionalImage']
-            };
-          } else if (componentType === 'features') {
-            imagesToGenerate = ['feature'];
-            imageMapping = {
-              feature: ['featureImage']
-            };
-          } else if (componentType === 'testimonials') {
-            imagesToGenerate = ['testimonial'];
-            imageMapping = {
-              testimonial: ['testimonialImage']
-            };
-          } else if (componentType === 'cta') {
-            imagesToGenerate = ['product'];
-            imageMapping = {
-              product: ['template1Image', 'brandLogoIcon', 'professionalImage']
-            };
-          }
-
-          aiImageGenerationRequest = {
-            productName,
-            productDescription,
-            imagesToGenerate,
-            imageMapping
-          };
         }
 
         // Alternate background gradient direction for each component
@@ -612,7 +634,8 @@ const Onboarding = () => {
             },
             visibility: {
               secondaryButton: false
-            }
+            },
+            custom_actions: customActions
           }])
           .select()
           .single();
@@ -621,48 +644,123 @@ const Onboarding = () => {
         
         console.log(`Created AI component ${newComponent.id} of type ${contentItem.componentType}`);
 
-        // Generate and upload AI images after component creation
-        if (aiImageGenerationRequest) {
+        // Step 5: Generate AI images if requested and component requires images
+        if (onboardingData.generateAIImages && variation.required_images && variation.required_images > 0) {
           try {
             toast({
               title: "AI is working...",
               description: `Generating custom images for ${contentItem.componentType} component...`,
             });
 
-            console.log(`Generating AI images for component ${newComponent.id}...`);
+            console.log(`Generating AI images for component ${newComponent.id} (requires ${variation.required_images} images)...`);
 
-            // Generate and upload images directly to the component
-            const generatedImages = await aiImageService.generateAndUploadComponentImages(
-              aiImageGenerationRequest.productName,
-              aiImageGenerationRequest.productDescription,
-              aiImageGenerationRequest.imagesToGenerate,
-              newComponent.id,
-              'modern'
-            );
+            const productName = onboardingData.selectedProduct?.title || 'Product';
+            const productDescription = effectiveDescription;
+            const componentType = variation.component_type;
+            const requiredImagesCount = variation.required_images || 0;
 
-            // Update component content with uploaded image URLs
-            const updatedContent = { ...finalContent };
-            for (const [imageType, contentFields] of Object.entries(aiImageGenerationRequest.imageMapping)) {
-              if (generatedImages[imageType]) {
-                // Map to content fields for immediate use
-                contentFields.forEach(field => {
-                  updatedContent[field] = generatedImages[imageType];
-                });
-              }
+            // Determine which images to generate based on component type and required count
+            let imagesToGenerate: Array<'hero' | 'feature' | 'testimonial' | 'product' | 'background'> = [];
+            
+            // Generate the exact number of images required by the component
+            if (componentType === 'hero') {
+              const imageTypes: Array<'hero' | 'feature' | 'testimonial' | 'product' | 'background'> = ['hero', 'product'];
+              imagesToGenerate = imageTypes.slice(0, requiredImagesCount);
+            } else if (componentType === 'features') {
+              const imageTypes: Array<'hero' | 'feature' | 'testimonial' | 'product' | 'background'> = ['feature', 'product'];
+              imagesToGenerate = imageTypes.slice(0, requiredImagesCount);
+            } else if (componentType === 'testimonials') {
+              const imageTypes: Array<'hero' | 'feature' | 'testimonial' | 'product' | 'background'> = ['testimonial', 'product'];
+              imagesToGenerate = imageTypes.slice(0, requiredImagesCount);
+            } else if (componentType === 'cta') {
+              const imageTypes: Array<'hero' | 'feature' | 'testimonial' | 'product' | 'background'> = ['product', 'background'];
+              imagesToGenerate = imageTypes.slice(0, requiredImagesCount);
+            } else if (componentType === 'pricing') {
+              const imageTypes: Array<'hero' | 'feature' | 'testimonial' | 'product' | 'background'> = ['background', 'product'];
+              imagesToGenerate = imageTypes.slice(0, requiredImagesCount);
+            } else {
+              // Generic fallback for other component types
+              const imageTypes: Array<'hero' | 'feature' | 'testimonial' | 'product' | 'background'> = ['product', 'background', 'feature'];
+              imagesToGenerate = imageTypes.slice(0, requiredImagesCount);
             }
 
-            // Update component content with new image URLs
-            await supabase
-              .from('landing_page_components')
-              .update({ content: updatedContent })
-              .eq('id', newComponent.id);
+            console.log(`Will generate ${imagesToGenerate.length} images for ${componentType} component:`, imagesToGenerate);
 
-            console.log(`✅ AI images generated and applied to component ${newComponent.id}:`, generatedImages);
-            
-            toast({
-              title: "Images Generated!",
-              description: `Custom images created for ${contentItem.componentType} component`,
-            });
+            // Only generate if we have images to generate
+            if (imagesToGenerate.length > 0) {
+              // Generate and upload images directly to the component
+              const generatedImages = await aiImageService.generateAndUploadComponentImages(
+                productName,
+                productDescription,
+                imagesToGenerate,
+                newComponent.id,
+                'modern'
+              );
+
+              // Update component content with uploaded image URLs
+              const updatedContent = { ...finalContent };
+              
+              // Map generated images to component fields based on component type and available images
+              const imageFieldMapping = getImageFieldNames(contentItem.variationId, variation);
+              let fieldIndex = 0;
+
+              // Map the generated images to the appropriate fields
+              imagesToGenerate.forEach((imageType, index) => {
+                if (generatedImages[imageType] && fieldIndex < imageFieldMapping.length) {
+                  const fieldName = imageFieldMapping[fieldIndex];
+                  updatedContent[fieldName] = generatedImages[imageType];
+                  console.log(`Mapped ${imageType} image to field ${fieldName}`);
+                  fieldIndex++;
+                }
+              });
+
+              // Legacy mapping for specific component types (fallback)
+              if (componentType === 'hero') {
+                if (generatedImages.hero && !updatedContent.productImage) {
+                  updatedContent.productImage = generatedImages.hero;
+                  updatedContent.dashboardImage = generatedImages.hero;
+                }
+                if (generatedImages.product && !updatedContent.template1Image) {
+                  updatedContent.template1Image = generatedImages.product;
+                  updatedContent.brandLogoIcon = generatedImages.product;
+                  updatedContent.professionalImage = generatedImages.product;
+                }
+              } else if (componentType === 'features') {
+                if (generatedImages.feature && !updatedContent.featureImage) {
+                  updatedContent.featureImage = generatedImages.feature;
+                }
+              } else if (componentType === 'testimonials') {
+                if (generatedImages.testimonial && !updatedContent.testimonialImage) {
+                  updatedContent.testimonialImage = generatedImages.testimonial;
+                }
+              } else if (componentType === 'cta') {
+                if (generatedImages.product && !updatedContent.template1Image) {
+                  updatedContent.template1Image = generatedImages.product;
+                  updatedContent.brandLogoIcon = generatedImages.product;
+                  updatedContent.professionalImage = generatedImages.product;
+                }
+              } else if (componentType === 'pricing') {
+                if (generatedImages.background && !updatedContent.backgroundImage) {
+                  updatedContent.backgroundImage = generatedImages.background;
+                }
+              }
+
+              // Update component content with new image URLs
+              await supabase
+                .from('landing_page_components')
+                .update({ content: updatedContent })
+                .eq('id', newComponent.id);
+
+              console.log(`✅ AI images generated and applied to component ${newComponent.id}:`, generatedImages);
+              
+              const generatedCount = Object.keys(generatedImages).length;
+              toast({
+                title: "Images Generated!",
+                description: `${generatedCount} custom image${generatedCount !== 1 ? 's' : ''} created for ${contentItem.componentType} component`,
+              });
+            } else {
+              console.log(`No images to generate for component type: ${componentType}`);
+            }
           } catch (error) {
             console.error('AI image generation failed for component:', error);
             toast({
@@ -670,6 +768,52 @@ const Onboarding = () => {
               description: "Some images couldn't be generated, but your landing page was still created",
               variant: "destructive"
             });
+          }
+        } else if (onboardingData.generateAIImages && (!variation.required_images || variation.required_images === 0)) {
+          console.log(`Skipping AI image generation for ${contentItem.componentType} - component doesn't require images (required_images: ${variation.required_images})`);
+        }
+      }
+
+      // Step 6: Update scroll target IDs for non-CTA components
+      // Find the CTA component and update other components to scroll to it
+      const { data: allComponents, error: fetchComponentsError } = await supabase
+        .from('landing_page_components')
+        .select('id, component_variation_id, custom_actions')
+        .eq('page_id', landingPage.id);
+
+      if (fetchComponentsError) {
+        console.warn('Could not fetch components to update scroll targets:', fetchComponentsError);
+      } else {
+        // Find CTA component
+        const ctaComponent = allComponents?.find(comp => {
+          const variation = selectedVariations.find(v => v.id === comp.component_variation_id);
+          return variation?.component_type === 'cta';
+        });
+
+        if (ctaComponent) {
+          const ctaTargetId = `section-${ctaComponent.id}`;
+          
+          // Update all non-CTA components to scroll to the CTA component
+          const nonCtaComponents = allComponents?.filter(comp => {
+            const variation = selectedVariations.find(v => v.id === comp.component_variation_id);
+            return variation?.component_type !== 'cta';
+          });
+
+          for (const component of nonCtaComponents || []) {
+            const updatedCustomActions = {
+              ...component.custom_actions,
+              "cta-button": {
+                "type": "scroll",
+                "targetId": ctaTargetId
+              }
+            };
+
+            await supabase
+              .from('landing_page_components')
+              .update({ custom_actions: updatedCustomActions })
+              .eq('id', component.id);
+
+            console.log(`Updated scroll target for component ${component.id} to ${ctaTargetId}`);
           }
         }
       }
@@ -726,7 +870,10 @@ const Onboarding = () => {
                           ? 'border-blue-500 bg-blue-50 shadow-md' 
                           : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                       }`}
-                      onClick={() => setOnboardingData(prev => ({ ...prev, selectedProduct: product }))}
+                      onClick={async () => {
+                        setOnboardingData(prev => ({ ...prev, selectedProduct: product }));
+                        await fetchProductMedia(product.id);
+                      }}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start space-x-4">
@@ -992,14 +1139,40 @@ const Onboarding = () => {
                           <p className="text-sm text-gray-600 mb-3">
                             Perfect for showcasing authentic product visuals and building trust
                           </p>
-                          {onboardingData.selectedProduct?.preview_image_url ? (
+                          {onboardingData.selectedProductMedia && onboardingData.selectedProductMedia.length > 0 ? (
                             <div className="bg-white p-3 rounded-lg border border-gray-200">
-                              <p className="text-xs text-gray-500 mb-2">Preview image:</p>
+                              <p className="text-xs text-gray-500 mb-2">
+                                Available images ({onboardingData.selectedProductMedia.length}):
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {onboardingData.selectedProductMedia.slice(0, 4).map((media, index) => (
+                                  <img 
+                                    key={media.id}
+                                    src={media.file_url} 
+                                    alt={`Product image ${index + 1}`}
+                                    className="w-16 h-16 object-cover rounded border shadow-sm"
+                                  />
+                                ))}
+                                {onboardingData.selectedProductMedia.length > 4 && (
+                                  <div className="w-16 h-16 bg-gray-100 rounded border flex items-center justify-center">
+                                    <span className="text-xs text-gray-500">
+                                      +{onboardingData.selectedProductMedia.length - 4}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ) : onboardingData.selectedProduct?.preview_image_url ? (
+                            <div className="bg-white p-3 rounded-lg border border-gray-200">
+                              <p className="text-xs text-gray-500 mb-2">Preview image only:</p>
                               <img 
                                 src={onboardingData.selectedProduct.preview_image_url} 
                                 alt="Product preview"
                                 className="w-24 h-24 object-cover rounded border shadow-sm"
                               />
+                              <p className="text-xs text-amber-600 mt-2">
+                                💡 Consider uploading more product images for better variety
+                              </p>
                             </div>
                           ) : (
                             <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
@@ -1073,51 +1246,10 @@ const Onboarding = () => {
                       generateAIImages: false
                     }))}
                   >
-                    <CardContent className="p-4">
-                      <div className="flex items-start space-x-3">
-                        <div className={`w-4 h-4 rounded-full border-2 mt-1 flex items-center justify-center ${
-                          !onboardingData.useProductImages && !onboardingData.generateAIImages 
-                            ? 'border-gray-500 bg-gray-500' 
-                            : 'border-gray-300'
-                        }`}>
-                          {!onboardingData.useProductImages && !onboardingData.generateAIImages && (
-                            <div className="w-2 h-2 rounded-full bg-white"></div>
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <FileText className="h-4 w-4 text-gray-600" />
-                            <Label className="text-sm font-semibold text-gray-900">
-                              Text-only landing page
-                            </Label>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-3">
-                            Create a clean, minimal landing page focused on compelling copy
-                          </p>
-                          <div className="bg-gray-100 p-3 rounded-lg border border-gray-200">
-                            <p className="text-xs text-gray-600">
-                              📝 Perfect for service-based products or when you want to focus on strong messaging
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
+                   
                   </Card>
                 </div>
 
-                {/* Smart Recommendation */}
-                <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
-                  <div className="flex items-center mb-2">
-                    <Wand2 className="h-4 w-4 text-amber-600 mr-2" />
-                    <h4 className="font-medium text-amber-900">Smart Recommendation</h4>
-                  </div>
-                  <p className="text-amber-700 text-sm">
-                    {onboardingData.selectedProduct?.preview_image_url 
-                      ? "✅ Your product has existing images. Using them will create a more authentic and trustworthy landing page."
-                      : "💡 No product images found. Consider uploading product images first, or use AI generation for professional visuals."
-                    }
-                  </p>
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -1217,96 +1349,9 @@ const Onboarding = () => {
                 </div>
               </div>
               
-              {/* AI Generation Info */}
-              <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border border-blue-200">
-                <div className="flex items-center mb-3">
-                  <Wand2 className="h-5 w-5 text-blue-600 mr-2" />
-                  <h3 className="font-semibold text-blue-900">AI-Powered Generation</h3>
-                </div>
-                <p className="text-blue-700 text-sm mb-3">
-                  Our AI will create a stunning landing page automatically:
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-blue-700 text-sm">
-                  <div className="flex items-center">
-                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></div>
-                    Select optimal components
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></div>
-                    Generate compelling content
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></div>
-                    Apply professional styling
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></div>
-                    Optimize for conversions
-                  </div>
-                </div>
-              </div>
+            
 
-              {/* Configuration Summary */}
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Configuration Summary
-                </h4>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-2 bg-white rounded border">
-                    <span className="text-gray-600 text-sm">Product:</span>
-                    <span className="font-medium text-sm">{onboardingData.selectedProduct?.title}</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-white rounded border">
-                    <span className="text-gray-600 text-sm">Description:</span>
-                    <span className="font-medium text-sm flex items-center">
-                      {onboardingData.useProductDescription ? (
-                        <>
-                          <FileText className="h-3 w-3 mr-1 text-blue-600" />
-                          Product description
-                        </>
-                      ) : (
-                        <>
-                          <Wand2 className="h-3 w-3 mr-1 text-green-600" />
-                          Custom description
-                        </>
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-white rounded border">
-                    <span className="text-gray-600 text-sm">Images:</span>
-                    <span className="font-medium text-sm flex items-center">
-                      {onboardingData.useProductImages ? (
-                        <>
-                          <Camera className="h-3 w-3 mr-1 text-blue-600" />
-                          Product images
-                        </>
-                      ) : onboardingData.generateAIImages ? (
-                        <>
-                          <Sparkles className="h-3 w-3 mr-1 text-purple-600" />
-                          AI generated
-                        </>
-                      ) : (
-                        <>
-                          <FileText className="h-3 w-3 mr-1 text-gray-600" />
-                          Text only
-                        </>
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-white rounded border">
-                    <span className="text-gray-600 text-sm">Language:</span>
-                    <span className="font-medium text-sm flex items-center">
-                      <Globe className="h-3 w-3 mr-1 text-blue-600" />
-                      {onboardingData.language === 'en' ? 'English' : 
-                       onboardingData.language === 'fr' ? 'Français' : 'العربية'}
-                      <span className="text-xs text-gray-500 ml-1">
-                        ({onboardingData.language === 'ar' ? 'RTL' : 'LTR'})
-                      </span>
-                    </span>
-                  </div>
-                </div>
-              </div>
+           
             </CardContent>
           </Card>
         );
