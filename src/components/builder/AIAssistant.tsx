@@ -4,7 +4,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Sparkles, Send, X } from 'lucide-react';
-import { useAIGeneration } from '@/hooks/useAIGeneration';
 
 interface AIAssistantProps {
   isOpen: boolean;
@@ -19,26 +18,22 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 }) => {
   const [prompt, setPrompt] = useState('');
   const [componentType, setComponentType] = useState<'hero' | 'testimonials' | 'features' | 'pricing' | 'faq' | 'cta'>('hero');
-  const { generateContent, isGenerating, error } = useAIGeneration();
+  
+  // Temporarily disabled - will be replaced with Edge Function implementation
+  const generateContent = async () => {
+    throw new Error('AI content generation temporarily disabled');
+  };
+  const isGenerating = false;
+  const error = null;
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
 
     try {
-      const result = await generateContent({
-        productType: 'general',
-        targetAudience: 'general',
-        language: 'en',
-        tone: 'professional',
-        componentType,
-        context: prompt
-      });
-
-      if (result) {
-        onApplyContent(result);
-        setPrompt('');
-      }
+      // AI content generation temporarily disabled
+      throw new Error('AI content generation is being updated. Please use the manual editor for now.');
     } catch (error) {
+      console.error('AI generation error:', error);
     }
   };
 

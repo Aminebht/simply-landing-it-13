@@ -38,7 +38,7 @@ const CtaVariation3: React.FC<CtaVariation3Props> = ({
     initialMediaUrls: mediaUrls
   });
   const getImageUrl = (fieldName: string): string | undefined => {
-    return mediaUrls?.[fieldName] || hookMediaUrls[fieldName] || getMediaUrl(fieldName);
+    return hookMediaUrls[fieldName] || getMediaUrl(fieldName) || mediaUrls?.[fieldName];
   };
 
   // Get shared class maps

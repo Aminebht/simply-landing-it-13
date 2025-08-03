@@ -11,7 +11,6 @@ import { LandingPageSettings } from '@/components/builder/LandingPageSettings';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Palette, Eye, Edit, Save, Globe, ChevronLeft, ChevronRight, CloudUpload, Database } from 'lucide-react';
-import { useAIGeneration } from '@/hooks/useAIGeneration';
 import { useReactDeployment } from '@/hooks/useReactDeployment';
 import { LandingPageComponent, ComponentVariation } from '@/types/components';
 import { LandingPageService } from '@/services/landing-page';

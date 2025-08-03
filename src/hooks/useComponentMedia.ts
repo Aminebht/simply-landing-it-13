@@ -110,20 +110,26 @@ export const useComponentMedia = (
     return mediaUrls[fieldName];
   }, [mediaUrls]);
 
-  // Load media URLs on mount only if not provided initially
+  // Load media URLs on mount if autoLoad is enabled
   useEffect(() => {
-    if (autoLoad && componentId && !initialMediaUrls) {
+    if (autoLoad && componentId) {
       refreshMediaUrls();
     }
-  }, [autoLoad, componentId, refreshMediaUrls, initialMediaUrls]);
+  }, [autoLoad, componentId, refreshMediaUrls]);
 
-  // Update state when initialMediaUrls changes
+  // Update state when initialMediaUrls changes, but don't override fresh data
   useEffect(() => {
     if (initialMediaUrls) {
-      setMediaUrls(prev => ({
-        ...prev,
-        ...initialMediaUrls
-      }));
+      setMediaUrls(prev => {
+        // Only use initialMediaUrls for fields that don't have fresh data
+        const merged = { ...initialMediaUrls };
+        Object.keys(prev).forEach(key => {
+          if (prev[key]) {
+            merged[key] = prev[key]; // Keep fresh data
+          }
+        });
+        return merged;
+      });
     }
   }, [initialMediaUrls]);
 
