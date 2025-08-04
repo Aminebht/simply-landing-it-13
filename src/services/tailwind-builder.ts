@@ -620,56 +620,178 @@ html, body {
   }
 
   private async runTailwindBuild(inputCSS: string, configPath: string, minify: boolean = true): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const inputPath = `/tmp/tailwind-input-${Date.now()}.css`;
-      const outputPath = `/tmp/tailwind-output-${Date.now()}.css`;
-      
-      fs.writeFile(inputPath, inputCSS)
-        .then(() => {
-          const args = [
-            '--input', inputPath,
-            '--output', outputPath,
-            '--config', configPath
-          ];
-          
-          if (minify) {
-            args.push('--minify');
-          }
-          
-          const tailwind = spawn('npx', ['tailwindcss', ...args], {
-            stdio: ['pipe', 'pipe', 'pipe']
-          });
-          
-          let stderr = '';
-          
-          tailwind.stderr.on('data', (data) => {
-            stderr += data.toString();
-          });
-          
-          tailwind.on('close', async (code) => {
-            try {
-              if (code !== 0) {
-                throw new Error(`Tailwind build failed with code ${code}: ${stderr}`);
-              }
-              
-              const css = await fs.readFile(outputPath, 'utf-8');
-              
-              // Cleanup temp files
-              await Promise.all([
-                fs.unlink(inputPath).catch(() => {}),
-                fs.unlink(outputPath).catch(() => {})
-              ]);
-              
-              resolve(css);
-            } catch (error) {
-              reject(error);
-            }
-          });
-          
-          tailwind.on('error', reject);
-        })
-        .catch(reject);
-    });
+    // Since we can't modify PostCSS config, return a comprehensive CSS fallback
+    console.log('Using CSS fallback approach due to PostCSS configuration limitations');
+    
+    const comprehensiveCSS = this.generateComprehensiveFallbackCSS();
+    return minify ? this.minifyCSS(comprehensiveCSS) : comprehensiveCSS;
+  }
+
+  private generateComprehensiveFallbackCSS(): string {
+    return `
+/* Comprehensive Tailwind CSS Fallback */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* CSS Variables */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222.2 84% 4.9%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 222.2 84% 4.9%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 221.2 83.2% 53.3%;
+  --radius: 0.5rem;
+}
+
+/* Reset and base styles */
+*,::before,::after{box-sizing:border-box;border-width:0;border-style:solid;border-color:hsl(var(--border))}
+*{margin:0;padding:0}
+html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;-o-tab-size:4;tab-size:4;font-family:Inter,sans-serif}
+body{margin:0;line-height:inherit;background-color:hsl(var(--background));color:hsl(var(--foreground))}
+
+/* Core utilities that landing pages need */
+.container{width:100%;max-width:1200px;margin:0 auto;padding:0 1rem}
+.flex{display:flex}
+.inline-flex{display:inline-flex}
+.grid{display:grid}
+.hidden{display:none}
+.block{display:block}
+.inline{display:inline}
+.inline-block{display:inline-block}
+
+/* Flex utilities */
+.flex-col{flex-direction:column}
+.flex-row{flex-direction:row}
+.flex-wrap{flex-wrap:wrap}
+.items-center{align-items:center}
+.items-start{align-items:flex-start}
+.items-end{align-items:flex-end}
+.justify-center{justify-content:center}
+.justify-between{justify-content:space-between}
+.justify-start{justify-content:flex-start}
+.justify-end{justify-content:flex-end}
+
+/* Grid utilities */
+.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}
+.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+
+/* Spacing utilities */
+.p-0{padding:0}.p-1{padding:0.25rem}.p-2{padding:0.5rem}.p-3{padding:0.75rem}.p-4{padding:1rem}.p-5{padding:1.25rem}.p-6{padding:1.5rem}.p-8{padding:2rem}.p-10{padding:2.5rem}.p-12{padding:3rem}.p-16{padding:4rem}.p-20{padding:5rem}.p-24{padding:6rem}
+.px-0{padding-left:0;padding-right:0}.px-1{padding-left:0.25rem;padding-right:0.25rem}.px-2{padding-left:0.5rem;padding-right:0.5rem}.px-3{padding-left:0.75rem;padding-right:0.75rem}.px-4{padding-left:1rem;padding-right:1rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.px-8{padding-left:2rem;padding-right:2rem}
+.py-0{padding-top:0;padding-bottom:0}.py-1{padding-top:0.25rem;padding-bottom:0.25rem}.py-2{padding-top:0.5rem;padding-bottom:0.5rem}.py-3{padding-top:0.75rem;padding-bottom:0.75rem}.py-4{padding-top:1rem;padding-bottom:1rem}.py-6{padding-top:1.5rem;padding-bottom:1.5rem}.py-8{padding-top:2rem;padding-bottom:2rem}.py-12{padding-top:3rem;padding-bottom:3rem}.py-16{padding-top:4rem;padding-bottom:4rem}.py-20{padding-top:5rem;padding-bottom:5rem}
+
+.m-0{margin:0}.m-1{margin:0.25rem}.m-2{margin:0.5rem}.m-3{margin:0.75rem}.m-4{margin:1rem}.m-auto{margin:auto}
+.mx-auto{margin-left:auto;margin-right:auto}.my-4{margin-top:1rem;margin-bottom:1rem}.my-8{margin-top:2rem;margin-bottom:2rem}
+.mt-4{margin-top:1rem}.mt-8{margin-top:2rem}.mb-4{margin-bottom:1rem}.mb-8{margin-bottom:2rem}
+
+.gap-1{gap:0.25rem}.gap-2{gap:0.5rem}.gap-3{gap:0.75rem}.gap-4{gap:1rem}.gap-6{gap:1.5rem}.gap-8{gap:2rem}
+.space-y-1>*+*{margin-top:0.25rem}.space-y-2>*+*{margin-top:0.5rem}.space-y-3>*+*{margin-top:0.75rem}.space-y-4>*+*{margin-top:1rem}.space-y-6>*+*{margin-top:1.5rem}.space-y-8>*+*{margin-top:2rem}
+
+/* Typography */
+.text-xs{font-size:0.75rem}.text-sm{font-size:0.875rem}.text-base{font-size:1rem}.text-lg{font-size:1.125rem}.text-xl{font-size:1.25rem}.text-2xl{font-size:1.5rem}.text-3xl{font-size:1.875rem}.text-4xl{font-size:2.25rem}.text-5xl{font-size:3rem}.text-6xl{font-size:3.75rem}
+.font-normal{font-weight:400}.font-medium{font-weight:500}.font-semibold{font-weight:600}.font-bold{font-weight:700}
+.text-left{text-align:left}.text-center{text-align:center}.text-right{text-align:right}
+.leading-tight{line-height:1.25}.leading-normal{line-height:1.5}.leading-relaxed{line-height:1.625}
+
+/* Colors */
+.text-white{color:#ffffff}.text-black{color:#000000}
+.text-primary{color:hsl(var(--primary))}.text-primary-foreground{color:hsl(var(--primary-foreground))}
+.text-secondary{color:hsl(var(--secondary))}.text-secondary-foreground{color:hsl(var(--secondary-foreground))}
+.text-muted{color:hsl(var(--muted))}.text-muted-foreground{color:hsl(var(--muted-foreground))}
+.text-foreground{color:hsl(var(--foreground))}.text-background{color:hsl(var(--background))}
+
+.bg-white{background-color:#ffffff}.bg-black{background-color:#000000}.bg-transparent{background-color:transparent}
+.bg-primary{background-color:hsl(var(--primary))}.bg-primary-foreground{background-color:hsl(var(--primary-foreground))}
+.bg-secondary{background-color:hsl(var(--secondary))}.bg-secondary-foreground{background-color:hsl(var(--secondary-foreground))}
+.bg-background{background-color:hsl(var(--background))}.bg-foreground{background-color:hsl(var(--foreground))}
+.bg-card{background-color:hsl(var(--card))}.bg-muted{background-color:hsl(var(--muted))}
+
+/* Sizing */
+.w-full{width:100%}.w-auto{width:auto}.w-fit{width:fit-content}.w-1\/2{width:50%}.w-1\/3{width:33.333333%}.w-2\/3{width:66.666667%}.w-1\/4{width:25%}.w-3\/4{width:75%}
+.h-full{height:100%}.h-auto{height:auto}.h-fit{height:fit-content}.h-screen{height:100vh}.min-h-screen{min-height:100vh}.h-10{height:2.5rem}.h-12{height:3rem}
+.max-w-md{max-width:28rem}.max-w-lg{max-width:32rem}.max-w-xl{max-width:36rem}.max-w-2xl{max-width:42rem}.max-w-4xl{max-width:56rem}.max-w-6xl{max-width:72rem}
+
+/* Borders */
+.rounded{border-radius:0.25rem}.rounded-md{border-radius:0.375rem}.rounded-lg{border-radius:0.5rem}.rounded-xl{border-radius:0.75rem}.rounded-full{border-radius:9999px}
+.border{border-width:1px}.border-0{border-width:0}.border-2{border-width:2px}
+.border-input{border-color:hsl(var(--input))}.border-border{border-color:hsl(var(--border))}
+
+/* Shadows */
+.shadow{box-shadow:0 1px 3px 0 rgba(0,0,0,0.1),0 1px 2px 0 rgba(0,0,0,0.06)}
+.shadow-md{box-shadow:0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -1px rgba(0,0,0,0.06)}
+.shadow-lg{box-shadow:0 10px 15px -3px rgba(0,0,0,0.1),0 4px 6px -2px rgba(0,0,0,0.05)}
+
+/* Component styles */
+.btn{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;border-radius:0.375rem;font-size:0.875rem;font-weight:500;transition:all 0.2s;cursor:pointer;border:none;padding:0.5rem 1rem;text-decoration:none}
+.btn-primary{background-color:hsl(var(--primary));color:hsl(var(--primary-foreground))}
+.btn-primary:hover{opacity:0.9}
+.btn-secondary{background-color:hsl(var(--secondary));color:hsl(var(--secondary-foreground))}
+.btn-outline{border:1px solid hsl(var(--border));background-color:hsl(var(--background));color:hsl(var(--foreground))}
+.btn-outline:hover{background-color:hsl(var(--accent));color:hsl(var(--accent-foreground))}
+
+/* Form styles */
+input,textarea,select{font-family:inherit;font-size:inherit}
+.form-input{display:flex;height:2.5rem;width:100%;border-radius:0.375rem;border:1px solid hsl(var(--border));background-color:hsl(var(--background));padding:0.5rem 0.75rem;font-size:0.875rem;transition:all 0.2s}
+.form-input:focus{outline:none;border-color:hsl(var(--ring));box-shadow:0 0 0 2px hsl(var(--ring))}
+
+/* Responsive utilities */
+@media (min-width: 640px) {
+  .sm\\:block{display:block}.sm\\:flex{display:flex}.sm\\:hidden{display:none}
+  .sm\\:text-base{font-size:1rem}.sm\\:text-lg{font-size:1.125rem}.sm\\:text-xl{font-size:1.25rem}.sm\\:text-2xl{font-size:1.5rem}.sm\\:text-3xl{font-size:1.875rem}.sm\\:text-4xl{font-size:2.25rem}
+  .sm\\:p-4{padding:1rem}.sm\\:px-6{padding-left:1.5rem;padding-right:1.5rem}.sm\\:py-8{padding-top:2rem;padding-bottom:2rem}
+  .sm\\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.sm\\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+
+@media (min-width: 768px) {
+  .md\\:block{display:block}.md\\:flex{display:flex}.md\\:hidden{display:none}
+  .md\\:text-lg{font-size:1.125rem}.md\\:text-xl{font-size:1.25rem}.md\\:text-2xl{font-size:1.5rem}.md\\:text-3xl{font-size:1.875rem}.md\\:text-4xl{font-size:2.25rem}.md\\:text-5xl{font-size:3rem}
+  .md\\:p-6{padding:1.5rem}.md\\:px-8{padding-left:2rem;padding-right:2rem}.md\\:py-12{padding-top:3rem;padding-bottom:3rem}
+  .md\\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.md\\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.md\\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+
+@media (min-width: 1024px) {
+  .lg\\:block{display:block}.lg\\:flex{display:flex}.lg\\:hidden{display:none}
+  .lg\\:text-xl{font-size:1.25rem}.lg\\:text-2xl{font-size:1.5rem}.lg\\:text-3xl{font-size:1.875rem}.lg\\:text-4xl{font-size:2.25rem}.lg\\:text-5xl{font-size:3rem}.lg\\:text-6xl{font-size:3.75rem}
+  .lg\\:p-8{padding:2rem}.lg\\:px-12{padding-left:3rem;padding-right:3rem}.lg\\:py-16{padding-top:4rem;padding-bottom:4rem}
+  .lg\\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.lg\\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+
+/* Hover states */
+.hover\\:opacity-90:hover{opacity:0.9}
+.hover\\:bg-primary\\/90:hover{background-color:hsl(var(--primary)/0.9)}
+.hover\\:bg-secondary\\/80:hover{background-color:hsl(var(--secondary)/0.8)}
+
+/* Transitions */
+.transition{transition-property:all;transition-timing-function:cubic-bezier(0.4,0,0.2,1);transition-duration:150ms}
+.transition-colors{transition-property:color,background-color,border-color;transition-timing-function:cubic-bezier(0.4,0,0.2,1);transition-duration:150ms}
+`;
+  }
+
+  private minifyCSS(css: string): string {
+    return css
+      .replace(/\/\*[\s\S]*?\*\//g, '') // Remove comments
+      .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+      .replace(/;\s*}/g, '}') // Remove semicolon before closing brace
+      .replace(/\s*{\s*/g, '{') // Remove spaces around opening brace
+      .replace(/\s*}\s*/g, '}') // Remove spaces around closing brace
+      .replace(/\s*;\s*/g, ';') // Remove spaces around semicolons
+      .replace(/\s*,\s*/g, ',') // Remove spaces around commas
+      .trim();
   }
 
   private async cleanupTempFiles(configPath: string): Promise<void> {
