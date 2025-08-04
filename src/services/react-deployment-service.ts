@@ -66,7 +66,7 @@ export class ReactDeploymentService {
       const html = await this.generateReactHTML(pageData);
 
       // 3. Generate supporting assets
-      const { css, js } = this.generateAssets(pageData);
+      const { css, js } = await this.generateAssets(pageData);
 
       // 4. Create deployment package
       const files = {
@@ -318,7 +318,7 @@ export class ReactDeploymentService {
   <meta http-equiv="X-Frame-Options" content="DENY">
   <meta http-equiv="X-XSS-Protection" content="1; mode=block">
   <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.tailwindcss.com https://connect.facebook.net https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co https://*.netlify.app https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com https://www.clarity.ms https://k.clarity.ms; frame-src 'none';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://connect.facebook.net https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co https://*.netlify.app https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com https://www.clarity.ms https://k.clarity.ms; frame-src 'none';">
   
   ${this.generateSEOMetaTags(pageData)}
   <link rel="stylesheet" href="styles.css">
@@ -528,420 +528,8 @@ export class ReactDeploymentService {
   }
 
   private generateTailwindCSS(): string {
-    // HYBRID SOLUTION: Keep CDN for full functionality but suppress warning and add layout fixes
-    return `<script src="https://cdn.tailwindcss.com"></script>
-<script>
-  // Suppress production warning about CDN usage
-  const originalWarn = console.warn;
-  console.warn = function(...args) {
-    if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) {
-      return; // Suppress this specific warning
-    }
-    return originalWarn.apply(console, args);
-  };
-
-  // Configure Tailwind with full functionality for proper UI rendering
-  tailwind.config = {
-    theme: {
-      screens: {
-        'sm': '640px',
-        'md': '768px',
-        'lg': '1024px',
-        'xl': '1280px',
-        '2xl': '1536px',
-      },
-      extend: {
-        spacing: {
-          '72': '18rem',
-          '84': '21rem',
-          '96': '24rem',
-        },
-        colors: {
-          // Support for CSS variables and theming
-          background: 'hsl(var(--background))',
-          foreground: 'hsl(var(--foreground))',
-          primary: {
-            DEFAULT: 'hsl(var(--primary))',
-            foreground: 'hsl(var(--primary-foreground))',
-          },
-          secondary: {
-            DEFAULT: 'hsl(var(--secondary))',
-            foreground: 'hsl(var(--secondary-foreground))',
-          },
-          muted: {
-            DEFAULT: 'hsl(var(--muted))',
-            foreground: 'hsl(var(--muted-foreground))',
-          },
-          accent: {
-            DEFAULT: 'hsl(var(--accent))',
-            foreground: 'hsl(var(--accent-foreground))',
-          },
-          destructive: {
-            DEFAULT: 'hsl(var(--destructive))',
-            foreground: 'hsl(var(--destructive-foreground))',
-          },
-          border: 'hsl(var(--border))',
-          input: 'hsl(var(--input))',
-          ring: 'hsl(var(--ring))',
-        }
-      }
-    },
-    variants: {
-      extend: {
-        display: ['responsive'],
-        flexDirection: ['responsive'],
-        gridTemplateColumns: ['responsive'],
-        gridTemplateRows: ['responsive'],
-        gap: ['responsive'],
-        padding: ['responsive'],
-        margin: ['responsive'],
-        fontSize: ['responsive'],
-        lineHeight: ['responsive'],
-        textAlign: ['responsive'],
-        justifyContent: ['responsive'],
-        alignItems: ['responsive'],
-        width: ['responsive'],
-        height: ['responsive'],
-        maxWidth: ['responsive'],
-        maxHeight: ['responsive'],
-        backgroundColor: ['hover', 'focus'],
-        textColor: ['hover', 'focus'],
-        opacity: ['hover', 'focus'],
-        transform: ['hover', 'focus'],
-      }
-    }
-  }
-</script>
-<style>
-  /* CRITICAL: Layout stability fixes to prevent white gaps during scrolling */
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-  
-  html, body {
-    font-family: Inter, sans-serif;
-    line-height: 1.6;
-    color: #1a202c;
-    overflow-x: hidden;
-    scroll-behavior: smooth;
-  }
-  
-  /* CRITICAL: Prevent white gaps between components during rapid scrolling/resizing */
-  #landing-page {
-    min-height: 100vh;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    position: relative;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    -webkit-transform: translateZ(0);
-    transform: translateZ(0);
-  }
-  
-  [data-section-id] {
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0;
-    position: relative;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    -webkit-transform: translateZ(0);
-    transform: translateZ(0);
-  }
-  
-  /* Eliminate gaps between consecutive sections */
-  [data-section-id] + [data-section-id] {
-    margin-top: 0 !important;
-    border-top: none !important;
-    padding-top: 0 !important;
-  }
-  
-  /* Enhanced button interactions with stability */
-  button, [role="button"] {
-    cursor: pointer;
-    transition: all 0.2s ease;
-    will-change: transform, opacity;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-  }
-  
-  button:hover, [role="button"]:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
-  }
-  
-  /* Form styling improvements */
-  input, textarea, select {
-    font-family: inherit;
-    font-size: inherit;
-    will-change: auto;
-  }
-  
-  /* Grid and flex layout stability */
-  .grid, .flex {
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    width: 100%;
-  }
-  
-  /* Performance optimization - prevent unnecessary repaints */
-  * {
-    will-change: auto;
-  }
-  
-  /* CSS Variables for proper theming support */
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
-  }
-  
-  /* Container responsive improvements */
-  .container {
-    width: 100%;
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-  
-  @media (min-width: 640px) {
-    .container {
-      padding-left: 1.5rem;
-      padding-right: 1.5rem;
-    }
-  }
-  
-  @media (min-width: 768px) {
-    .container {
-      padding-left: 2rem;
-      padding-right: 2rem;
-    }
-  }
-    box-sizing: border-box;
-  }
-  
-  html, body {
-    font-family: Inter, sans-serif;
-    line-height: 1.6;
-    color: #1a202c;
-  }
-  
-  /* Ensure buttons and interactions work */
-  button, [role="button"] {
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-  
-  button:hover, [role="button"]:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
-  }
-  
-  /* Form styling */
-  input, textarea, select {
-    font-family: inherit;
-    font-size: inherit;
-  }
-  
-  /* Toast notification styles */
-  .toast-container {
-    position: fixed;
-    top: 1rem;
-    right: 1rem;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    max-width: 400px;
-    width: 100%;
-    pointer-events: none;
-  }
-  
-  .toast {
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 0.5rem;
-    padding: 1rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    pointer-events: auto;
-    transform: translateX(100%);
-    opacity: 0;
-    transition: all 0.3s ease;
-  }
-  
-  .toast.show {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  
-  .toast.success {
-    border-left: 4px solid #10b981;
-  }
-  
-  .toast.error {
-    border-left: 4px solid #ef4444;
-  }
-  
-  .toast.warning {
-    border-left: 4px solid #f59e0b;
-  }
-  
-  .toast.info {
-    border-left: 4px solid #3b82f6;
-  }
-  
-  .toast-icon {
-    width: 1.25rem;
-    height: 1.25rem;
-    flex-shrink: 0;
-  }
-  
-  .toast-content {
-    flex: 1;
-  }
-  
-  .toast-title {
-    font-weight: 600;
-    color: #1f2937;
-    margin-bottom: 0.25rem;
-    font-size: 0.875rem;
-  }
-  
-  .toast-message {
-    color: #6b7280;
-    font-size: 0.875rem;
-    line-height: 1.4;
-  }
-  
-  .toast-close {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    margin-left: 0.5rem;
-    color: #9ca3af;
-    font-size: 1.125rem;
-    line-height: 1;
-    flex-shrink: 0;
-  }
-  
-  .toast-close:hover {
-    color: #6b7280;
-  }
-  
-  @media (max-width: 640px) {
-    .toast-container {
-      left: 1rem;
-      right: 1rem;
-      max-width: none;
-    }
-  }
-
-  /* Enhanced responsive utilities */
-  @media (max-width: 640px) {
-    .container {
-      padding-left: 1rem;
-      padding-right: 1rem;
-    }
-    /* Ensure mobile-first responsive design */
-    .responsive-text {
-      font-size: 0.875rem;
-      line-height: 1.25rem;
-    }
-  }
-  
-  @media (min-width: 641px) and (max-width: 768px) {
-    .container {
-      padding-left: 1.5rem;
-      padding-right: 1.5rem;
-    }
-    .responsive-text {
-      font-size: 1rem;
-      line-height: 1.5rem;
-    }
-  }
-  
-  @media (min-width: 769px) {
-    .container {
-      padding-left: 2rem;
-      padding-right: 2rem;
-    }
-    .responsive-text {
-      font-size: 1.125rem;
-      line-height: 1.75rem;
-    }
-  }
-  
-  /* Ensure grid and flexbox responsive utilities work properly */
-  .grid {
-    display: grid;
-  }
-  
-  .flex {
-    display: flex;
-  }
-  
-  /* Force responsive grid columns to work */
-  @media (max-width: 768px) {
-    .md\\:grid-cols-1 {
-      grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
-    }
-    .md\\:grid-cols-2 {
-      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    }
-  }
-  
-  @media (min-width: 769px) and (max-width: 1024px) {
-    .lg\\:grid-cols-1 {
-      grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
-    }
-    .lg\\:grid-cols-2 {
-      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    }
-    .lg\\:grid-cols-3 {
-      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    }
-  }
-  
-  @media (min-width: 1025px) {
-    .xl\\:grid-cols-1 {
-      grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
-    }
-    .xl\\:grid-cols-2 {
-      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    }
-    .xl\\:grid-cols-3 {
-      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    }
-    .xl\\:grid-cols-4 {
-      grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    }
-  }
-</style>`;
+    // PRODUCTION SOLUTION: No CDN, built CSS only
+    return ``; // CSS is now included in styles.css file
   }
 
   private generateSupabaseSDK(pageData: any): string {
@@ -1085,9 +673,9 @@ window.addEventListener('load',function(){trackEvent('page_view',{page_title:PAG
 </script>`;
   }
 
-  private generateAssets(pageData: any): { css: string; js: string } {
-    // Generate CSS for custom styles
-    const css = this.generateCustomCSS(pageData);
+  private async generateAssets(pageData: any): Promise<{ css: string; js: string }> {
+    // Generate optimized CSS with built Tailwind
+    const css = await this.generateCustomCSS(pageData);
     
     // Generate JavaScript for interactivity
     const js = this.generateInteractivityJS(pageData);
@@ -1095,37 +683,212 @@ window.addEventListener('load',function(){trackEvent('page_view',{page_title:PAG
     return { css, js };
   }
 
-  private generateCustomCSS(pageData: any): string {
-    // Minified CSS for production deployment
-    let css = `/* ${pageData.slug} */\n`;
-
-    // Add global theme styles (minified)
-    if (pageData.global_theme) {
-      css += `:root{--primary-color:${pageData.global_theme.primaryColor || '#3b82f6'};--secondary-color:${pageData.global_theme.secondaryColor || '#f3f4f6'};--background-color:${pageData.global_theme.backgroundColor || '#ffffff'};--font-family:${pageData.global_theme.fontFamily || 'Inter, sans-serif'};}body{background-color:var(--background-color);font-family:var(--font-family);color:#1a202c;}`;
-    }
-
-    // Add component-specific styles (minified)
-    pageData.components?.forEach((component: LandingPageComponent, index: number) => {
-      const customStyles = component.custom_styles || {};
+  private async generateCustomCSS(pageData: any): Promise<string> {
+    try {
+      console.log('🎨 Building production-optimized Tailwind CSS...');
       
-      Object.entries(customStyles).forEach(([elementId, styles]: [string, any]) => {
-        if (!styles || typeof styles !== 'object') return;
+      // Import TailwindBuilder
+      const { TailwindBuilder } = await import('./tailwind-builder');
+      const builder = TailwindBuilder.getInstance();
+      
+      // Build optimized Tailwind CSS
+      const tailwindCSS = await builder.buildTailwindCSS({ minify: true });
+      
+      // Get file size info for monitoring
+      const sizeInfo = builder.getFileSizeInfo(tailwindCSS);
+      console.log(`✅ Tailwind CSS optimized: ${sizeInfo.sizeComparison}`);
+      
+      // Start with optimized Tailwind CSS
+      let css = `/* ${pageData.slug} - Optimized Tailwind CSS Build */\n`;
+      css += tailwindCSS;
+      css += '\n\n/* Custom Theme Variables */\n';
 
-        css += `#section-${component.id} [data-element="${elementId}"]{`;
+      // Add global theme styles
+      if (pageData.global_theme) {
+        css += `:root{
+          --primary-color:${pageData.global_theme.primaryColor || '#3b82f6'};
+          --secondary-color:${pageData.global_theme.secondaryColor || '#f3f4f6'};
+          --background-color:${pageData.global_theme.backgroundColor || '#ffffff'};
+          --font-family:${pageData.global_theme.fontFamily || 'Inter, sans-serif'};
+        }
+        body{
+          background-color:var(--background-color);
+          font-family:var(--font-family);
+          color:hsl(var(--foreground));
+        }`;
+      }
 
-        Object.entries(styles).forEach(([property, value]) => {
-          if (typeof value === 'string' || typeof value === 'number') {
-            // Convert camelCase to kebab-case and minify
-            const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
-            css += `${cssProperty}:${value};`;
-          }
+      // Add component-specific styles
+      css += '\n\n/* Component Custom Styles */\n';
+      pageData.components?.forEach((component: LandingPageComponent, index: number) => {
+        const customStyles = component.custom_styles || {};
+        
+        Object.entries(customStyles).forEach(([elementId, styles]: [string, any]) => {
+          if (!styles || typeof styles !== 'object') return;
+
+          css += `#section-${component.id} [data-element="${elementId}"]{`;
+
+          Object.entries(styles).forEach(([property, value]) => {
+            if (typeof value === 'string' || typeof value === 'number') {
+              // Convert camelCase to kebab-case
+              const cssProperty = property.replace(/([A-Z])/g, '-$1').toLowerCase();
+              css += `${cssProperty}:${value};`;
+            }
+          });
+
+          css += '}';
         });
-
-        css += '}';
       });
-    });
 
-    return css;
+      // Add production stability styles
+      css += `\n\n/* Production Layout Stability */
+/* Prevent white gaps and layout shifts */
+#landing-page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+[data-section-id] {
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0;
+  position: relative;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+/* Eliminate gaps between sections */
+[data-section-id] + [data-section-id] {
+  margin-top: 0 !important;
+  border-top: none !important;
+  padding-top: 0 !important;
+}
+
+/* Form validation styles */
+.border-red-500 {
+  border-color: rgb(239 68 68) !important;
+}
+
+.ring-red-500 {
+  --tw-ring-color: rgb(239 68 68) !important;
+}
+
+.text-red-500 {
+  color: rgb(239 68 68) !important;
+}
+
+/* Toast notification styles */
+.toast-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 400px;
+  width: 100%;
+  pointer-events: none;
+}
+
+.toast {
+  background: white;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  padding: 1rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  pointer-events: auto;
+  transform: translateX(100%);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.toast.show {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.toast.success { border-left: 4px solid #10b981; }
+.toast.error { border-left: 4px solid #ef4444; }
+.toast.warning { border-left: 4px solid #f59e0b; }
+.toast.info { border-left: 4px solid #3b82f6; }
+
+@media (max-width: 640px) {
+  .toast-container {
+    left: 1rem;
+    right: 1rem;
+    max-width: none;
+  }
+}`;
+
+      return css;
+      
+    } catch (error) {
+      console.error('Failed to build optimized CSS, falling back to basic CSS:', error);
+      
+      // Fallback to basic CSS if Tailwind build fails
+      let css = `/* ${pageData.slug} - Fallback CSS */\n`;
+      
+      // Add minimal CSS for functionality
+      css += `
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  line-height: 1.6;
+  color: #1a202c;
+  background-color: #ffffff;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-primary {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #2563eb;
+}
+`;
+      
+      return css;
+    }
   }
 
   private generateInteractivityJS(pageData: any): string {
