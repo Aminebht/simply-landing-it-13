@@ -528,76 +528,10 @@ export class ReactDeploymentService {
   }
 
   private generateTailwindCSS(): string {
-    // HYBRID SOLUTION: Keep CDN for full functionality but suppress warning and add layout fixes
-    return `<script src="https://cdn.tailwindcss.com"></script>
-<script>
-  // Suppress production warning about CDN usage
-  const originalWarn = console.warn;
-  console.warn = function(...args) {
-    if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) {
-      return; // Suppress this specific warning
-    }
-    return originalWarn.apply(console, args);
-  };
-
-  // Configure Tailwind with full functionality for proper UI rendering
-  tailwind.config = {
-    theme: {
-      screens: {
-        'sm': '640px',
-        'md': '768px',
-        'lg': '1024px',
-        'xl': '1280px',
-        '2xl': '1536px',
-      },
-      extend: {
-        spacing: {
-          '72': '18rem',
-          '84': '21rem',
-          '96': '24rem',
-        },
-        colors: {
-          // Support for CSS variables and theming
-          background: 'hsl(var(--background))',
-          foreground: 'hsl(var(--foreground))',
-          primary: {
-            DEFAULT: 'hsl(var(--primary))',
-            foreground: 'hsl(var(--primary-foreground))',
-          },
-          secondary: {
-            DEFAULT: 'hsl(var(--secondary))',
-            foreground: 'hsl(var(--secondary-foreground))',
-          },
-          muted: {
-            DEFAULT: 'hsl(var(--muted))',
-            foreground: 'hsl(var(--muted-foreground))',
-          },
-          accent: {
-            DEFAULT: 'hsl(var(--accent))',
-            foreground: 'hsl(var(--accent-foreground))',
-          },
-          destructive: {
-            DEFAULT: 'hsl(var(--destructive))',
-            foreground: 'hsl(var(--destructive-foreground))',
-          },
-          border: 'hsl(var(--border))',
-          input: 'hsl(var(--input))',
-          ring: 'hsl(var(--ring))',
-        }
-      }
-    },
-    variants: {
-      extend: {
-        display: ['responsive'],
-        flexDirection: ['responsive'],
-        gridTemplateColumns: ['responsive'],
-        gridTemplateRows: ['responsive'],
-        gap: ['responsive'],
-        padding: ['responsive'],
-        margin: ['responsive'],
-        fontSize: ['responsive'],
-        lineHeight: ['responsive'],
-        textAlign: ['responsive'],
+    // Generate comprehensive production CSS without CDN - eliminates console warnings  
+    const minifiedCSS = `*,::before,::after{box-sizing:border-box;border-width:0;border-style:solid;border-color:hsl(var(--border))}html{line-height:1.5;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif}body{margin:0;line-height:inherit;background-color:hsl(var(--background));color:hsl(var(--foreground))}.container{width:100%;margin:0 auto;padding:0 2rem}.block{display:block}.inline-block{display:inline-block}.flex{display:flex}.inline-flex{display:inline-flex}.grid{display:grid}.hidden{display:none}.relative{position:relative}.absolute{position:absolute}.fixed{position:fixed}.flex-1{flex:1 1 0%}.flex-col{flex-direction:column}.flex-row{flex-direction:row}.items-center{align-items:center}.items-start{align-items:flex-start}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-4{gap:1rem}.gap-6{gap:1.5rem}.gap-8{gap:2rem}.grid-cols-1{grid-template-columns:repeat(1,minmax(0,1fr))}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.p-4{padding:1rem}.p-6{padding:1.5rem}.p-8{padding:2rem}.px-4{padding-left:1rem;padding-right:1rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.py-4{padding-top:1rem;padding-bottom:1rem}.py-8{padding-top:2rem;padding-bottom:2rem}.py-12{padding-top:3rem;padding-bottom:3rem}.py-16{padding-top:4rem;padding-bottom:4rem}.py-20{padding-top:5rem;padding-bottom:5rem}.py-24{padding-top:6rem;padding-bottom:6rem}.m-0{margin:0}.mx-auto{margin-left:auto;margin-right:auto}.mt-4{margin-top:1rem}.mt-8{margin-top:2rem}.mb-4{margin-bottom:1rem}.mb-8{margin-bottom:2rem}.w-full{width:100%}.h-full{height:100%}.h-10{height:2.5rem}.max-w-md{max-width:28rem}.max-w-lg{max-width:32rem}.max-w-xl{max-width:36rem}.max-w-2xl{max-width:42rem}.max-w-4xl{max-width:56rem}.max-w-6xl{max-width:72rem}.text-xs{font-size:0.75rem}.text-sm{font-size:0.875rem}.text-base{font-size:1rem}.text-lg{font-size:1.125rem}.text-xl{font-size:1.25rem}.text-2xl{font-size:1.5rem}.text-3xl{font-size:1.875rem}.text-4xl{font-size:2.25rem}.text-5xl{font-size:3rem}.font-medium{font-weight:500}.font-semibold{font-weight:600}.font-bold{font-weight:700}.text-center{text-align:center}.text-left{text-align:left}.leading-tight{line-height:1.25}.text-primary{color:hsl(var(--primary))}.text-primary-foreground{color:hsl(var(--primary-foreground))}.text-secondary{color:hsl(var(--secondary))}.text-muted-foreground{color:hsl(var(--muted-foreground))}.text-foreground{color:hsl(var(--foreground))}.text-white{color:rgb(255 255 255)}.text-gray-600{color:rgb(75 85 99)}.bg-primary{background-color:hsl(var(--primary))}.bg-secondary{background-color:hsl(var(--secondary))}.bg-background{background-color:hsl(var(--background))}.bg-card{background-color:hsl(var(--card))}.bg-white{background-color:rgb(255 255 255)}.border{border-width:1px}.border-0{border-width:0}.border-input{border-color:hsl(var(--input))}.border-primary{border-color:hsl(var(--primary))}.border-red-500{border-color:rgb(239 68 68)}.rounded{border-radius:0.25rem}.rounded-md{border-radius:calc(var(--radius) - 2px)}.rounded-lg{border-radius:var(--radius)}.rounded-full{border-radius:9999px}.shadow{box-shadow:0 1px 3px 0 rgb(0 0 0 / 0.1)}.shadow-md{box-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1)}.shadow-lg{box-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1)}.transition{transition-property:color,background-color,border-color,opacity,box-shadow,transform;transition-timing-function:cubic-bezier(0.4,0,0.2,1);transition-duration:150ms}.transition-colors{transition-property:color,background-color,border-color;transition-timing-function:cubic-bezier(0.4,0,0.2,1);transition-duration:150ms}.duration-200{transition-duration:200ms}.hover\\:bg-primary\\/90:hover{background-color:hsl(var(--primary) / 0.9)}.hover\\:bg-secondary\\/80:hover{background-color:hsl(var(--secondary) / 0.8)}.focus\\:outline-none:focus{outline:2px solid transparent;outline-offset:2px}.focus-visible\\:ring-2:focus-visible{box-shadow:0 0 0 2px hsl(var(--ring))}.focus-visible\\:ring-offset-2:focus-visible{box-shadow:0 0 0 2px hsl(var(--background)),0 0 0 4px hsl(var(--ring))}.disabled\\:opacity-50:disabled{opacity:0.5}.disabled\\:cursor-not-allowed:disabled{cursor:not-allowed}.cursor-pointer{cursor:pointer}.space-y-2>:not([hidden])~:not([hidden]){margin-top:0.5rem}.space-y-4>:not([hidden])~:not([hidden]){margin-top:1rem}@keyframes fade-in{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:translateY(0)}}.animate-fade-in{animation:fade-in 0.6s ease-out}@media (min-width:640px){.sm\\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.sm\\:text-lg{font-size:1.125rem}.sm\\:text-xl{font-size:1.25rem}.sm\\:text-2xl{font-size:1.5rem}.sm\\:text-3xl{font-size:1.875rem}.sm\\:px-6{padding-left:1.5rem;padding-right:1.5rem}.sm\\:py-8{padding-top:2rem;padding-bottom:2rem}}@media (min-width:768px){.md\\:grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.md\\:text-xl{font-size:1.25rem}.md\\:text-2xl{font-size:1.5rem}.md\\:text-3xl{font-size:1.875rem}.md\\:text-4xl{font-size:2.25rem}.md\\:text-5xl{font-size:3rem}.md\\:px-8{padding-left:2rem;padding-right:2rem}.md\\:py-12{padding-top:3rem;padding-bottom:3rem}.md\\:py-16{padding-top:4rem;padding-bottom:4rem}}@media (min-width:1024px){.lg\\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.lg\\:text-2xl{font-size:1.5rem}.lg\\:text-3xl{font-size:1.875rem}.lg\\:text-4xl{font-size:2.25rem}.lg\\:text-5xl{font-size:3rem}.lg\\:text-6xl{font-size:3.75rem}.lg\\:px-8{padding-left:2rem;padding-right:2rem}.lg\\:py-16{padding-top:4rem;padding-bottom:4rem}.lg\\:py-20{padding-top:5rem;padding-bottom:5rem}.lg\\:py-24{padding-top:6rem;padding-bottom:6rem}}:root{--background:0 0% 100%;--foreground:222.2 84% 4.9%;--card:0 0% 100%;--card-foreground:222.2 84% 4.9%;--primary:222.2 47.4% 11.2%;--primary-foreground:210 40% 98%;--secondary:210 40% 96.1%;--secondary-foreground:222.2 47.4% 11.2%;--muted:210 40% 96.1%;--muted-foreground:215.4 16.3% 46.9%;--accent:210 40% 96.1%;--accent-foreground:222.2 47.4% 11.2%;--destructive:0 84.2% 60.2%;--destructive-foreground:210 40% 98%;--border:214.3 31.8% 91.4%;--input:214.3 31.8% 91.4%;--ring:222.2 84% 4.9%;--radius:0.5rem}@media (prefers-color-scheme:dark){:root{--background:222.2 84% 4.9%;--foreground:210 40% 98%;--card:222.2 84% 4.9%;--card-foreground:210 40% 98%;--primary:210 40% 98%;--primary-foreground:222.2 47.4% 11.2%;--secondary:217.2 32.6% 17.5%;--secondary-foreground:210 40% 98%;--muted:217.2 32.6% 17.5%;--muted-foreground:215 20.2% 65.1%;--accent:217.2 32.6% 17.5%;--accent-foreground:210 40% 98%;--destructive:0 62.8% 30.6%;--destructive-foreground:210 40% 98%;--border:217.2 32.6% 17.5%;--input:217.2 32.6% 17.5%;--ring:212.7 26.8% 83.9%}}`;
+    
+    return `<style>${minifiedCSS}</style>`;
         justifyContent: ['responsive'],
         alignItems: ['responsive'],
         width: ['responsive'],
