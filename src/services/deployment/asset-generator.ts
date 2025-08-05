@@ -145,14 +145,32 @@ function initializeButtons() {
 
     button.addEventListener('click', function(e) {
       const action = this.dataset.action;
-      const actionData = this.dataset.actionData ? JSON.parse(this.dataset.actionData) : {};
+      let actionData = {};
+      
+      // Safely parse action data
+      if (this.dataset.actionData) {
+        try {
+          actionData = JSON.parse(this.dataset.actionData);
+        } catch (error) {
+          console.warn('Failed to parse action data:', this.dataset.actionData, error);
+          // Fallback: if it's a plain string, assume it's a target ID for scroll action
+          if (action === 'scroll') {
+            actionData = { target: this.dataset.actionData };
+          }
+        }
+      }
       
       switch (action) {
-        case 'scroll-to':
-          if (actionData.target) {
-            const target = document.querySelector(actionData.target);
+        case 'scroll':
+          const targetId = actionData.target || actionData.targetId;
+          if (targetId) {
+            // Add # prefix if not present
+            const targetSelector = targetId.startsWith('#') ? targetId : '#' + targetId;
+            const target = document.querySelector(targetSelector);
             if (target) {
               target.scrollIntoView({ behavior: 'smooth' });
+            } else {
+              console.warn('Scroll target not found:', targetSelector);
             }
           }
           break;
@@ -170,6 +188,31 @@ function initializeButtons() {
         case 'track-event':
           if (window.trackEvent) {
             window.trackEvent(actionData.eventType || 'click', actionData);
+          }
+          break;
+          
+        case 'checkout':
+          // Handle checkout action
+          if (actionData.productId && actionData.amount) {
+            // Scroll to checkout form or trigger checkout process
+            const checkoutForm = document.querySelector('form[data-form-type="checkout"]') || 
+                                document.querySelector('form');
+            if (checkoutForm) {
+              checkoutForm.scrollIntoView({ behavior: 'smooth' });
+              // Focus on first input
+              const firstInput = checkoutForm.querySelector('input');
+              if (firstInput) {
+                setTimeout(() => firstInput.focus(), 500);
+              }
+            }
+            
+            // Track checkout initiation
+            if (window.trackEvent) {
+              window.trackEvent('checkout_initiated', {
+                productId: actionData.productId,
+                amount: actionData.amount
+              });
+            }
           }
           break;
       }
