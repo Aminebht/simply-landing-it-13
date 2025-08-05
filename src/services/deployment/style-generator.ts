@@ -36,85 +36,98 @@ export class StyleGenerator {
   generateTailwindCSS(): string {
     return `<script src="https://cdn.tailwindcss.com"></script>
 <script>
-  // Suppress production warning about CDN usage
-  const originalWarn = console.warn;
-  console.warn = function(...args) {
-    if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) {
-      return;
-    }
-    return originalWarn.apply(console, args);
-  };
+  // Wait for Tailwind to load before configuring
+  (function() {
+    function configureTailwind() {
+      if (typeof tailwind === 'undefined') {
+        setTimeout(configureTailwind, 50);
+        return;
+      }
 
-  // Configure Tailwind with full functionality
-  tailwind.config = {
-    theme: {
-      screens: {
-        'sm': '640px',
-        'md': '768px',
-        'lg': '1024px',
-        'xl': '1280px',
-        '2xl': '1536px',
-      },
-      extend: {
-        spacing: {
-          '72': '18rem',
-          '84': '21rem',
-          '96': '24rem',
-        },
-        colors: {
-          background: 'hsl(var(--background))',
-          foreground: 'hsl(var(--foreground))',
-          primary: {
-            DEFAULT: 'hsl(var(--primary))',
-            foreground: 'hsl(var(--primary-foreground))',
-          },
-          secondary: {
-            DEFAULT: 'hsl(var(--secondary))',
-            foreground: 'hsl(var(--secondary-foreground))',
-          },
-          muted: {
-            DEFAULT: 'hsl(var(--muted))',
-            foreground: 'hsl(var(--muted-foreground))',
-          },
-          accent: {
-            DEFAULT: 'hsl(var(--accent))',
-            foreground: 'hsl(var(--accent-foreground))',
-          },
-          destructive: {
-            DEFAULT: 'hsl(var(--destructive))',
-            foreground: 'hsl(var(--destructive-foreground))',
-          },
-          border: 'hsl(var(--border))',
-          input: 'hsl(var(--input))',
-          ring: 'hsl(var(--ring))',
+      // Suppress production warning about CDN usage
+      const originalWarn = console.warn;
+      console.warn = function(...args) {
+        if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) {
+          return;
         }
-      }
-    },
-    variants: {
-      extend: {
-        display: ['responsive'],
-        flexDirection: ['responsive'],
-        gridTemplateColumns: ['responsive'],
-        gridTemplateRows: ['responsive'],
-        gap: ['responsive'],
-        padding: ['responsive'],
-        margin: ['responsive'],
-        fontSize: ['responsive'],
-        lineHeight: ['responsive'],
-        textAlign: ['responsive'],
-        justifyContent: ['responsive'],
-        alignItems: ['responsive'],
-        width: ['responsive'],
-        height: ['responsive'],
-        maxWidth: ['responsive'],
-        maxHeight: ['responsive'],
-        backgroundColor: ['hover', 'focus'],
-        textColor: ['hover', 'focus'],
-        opacity: ['hover', 'focus'],
-        transform: ['hover', 'focus'],
-      }
+        return originalWarn.apply(console, args);
+      };
+
+      // Configure Tailwind with full functionality
+      tailwind.config = {
+        theme: {
+          screens: {
+            'sm': '640px',
+            'md': '768px',
+            'lg': '1024px',
+            'xl': '1280px',
+            '2xl': '1536px',
+          },
+          extend: {
+            spacing: {
+              '72': '18rem',
+              '84': '21rem',
+              '96': '24rem',
+            },
+            colors: {
+              background: 'hsl(var(--background))',
+              foreground: 'hsl(var(--foreground))',
+              primary: {
+                DEFAULT: 'hsl(var(--primary))',
+                foreground: 'hsl(var(--primary-foreground))',
+              },
+              secondary: {
+                DEFAULT: 'hsl(var(--secondary))',
+                foreground: 'hsl(var(--secondary-foreground))',
+              },
+              muted: {
+                DEFAULT: 'hsl(var(--muted))',
+                foreground: 'hsl(var(--muted-foreground))',
+              },
+              accent: {
+                DEFAULT: 'hsl(var(--accent))',
+                foreground: 'hsl(var(--accent-foreground))',
+              },
+              destructive: {
+                DEFAULT: 'hsl(var(--destructive))',
+                foreground: 'hsl(var(--destructive-foreground))',
+              },
+              border: 'hsl(var(--border))',
+              input: 'hsl(var(--input))',
+              ring: 'hsl(var(--ring))',
+            }
+          }
+        },
+        variants: {
+          extend: {
+            display: ['responsive'],
+            flexDirection: ['responsive'],
+            gridTemplateColumns: ['responsive'],
+            gridTemplateRows: ['responsive'],
+            gap: ['responsive'],
+            padding: ['responsive'],
+            margin: ['responsive'],
+            fontSize: ['responsive'],
+            lineHeight: ['responsive'],
+            textAlign: ['responsive'],
+            justifyContent: ['responsive'],
+            alignItems: ['responsive'],
+            width: ['responsive'],
+            height: ['responsive'],
+            maxWidth: ['responsive'],
+            maxHeight: ['responsive'],
+            backgroundColor: ['hover', 'focus'],
+            textColor: ['hover', 'focus'],
+            opacity: ['hover', 'focus'],
+            transform: ['hover', 'focus'],
+          }
+        }
+      };
     }
-  }
+    
+    // Start configuration
+    configureTailwind();
+  })();
 </script>
 ${this.generateBaseStyles()}`;
   }

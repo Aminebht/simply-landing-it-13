@@ -266,12 +266,11 @@ export class HtmlGenerator {
   }
 
   private generateSecurityHeaders(): string {
-    return `<!-- Security Headers -->
-  <meta http-equiv="X-Content-Type-Options" content="nosniff">
-  <meta http-equiv="X-Frame-Options" content="DENY">
-  <meta http-equiv="X-XSS-Protection" content="1; mode=block">
-  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.tailwindcss.com https://connect.facebook.net https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co https://*.netlify.app https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com https://www.clarity.ms https://k.clarity.ms; frame-src 'none';">`;
+    // Note: Most security headers like X-Frame-Options, X-Content-Type-Options, etc. 
+    // must be set as HTTP headers, not meta tags. We'll handle these via Netlify _headers file.
+    // Only CSP can be set via meta tag as a fallback.
+    return `<!-- Content Security Policy (meta fallback) -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; font-src 'self' https:; img-src 'self' data: https: blob:; connect-src 'self' https:; frame-src 'none'; object-src 'none';">`;
   }
 
   private escapeHtml(text: string): string {

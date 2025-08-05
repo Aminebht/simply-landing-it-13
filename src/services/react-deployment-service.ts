@@ -22,6 +22,7 @@ export interface DeploymentFiles extends Record<string, string> {
   'index.html': string;
   'styles.css': string;
   'app.js': string;
+  '_headers': string;
 }
 
 export class ReactDeploymentService {
@@ -113,10 +114,13 @@ export class ReactDeploymentService {
       this.assetGenerator.generateAssets(pageData)
     ]);
 
+    const headers = this.generateNetlifyHeaders();
+
     return {
       'index.html': html,
       'styles.css': css,
-      'app.js': js
+      'app.js': js,
+      '_headers': headers
     };
   }
 
@@ -235,5 +239,45 @@ export class ReactDeploymentService {
     await landingPageService.updateDeploymentInfo(pageId, updateData);
     
     this.logger.debug('Database updated successfully', { pageId });
+  }
+
+  private generateNetlifyHeaders(): string {
+    // Netlify _headers file format for setting HTTP security headers
+    // These headers cannot be set via HTML meta tags
+    return `/*
+  # Security Headers
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  X-XSS-Protection: 1; mode=block
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+  # Additional security headers (relaxed for external resources)
+  X-Permitted-Cross-Domain-Policies: none
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+
+# Specific headers for different file types
+*.html
+  Cache-Control: no-cache
+
+*.css
+  Cache-Control: public, max-age=31536000
+
+*.js
+  Cache-Control: public, max-age=31536000
+
+*.png, *.jpg, *.jpeg, *.gif, *.webp, *.svg
+  Cache-Control: public, max-age=31536000
+
+# API and font specific headers
+/api/*
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+  Access-Control-Allow-Headers: Content-Type, Authorization
+
+*.woff, *.woff2, *.ttf, *.eot
+  Cache-Control: public, max-age=31536000
+  Cross-Origin-Resource-Policy: cross-origin`;
   }
 }
