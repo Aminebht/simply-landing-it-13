@@ -5,3 +5,6 @@ export { DeploymentLogger } from './deployment-logger';
 export { SeoGenerator } from './seo-generator';
 export { ScriptGenerator } from './script-generator';
 export { StyleGenerator } from './style-generator';
+export { ReactProjectTemplateGenerator } from './react-project-template-generator';
+export { ComponentCleanerService } from './component-cleaner-service';
+export { ReactProjectGenerator } from './react-project-generator';

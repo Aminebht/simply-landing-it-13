@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ReactDeploymentService } from '@/services/react-deployment-service';
 
-export function useReactDeployment(netlifyToken: string) {
+export function useReactDeployment(netlifyToken: string, useReactProject: boolean = false) {
   const [isDeploying, setIsDeploying] = useState(false);
   const [deploymentError, setDeploymentError] = useState<string | null>(null);
 
@@ -10,16 +10,17 @@ export function useReactDeployment(netlifyToken: string) {
       setIsDeploying(true);
       setDeploymentError(null);
 
-      console.log('Starting React-based deployment for page:', pageId);
+      const deploymentType = useReactProject ? 'React project' : 'static HTML';
+      console.log(`Starting ${deploymentType} deployment for page:`, pageId);
 
-      const deploymentService = new ReactDeploymentService(netlifyToken);
+      const deploymentService = new ReactDeploymentService(netlifyToken, useReactProject);
       const result = await deploymentService.deployLandingPage(pageId);
 
-      console.log('React deployment completed successfully:', result);
+      console.log(`${deploymentType} deployment completed successfully:`, result);
       return result;
 
     } catch (error) {
-      console.error('React deployment failed:', error);
+      console.error('Deployment failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown deployment error';
       setDeploymentError(errorMessage);
       throw error;

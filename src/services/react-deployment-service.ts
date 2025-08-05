@@ -1,10 +1,13 @@
 import { LandingPageComponent } from '@/types/components';
 import { LandingPageService } from './landing-page';
 import { NetlifyService } from './netlify';
-import { HtmlGenerator } from './deployment/html-generator';
-import { AssetGenerator } from './deployment/asset-generator';
-import { DeploymentValidator } from './deployment/deployment-validator';
-import { DeploymentLogger } from './deployment/deployment-logger';
+import { 
+  HtmlGenerator, 
+  AssetGenerator, 
+  DeploymentValidator, 
+  DeploymentLogger,
+  ReactProjectGenerator 
+} from './deployment/index';
 
 export interface DeploymentStatus {
   isDeployed: boolean;
@@ -19,10 +22,7 @@ export interface DeploymentResult {
 }
 
 export interface DeploymentFiles extends Record<string, string> {
-  'index.html': string;
-  'styles.css': string;
-  'app.js': string;
-  '_headers': string;
+  // Now supports both static HTML and React project files
 }
 
 export class ReactDeploymentService {
@@ -31,13 +31,17 @@ export class ReactDeploymentService {
   private assetGenerator: AssetGenerator;
   private validator: DeploymentValidator;
   private logger: DeploymentLogger;
+  private reactProjectGenerator: ReactProjectGenerator;
+  private useReactProject: boolean;
 
-  constructor(netlifyToken: string) {
+  constructor(netlifyToken: string, useReactProject: boolean = false) {
     this.netlifyService = new NetlifyService(netlifyToken);
     this.htmlGenerator = new HtmlGenerator();
     this.assetGenerator = new AssetGenerator();
     this.validator = new DeploymentValidator();
     this.logger = new DeploymentLogger();
+    this.reactProjectGenerator = new ReactProjectGenerator();
+    this.useReactProject = useReactProject;
   }
 
   async getDeploymentStatus(pageId: string): Promise<DeploymentStatus> {
@@ -61,13 +65,16 @@ export class ReactDeploymentService {
 
   async deployLandingPage(pageId: string): Promise<DeploymentResult> {
     try {
-      this.logger.info('Starting React-based deployment', { pageId });
+      const deploymentType = this.useReactProject ? 'React project' : 'static HTML';
+      this.logger.info(`Starting ${deploymentType} deployment`, { pageId });
 
       // Validate and fetch page data
       const pageData = await this.validateAndFetchPageData(pageId);
       
-      // Generate deployment files
-      const files = await this.generateDeploymentFiles(pageData);
+      // Generate deployment files based on deployment type
+      const files = this.useReactProject 
+        ? await this.generateReactProjectFiles(pageData)
+        : await this.generateDeploymentFiles(pageData);
       
       // Deploy to Netlify
       const { siteId, deploymentResult } = await this.deployToNetlify(pageData, files);
@@ -80,11 +87,11 @@ export class ReactDeploymentService {
         siteId: siteId
       };
 
-      this.logger.info('Deployment completed successfully', { pageId, result });
+      this.logger.info(`${deploymentType} deployment completed successfully`, { pageId, result });
       return result;
 
     } catch (error) {
-      this.logger.error('React deployment failed', { pageId, error });
+      this.logger.error('Deployment failed', { pageId, error, useReactProject: this.useReactProject });
       throw error;
     }
   }
@@ -94,6 +101,16 @@ export class ReactDeploymentService {
     const pageData = await landingPageService.getLandingPageWithComponents(pageId);
 
     this.validator.validatePageData(pageData);
+
+    // Debug component content during fetch - summary only
+    const componentSummary = pageData.components.map(c => ({
+      id: c.id,
+      type: c.component_variation?.component_type,
+      variation: c.component_variation?.variation_number,
+      hasContent: !!c.content && Object.keys(c.content).length > 0
+    }));
+
+    console.log('[DEPLOYMENT DEBUG] Page components:', componentSummary);
 
     this.logger.debug('Fetched page data', {
       pageId: pageData.id,
@@ -106,6 +123,31 @@ export class ReactDeploymentService {
     return pageData;
   }
 
+  private async generateReactProjectFiles(pageData: any): Promise<DeploymentFiles> {
+    this.logger.debug('Generating React project files');
+
+    // Use the React project generator to create a complete React project
+    const reactProjectFiles = this.reactProjectGenerator.generateReactProject(pageData);
+    
+    // Validate the generated project
+    const isValid = this.reactProjectGenerator.validateProject(reactProjectFiles);
+    if (!isValid) {
+      throw new Error('Generated React project failed validation');
+    }
+    
+    // Log project info
+    const projectInfo = this.reactProjectGenerator.getProjectInfo(reactProjectFiles);
+    this.logger.info('React project generated', {
+      totalFiles: projectInfo.totalFiles,
+      componentCount: projectInfo.componentCount,
+      totalSize: projectInfo.totalSize,
+      buildCommand: projectInfo.buildCommand,
+      publishDir: projectInfo.publishDir
+    });
+
+    return reactProjectFiles;
+  }
+
   private async generateDeploymentFiles(pageData: any): Promise<DeploymentFiles> {
     this.logger.debug('Generating deployment files');
 
@@ -115,12 +157,14 @@ export class ReactDeploymentService {
     ]);
 
     const headers = this.generateNetlifyHeaders();
+    const redirects = this.generateNetlifyRedirects();
 
     return {
       'index.html': html,
       'styles.css': css,
       'app.js': js,
-      '_headers': headers
+      '_headers': headers,
+      '_redirects': redirects
     };
   }
 
@@ -257,14 +301,46 @@ export class ReactDeploymentService {
   X-Permitted-Cross-Domain-Policies: none
   Cross-Origin-Opener-Policy: same-origin-allow-popups
 
+# Force HTML content type for root and index
+/
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache
+
+/index.html
+  Content-Type: text/html; charset=utf-8
+  Cache-Control: no-cache
+
 # Specific headers for different file types
 *.html
+  Content-Type: text/html; charset=utf-8
   Cache-Control: no-cache
 
 *.css
+  Content-Type: text/css; charset=utf-8
   Cache-Control: public, max-age=31536000
 
 *.js
+  Content-Type: text/javascript; charset=utf-8
+  X-Content-Type-Options: nosniff
+  Cache-Control: public, max-age=31536000
+
+*.jsx
+  Content-Type: text/javascript; charset=utf-8
+  X-Content-Type-Options: nosniff
+  Cache-Control: public, max-age=31536000
+
+*.mjs
+  Content-Type: application/javascript; charset=utf-8
+  Cache-Control: public, max-age=31536000
+
+*.ts
+  Content-Type: text/javascript; charset=utf-8
+  X-Content-Type-Options: nosniff
+  Cache-Control: public, max-age=31536000
+
+*.tsx
+  Content-Type: text/javascript; charset=utf-8
+  X-Content-Type-Options: nosniff
   Cache-Control: public, max-age=31536000
 
 *.png, *.jpg, *.jpeg, *.gif, *.webp, *.svg
@@ -279,5 +355,33 @@ export class ReactDeploymentService {
 *.woff, *.woff2, *.ttf, *.eot
   Cache-Control: public, max-age=31536000
   Cross-Origin-Resource-Policy: cross-origin`;
+  }
+
+  private generateNetlifyRedirects(): string {
+    // Netlify _redirects file to ensure HTML is served properly
+    // This fixes MIME type issues and ensures proper routing
+    return `# Redirect rules for proper HTML serving
+/*    /index.html   200
+
+# Ensure HTML files are served with correct content-type
+*.html    /index.html   200
+
+# Fallback for all routes to index.html (SPA behavior)
+/*    /index.html   200`;
+  }
+
+  /**
+   * Switch between React project deployment and static HTML deployment
+   */
+  setDeploymentMode(useReactProject: boolean): void {
+    this.useReactProject = useReactProject;
+    this.logger.info(`Deployment mode switched to: ${useReactProject ? 'React project' : 'static HTML'}`);
+  }
+
+  /**
+   * Get current deployment mode
+   */
+  getDeploymentMode(): 'react-project' | 'static-html' {
+    return this.useReactProject ? 'react-project' : 'static-html';
   }
 }

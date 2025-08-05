@@ -50,13 +50,13 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
 
     try {
       setIsExporting(true);
-      toast.info("Starting React-based deployment...");
+      toast.info("Starting static HTML deployment...");
       
-      // Use React deployment service for better accuracy
-      const deploymentService = new ReactDeploymentService("nfp_PxSrwC6LMCXfjrSi28pvhSdx9rNKLKyv4a6d");
+      // Use React deployment service with static HTML mode (more reliable)
+      const deploymentService = new ReactDeploymentService("nfp_PxSrwC6LMCXfjrSi28pvhSdx9rNKLKyv4a6d", false);
       const result = await deploymentService.deployLandingPage(pageId);
       
-      toast.success(`React deployment completed! URL: ${result.url}`, {
+      toast.success(`Static HTML deployment completed! URL: ${result.url}`, {
         action: {
           label: "Open",
           onClick: () => window.open(result.url, '_blank')

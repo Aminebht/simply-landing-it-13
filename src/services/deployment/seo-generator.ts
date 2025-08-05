@@ -7,7 +7,8 @@ export class SeoGenerator {
     
     // Basic SEO meta tags
     if (seoConfig.description) {
-      metaTags += `  <meta name="description" content="${this.escapeHtml(seoConfig.description)}">\n`;
+      const plainDescription = this.stripHtmlTags(seoConfig.description);
+      metaTags += `  <meta name="description" content="${this.escapeHtml(plainDescription)}">\n`;
     }
     
     if (seoConfig.keywords && Array.isArray(seoConfig.keywords) && seoConfig.keywords.length > 0) {
@@ -30,10 +31,9 @@ export class SeoGenerator {
     metaTags += this.generateAdditionalSeoTags();
     
     // Favicon and app icons
-    if (seoConfig.ogImage) {
-      metaTags += `  <link rel="icon" type="image/x-icon" href="${seoConfig.ogImage}">\n`;
-      metaTags += `  <link rel="apple-touch-icon" href="${seoConfig.ogImage}">\n`;
-    }
+    const faviconUrl = seoConfig.ogImage || '/favicon.svg';
+    metaTags += `  <link rel="icon" type="image/x-icon" href="${faviconUrl}">\n`;
+    metaTags += `  <link rel="apple-touch-icon" href="${faviconUrl}">\n`;
     
     // Structured data
     metaTags += this.generateStructuredData(seoConfig, pageData, currentUrl);
@@ -47,7 +47,8 @@ export class SeoGenerator {
     tags += `  <meta property="og:title" content="${this.escapeHtml(seoConfig.title || pageData.slug)}">\n`;
     
     if (seoConfig.description) {
-      tags += `  <meta property="og:description" content="${this.escapeHtml(seoConfig.description)}">\n`;
+      const plainDescription = this.stripHtmlTags(seoConfig.description);
+      tags += `  <meta property="og:description" content="${this.escapeHtml(plainDescription)}">\n`;
     }
     
     tags += `  <meta property="og:type" content="website">\n`;
@@ -70,7 +71,8 @@ export class SeoGenerator {
     tags += `  <meta name="twitter:title" content="${this.escapeHtml(seoConfig.title || pageData.slug)}">\n`;
     
     if (seoConfig.description) {
-      tags += `  <meta name="twitter:description" content="${this.escapeHtml(seoConfig.description)}">\n`;
+      const plainDescription = this.stripHtmlTags(seoConfig.description);
+      tags += `  <meta name="twitter:description" content="${this.escapeHtml(plainDescription)}">\n`;
     }
     
     if (seoConfig.ogImage) {
@@ -91,7 +93,7 @@ export class SeoGenerator {
       "@context": "https://schema.org",
       "@type": "WebPage",
       "name": seoConfig.title || pageData.slug,
-      "description": seoConfig.description || "",
+      "description": seoConfig.description ? this.stripHtmlTags(seoConfig.description) : "",
       "url": currentUrl,
       "image": seoConfig.ogImage || "",
       "inLanguage": pageData.global_theme?.language || "en",
@@ -112,5 +114,23 @@ export class SeoGenerator {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#x27;');
+  }
+
+  private stripHtmlTags(text: string): string {
+    if (!text) return '';
+    
+    // Remove HTML tags and decode HTML entities
+    let cleanText = text
+      .replace(/<[^>]*>/g, ' ') // Remove HTML tags
+      .replace(/&nbsp;/g, ' ') // Replace non-breaking spaces
+      .replace(/&amp;/g, '&') // Decode common entities
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#x27;/g, "'")
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
+    
+    return cleanText;
   }
 }

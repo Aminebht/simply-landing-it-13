@@ -149,6 +149,21 @@ export class HtmlGenerator {
       return null;
     }
 
+    // Use component content, with minimal fallback only if completely empty
+    let contentToUse = component.content || {};
+    
+    // Only provide fallback if content is completely empty (this should rarely happen)
+    if (!contentToUse || Object.keys(contentToUse).length === 0) {
+      console.warn(`[SSR] Component ${component.id} (${componentType}) has empty content, using minimal fallback`);
+      
+      // Provide minimal fallback content
+      contentToUse = {
+        headline: 'Welcome',
+        subheadline: 'Thank you for visiting our page.',
+        ctaButton: 'Learn More'
+      };
+    }
+
     return React.createElement('div', {
       key: component.id,
       id: `section-${component.id}`,
@@ -156,7 +171,7 @@ export class HtmlGenerator {
     }, React.createElement(ComponentRenderer, {
       type: componentType,
       variation: variationNumber,
-      content: component.content || {},
+      content: contentToUse,
       styles: component.custom_styles || {},
       visibility: component.visibility || {},
       mediaUrls: component.media_urls || {},
@@ -260,7 +275,7 @@ export class HtmlGenerator {
 </head>
 <body>
   ${bodyHTML}
-  <script src="app.js"></script>
+  <script type="text/javascript" src="app.js"></script>
 </body>
 </html>`;
   }
