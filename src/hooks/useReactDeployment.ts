@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ReactDeploymentService } from '@/services/react-deployment-service';
 
-export function useReactDeployment(netlifyToken: string, useReactProject: boolean = false) {
+export function useReactDeployment(netlifyToken: string) {
   const [isDeploying, setIsDeploying] = useState(false);
   const [deploymentError, setDeploymentError] = useState<string | null>(null);
 
@@ -10,13 +10,12 @@ export function useReactDeployment(netlifyToken: string, useReactProject: boolea
       setIsDeploying(true);
       setDeploymentError(null);
 
-      const deploymentType = useReactProject ? 'React project' : 'static HTML';
-      console.log(`Starting ${deploymentType} deployment for page:`, pageId);
+      console.log('Starting React project deployment for page:', pageId);
 
-      const deploymentService = new ReactDeploymentService(netlifyToken, useReactProject);
+      const deploymentService = new ReactDeploymentService(netlifyToken);
       const result = await deploymentService.deployLandingPage(pageId);
 
-      console.log(`${deploymentType} deployment completed successfully:`, result);
+      console.log('React project deployment completed successfully:', result);
       return result;
 
     } catch (error) {

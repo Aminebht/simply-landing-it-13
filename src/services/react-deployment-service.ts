@@ -2,8 +2,6 @@ import { LandingPageComponent } from '@/types/components';
 import { LandingPageService } from './landing-page';
 import { NetlifyService } from './netlify';
 import { 
-  HtmlGenerator, 
-  AssetGenerator, 
   DeploymentValidator, 
   DeploymentLogger,
   ReactProjectGenerator 
@@ -27,21 +25,15 @@ export interface DeploymentFiles extends Record<string, string> {
 
 export class ReactDeploymentService {
   private netlifyService: NetlifyService;
-  private htmlGenerator: HtmlGenerator;
-  private assetGenerator: AssetGenerator;
   private validator: DeploymentValidator;
   private logger: DeploymentLogger;
   private reactProjectGenerator: ReactProjectGenerator;
-  private useReactProject: boolean;
 
-  constructor(netlifyToken: string, useReactProject: boolean = false) {
+  constructor(netlifyToken: string) {
     this.netlifyService = new NetlifyService(netlifyToken);
-    this.htmlGenerator = new HtmlGenerator();
-    this.assetGenerator = new AssetGenerator();
     this.validator = new DeploymentValidator();
     this.logger = new DeploymentLogger();
     this.reactProjectGenerator = new ReactProjectGenerator();
-    this.useReactProject = useReactProject;
   }
 
   async getDeploymentStatus(pageId: string): Promise<DeploymentStatus> {
@@ -65,16 +57,13 @@ export class ReactDeploymentService {
 
   async deployLandingPage(pageId: string): Promise<DeploymentResult> {
     try {
-      const deploymentType = this.useReactProject ? 'React project' : 'static HTML';
-      this.logger.info(`Starting ${deploymentType} deployment`, { pageId });
+      this.logger.info('Starting React project deployment', { pageId });
 
       // Validate and fetch page data
       const pageData = await this.validateAndFetchPageData(pageId);
       
-      // Generate deployment files based on deployment type
-      const files = this.useReactProject 
-        ? await this.generateReactProjectFiles(pageData)
-        : await this.generateDeploymentFiles(pageData);
+      // Generate React project files
+      const files = await this.generateReactProjectFiles(pageData);
       
       // Deploy to Netlify
       const { siteId, deploymentResult } = await this.deployToNetlify(pageData, files);
@@ -87,11 +76,11 @@ export class ReactDeploymentService {
         siteId: siteId
       };
 
-      this.logger.info(`${deploymentType} deployment completed successfully`, { pageId, result });
+      this.logger.info('React project deployment completed successfully', { pageId, result });
       return result;
 
     } catch (error) {
-      this.logger.error('Deployment failed', { pageId, error, useReactProject: this.useReactProject });
+      this.logger.error('Deployment failed', { pageId, error });
       throw error;
     }
   }
@@ -146,26 +135,6 @@ export class ReactDeploymentService {
     });
 
     return reactProjectFiles;
-  }
-
-  private async generateDeploymentFiles(pageData: any): Promise<DeploymentFiles> {
-    this.logger.debug('Generating deployment files');
-
-    const [html, { css, js }] = await Promise.all([
-      this.htmlGenerator.generateReactHTML(pageData),
-      this.assetGenerator.generateAssets(pageData)
-    ]);
-
-    const headers = this.generateNetlifyHeaders();
-    const redirects = this.generateNetlifyRedirects();
-
-    return {
-      'index.html': html,
-      'styles.css': css,
-      'app.js': js,
-      '_headers': headers,
-      '_redirects': redirects
-    };
   }
 
   private async deployToNetlify(pageData: any, files: DeploymentFiles): Promise<{
@@ -370,18 +339,4 @@ export class ReactDeploymentService {
 /*    /index.html   200`;
   }
 
-  /**
-   * Switch between React project deployment and static HTML deployment
-   */
-  setDeploymentMode(useReactProject: boolean): void {
-    this.useReactProject = useReactProject;
-    this.logger.info(`Deployment mode switched to: ${useReactProject ? 'React project' : 'static HTML'}`);
-  }
-
-  /**
-   * Get current deployment mode
-   */
-  getDeploymentMode(): 'react-project' | 'static-html' {
-    return this.useReactProject ? 'react-project' : 'static-html';
-  }
 }

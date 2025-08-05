@@ -43,8 +43,8 @@ export default function Builder() {
   const [selectedComponent, setSelectedComponent] = useState<LandingPageComponent | null>(null);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
 
-  // Initialize React deployment hook with Netlify token (using static HTML mode for better compatibility)
-  const { deployLandingPage, isDeploying, deploymentError } = useReactDeployment('nfp_PxSrwC6LMCXfjrSi28pvhSdx9rNKLKyv4a6d', false);
+  // Initialize React deployment hook with Netlify token (using React project mode for better performance)
+  const { deployLandingPage, isDeploying, deploymentError } = useReactDeployment('nfp_PxSrwC6LMCXfjrSi28pvhSdx9rNKLKyv4a6d');
 
   // Use useUndoRedo for undo/redo and component state
   const {
