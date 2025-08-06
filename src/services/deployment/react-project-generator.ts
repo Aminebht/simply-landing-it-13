@@ -33,28 +33,68 @@ export class ReactProjectGenerator {
   }
 
   generateReactProject(pageData: any): Record<string, string> {
-    // Generate a pre-built static version for deployment
-    // This creates files that can be served directly without build process
-    const staticSiteFiles: Record<string, string> = {
-      // Main HTML file with everything bundled
-      'index.html': this.generateStaticIndexHtml(pageData),
+    // Generate a complete buildable React project for Netlify deployment
+    const components = pageData.components || [];
+    const cleanedComponents = this.componentCleaner.cleanComponents(components);
+    const utilityFiles = this.componentCleaner.generateUtilityFiles();
+
+    const reactProjectFiles: Record<string, string> = {
+      // Base project configuration
+      'package.json': this.generatePackageJson(),
+      'index.html': this.generateBuildableIndexHtml(pageData),
+      'vite.config.ts': this.generateViteConfig(),
+      'tsconfig.json': this.generateTsConfig(),
+      'postcss.config.js': this.generatePostCSSConfig(),
+      'tailwind.config.ts': this.generateTailwindConfig(pageData),
+      
+      // Netlify configuration with proper build settings
+      'netlify.toml': this.generateBuildableNetlifyToml(),
+      
+      // React application entry points
+      'src/main.tsx': this.generateMainTsx(pageData),
+      'src/App.tsx': this.generateAppTsx(pageData),
+      'src/index.css': this.generateIndexCSS(pageData),
+      
+      // Component exports
+      'src/components/index.ts': this.generateComponentIndexFile(cleanedComponents),
+      
+      // Utility files
+      ...Object.fromEntries(
+        Object.entries(utilityFiles).map(([file, content]) => [`src/utils/${file}`, content])
+      ),
+      
+      // Component files
+      ...Object.fromEntries(
+        Object.entries(cleanedComponents).map(([name, component]) => 
+          [`src/components/${name}.tsx`, component.code]
+        )
+      ),
       
       // Static assets
-      'favicon.svg': this.generateFavicon(),
-      'robots.txt': this.generateRobotsTxt(),
-      
-      // Netlify configuration for SPA
-      '_redirects': '/*    /index.html   200',
+      'public/favicon.svg': this.generateFavicon(),
+      'public/robots.txt': this.generateRobotsTxt(),
       
       // Security headers
       '_headers': `/*
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   X-XSS-Protection: 1; mode=block
-  Referrer-Policy: strict-origin-when-cross-origin`
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.js
+  Content-Type: application/javascript; charset=utf-8
+  Cache-Control: public, max-age=31536000
+
+/*.css
+  Content-Type: text/css; charset=utf-8
+  Cache-Control: public, max-age=31536000`
     };
 
-    return staticSiteFiles;
+    return reactProjectFiles;
   }
 
   private generatePackageJson(): string {
@@ -1237,11 +1277,14 @@ export default App`;
 
   validateProject(files: Record<string, string>): boolean {
     const requiredFiles = [
+      'package.json',
       'index.html',
-      'favicon.svg',
-      'robots.txt',
-      '_redirects',
-      '_headers'
+      'netlify.toml',
+      'src/main.tsx',
+      'src/App.tsx',
+      'src/index.css',
+      'vite.config.ts',
+      'tsconfig.json'
     ];
     
     for (const file of requiredFiles) {
@@ -1251,43 +1294,47 @@ export default App`;
       }
     }
     
-    // Validate that index.html contains proper HTML structure
+    // Validate package.json structure
+    try {
+      const packageJson = JSON.parse(files['package.json']);
+      if (!packageJson.scripts || !packageJson.scripts.build) {
+        console.error('package.json missing build script');
+        return false;
+      }
+      if (!packageJson.dependencies || !packageJson.dependencies.react) {
+        console.error('package.json missing React dependency');
+        return false;
+      }
+    } catch (error) {
+      console.error('Invalid package.json format', error);
+      return false;
+    }
+    
+    // Validate that index.html contains proper structure for React app
     const indexContent = files['index.html'];
     if (!indexContent.includes('<!DOCTYPE html>')) {
       console.error('index.html does not contain proper DOCTYPE');
       return false;
     }
     
-    if (!indexContent.includes('<html')) {
-      console.error('index.html does not contain html tag');
+    if (!indexContent.includes('<div id="root">')) {
+      console.error('index.html does not contain React root div');
       return false;
     }
     
-    if (!indexContent.includes('<head>')) {
-      console.error('index.html does not contain head section');
+    // Validate netlify.toml contains build configuration
+    const netlifyConfig = files['netlify.toml'];
+    if (!netlifyConfig.includes('command = "npm run build"')) {
+      console.error('netlify.toml missing build command');
       return false;
     }
     
-    if (!indexContent.includes('<body')) {
-      console.error('index.html does not contain body section');
+    if (!netlifyConfig.includes('publish = "dist"')) {
+      console.error('netlify.toml missing publish directory');
       return false;
     }
     
-    // Validate that _headers contains security headers
-    const headersContent = files['_headers'];
-    if (!headersContent.includes('X-Frame-Options')) {
-      console.error('_headers missing security headers');
-      return false;
-    }
-    
-    // Validate that _redirects contains SPA redirect
-    const redirectsContent = files['_redirects'];
-    if (!redirectsContent.includes('/index.html')) {
-      console.error('_redirects missing SPA redirect');
-      return false;
-    }
-    
-    console.log('Static site validation passed ✓');
+    console.log('React project validation passed ✓');
     return true;
   }
 
