@@ -20,7 +20,7 @@ export interface DeploymentResult {
 }
 
 export interface DeploymentFiles extends Record<string, string> {
-  // Now supports both static HTML and React project files
+  // React project files
 }
 
 export class ReactDeploymentService {
@@ -126,7 +126,7 @@ export class ReactDeploymentService {
     
     // Log project info
     const projectInfo = this.reactProjectGenerator.getProjectInfo(reactProjectFiles);
-    this.logger.info('React project generated', {
+    this.logger.info('React project generated and ready for deployment', {
       totalFiles: projectInfo.totalFiles,
       componentCount: projectInfo.componentCount,
       totalSize: projectInfo.totalSize,
@@ -134,6 +134,7 @@ export class ReactDeploymentService {
       publishDir: projectInfo.publishDir
     });
 
+    // Return source files for Netlify to build
     return reactProjectFiles;
   }
 
@@ -144,9 +145,11 @@ export class ReactDeploymentService {
     const hasExistingSite = this.hasValidNetlifySiteId(pageData.netlify_site_id);
 
     if (hasExistingSite) {
-      return this.updateExistingSite(pageData, files);
+      this.logger.info('Updating existing Netlify site', { siteId: pageData.netlify_site_id });
+      return await this.updateExistingSite(pageData, files);
     } else {
-      return this.createNewSite(pageData, files);
+      this.logger.info('Creating new Netlify site');
+      return await this.createNewSite(pageData, files);
     }
   }
 
@@ -158,28 +161,16 @@ export class ReactDeploymentService {
     siteId: string;
     deploymentResult: any;
   }> {
-    this.logger.info('Updating existing Netlify site', { siteId: pageData.netlify_site_id });
-
     try {
-      const deploymentResult = await this.netlifyService.deploySite(
-        pageData.netlify_site_id,
-        files
-      );
-
-      this.logger.info('Successfully updated existing site', { siteId: pageData.netlify_site_id });
+      const siteId = pageData.netlify_site_id;
       
-      return {
-        siteId: pageData.netlify_site_id,
-        deploymentResult
-      };
-    } catch (updateError) {
-      this.logger.warn('Failed to update existing site, creating new one', { 
-        siteId: pageData.netlify_site_id, 
-        error: updateError 
-      });
-
-      // Fallback to creating new site
-      return this.createNewSiteAsFallback(pageData, files);
+      // Deploy files to existing site
+      const deploymentResult = await this.netlifyService.deploySite(siteId, files);
+      
+      return { siteId, deploymentResult };
+    } catch (error) {
+      this.logger.warn('Failed to update existing site, creating new one', { error });
+      return await this.createNewSiteAsFallback(pageData, files);
     }
   }
 
@@ -187,52 +178,34 @@ export class ReactDeploymentService {
     siteId: string;
     deploymentResult: any;
   }> {
-    this.logger.info('Creating new Netlify site for first deployment');
-
-    const baseName = pageData.slug || 'landing-page';
-    const siteInfo = await this.netlifyService.createSite({
-      site_name: baseName,
-      custom_domain: undefined,
-      build_command: undefined,
-      publish_directory: undefined
-    });
-
-    const deploymentResult = await this.netlifyService.deploySite(
-      siteInfo.site_id,
-      files
-    );
-
-    this.logger.info('Successfully created and deployed new site', { siteId: siteInfo.site_id });
-
-    return {
-      siteId: siteInfo.site_id,
-      deploymentResult
-    };
+    const siteName = `landing-page-${pageData.id}`;
+    const config = { site_name: siteName };
+    
+    // Create new site
+    const siteResult = await this.netlifyService.createSite(config);
+    const siteId = siteResult.site_id;
+    
+    // Deploy files to new site
+    const deploymentResult = await this.netlifyService.deploySite(siteId, files);
+    
+    return { siteId, deploymentResult };
   }
 
   private async createNewSiteAsFallback(pageData: any, files: DeploymentFiles): Promise<{
     siteId: string;
     deploymentResult: any;
   }> {
-    const fallbackBaseName = pageData.slug || 'landing-page';
-    const siteInfo = await this.netlifyService.createSite({
-      site_name: `${fallbackBaseName}-updated`,
-      custom_domain: undefined,
-      build_command: undefined,
-      publish_directory: undefined
-    });
-
-    const deploymentResult = await this.netlifyService.deploySite(
-      siteInfo.site_id,
-      files
-    );
-
-    this.logger.info('Created new site after update failure', { siteId: siteInfo.site_id });
-
-    return {
-      siteId: siteInfo.site_id,
-      deploymentResult
-    };
+    const siteName = `landing-page-${pageData.id}-${Date.now()}`;
+    const config = { site_name: siteName };
+    
+    // Create new site as fallback
+    const siteResult = await this.netlifyService.createSite(config);
+    const siteId = siteResult.site_id;
+    
+    // Deploy files to new site
+    const deploymentResult = await this.netlifyService.deploySite(siteId, files);
+    
+    return { siteId, deploymentResult };
   }
 
   private async updateDatabaseWithDeploymentInfo(
@@ -240,103 +213,16 @@ export class ReactDeploymentService {
     siteId: string, 
     deploymentResult: any
   ): Promise<void> {
-    const landingPageService = LandingPageService.getInstance();
-    
-    const updateData = {
-      site_id: siteId,
-      url: deploymentResult.deploy_ssl_url || deploymentResult.deploy_url
-    };
-
-    this.logger.debug('Updating database with deployment info', { pageId, updateData });
-    
-    await landingPageService.updateDeploymentInfo(pageId, updateData);
-    
-    this.logger.debug('Database updated successfully', { pageId });
+    try {
+      const landingPageService = LandingPageService.getInstance();
+      await landingPageService.updateLandingPage(pageId, {
+        netlify_site_id: siteId,
+        last_deployed_at: new Date().toISOString(),
+        status: 'published'
+      });
+    } catch (error) {
+      this.logger.error('Failed to update database with deployment info', { pageId, siteId, error });
+      // Don't throw here as deployment was successful
+    }
   }
-
-  private generateNetlifyHeaders(): string {
-    // Netlify _headers file format for setting HTTP security headers
-    // These headers cannot be set via HTML meta tags
-    return `/*
-  # Security Headers
-  X-Frame-Options: DENY
-  X-Content-Type-Options: nosniff
-  X-XSS-Protection: 1; mode=block
-  Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: geolocation=(), microphone=(), camera=()
-  Strict-Transport-Security: max-age=31536000; includeSubDomains
-
-  # Additional security headers (relaxed for external resources)
-  X-Permitted-Cross-Domain-Policies: none
-  Cross-Origin-Opener-Policy: same-origin-allow-popups
-
-# Force HTML content type for root and index
-/
-  Content-Type: text/html; charset=utf-8
-  Cache-Control: no-cache
-
-/index.html
-  Content-Type: text/html; charset=utf-8
-  Cache-Control: no-cache
-
-# Specific headers for different file types
-*.html
-  Content-Type: text/html; charset=utf-8
-  Cache-Control: no-cache
-
-*.css
-  Content-Type: text/css; charset=utf-8
-  Cache-Control: public, max-age=31536000
-
-*.js
-  Content-Type: text/javascript; charset=utf-8
-  X-Content-Type-Options: nosniff
-  Cache-Control: public, max-age=31536000
-
-*.jsx
-  Content-Type: text/javascript; charset=utf-8
-  X-Content-Type-Options: nosniff
-  Cache-Control: public, max-age=31536000
-
-*.mjs
-  Content-Type: application/javascript; charset=utf-8
-  Cache-Control: public, max-age=31536000
-
-*.ts
-  Content-Type: text/javascript; charset=utf-8
-  X-Content-Type-Options: nosniff
-  Cache-Control: public, max-age=31536000
-
-*.tsx
-  Content-Type: text/javascript; charset=utf-8
-  X-Content-Type-Options: nosniff
-  Cache-Control: public, max-age=31536000
-
-*.png, *.jpg, *.jpeg, *.gif, *.webp, *.svg
-  Cache-Control: public, max-age=31536000
-
-# API and font specific headers
-/api/*
-  Access-Control-Allow-Origin: *
-  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
-  Access-Control-Allow-Headers: Content-Type, Authorization
-
-*.woff, *.woff2, *.ttf, *.eot
-  Cache-Control: public, max-age=31536000
-  Cross-Origin-Resource-Policy: cross-origin`;
-  }
-
-  private generateNetlifyRedirects(): string {
-    // Netlify _redirects file to ensure HTML is served properly
-    // This fixes MIME type issues and ensures proper routing
-    return `# Redirect rules for proper HTML serving
-/*    /index.html   200
-
-# Ensure HTML files are served with correct content-type
-*.html    /index.html   200
-
-# Fallback for all routes to index.html (SPA behavior)
-/*    /index.html   200`;
-  }
-
 }

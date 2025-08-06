@@ -46,7 +46,7 @@ export class NetlifyService {
     
     console.log('Creating Netlify site with name:', uniqueName);
     
-    // Simplified site creation payload - avoid optional fields that might cause 422 errors
+    // Create site for static file deployment (no build process needed)
     const sitePayload: any = {
       name: uniqueName
     };
@@ -72,7 +72,7 @@ export class NetlifyService {
   }
 
   async deploySite(siteId: string, files: Record<string, string>): Promise<NetlifyDeployment> {
-    // Prepare files for Netlify deployment
+    // Prepare static files for direct deployment
     const fileMap: Record<string, string> = {};
     const fileHashes: Record<string, string> = {};
     
@@ -82,8 +82,8 @@ export class NetlifyService {
       fileHashes[hash] = content;
     }
 
-    // Create deployment with file manifest
-    console.log('Creating deployment with file manifest:', fileMap);
+    // Create deployment for static files (no build needed)
+    console.log('Creating static file deployment:', Object.keys(fileMap));
     const deployment = await this.request(`/sites/${siteId}/deploys`, {
       method: 'POST',
       body: JSON.stringify({
@@ -91,23 +91,22 @@ export class NetlifyService {
       }),
     });
 
-    console.log('Deployment created:', { id: deployment.id, required: deployment.required });
+    console.log('Static deployment created:', { id: deployment.id, required: deployment.required });
 
     // Upload required files
     if (deployment.required && deployment.required.length > 0) {
-      console.log(`Uploading ${deployment.required.length} required files`);
+      console.log(`Uploading ${deployment.required.length} static files`);
       for (const hash of deployment.required) {
         const content = fileHashes[hash];
         if (content) {
-          console.log(`Uploading file with hash: ${hash}`);
           await this.uploadFileByHash(deployment.id, hash, content);
         } else {
-          console.warn(`No content found for hash: ${hash}`);
+          console.warn(`Content not found for hash: ${hash}`);
         }
       }
-    } else {
-      console.log('No files need to be uploaded (all files already exist on Netlify)');
     }
+
+    console.log('Static site deployment completed successfully');
 
     return {
       id: deployment.id,

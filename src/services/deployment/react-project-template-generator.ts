@@ -1,19 +1,11 @@
 import { LandingPageComponent } from '@/types/components';
 
 export interface ReactProjectTemplate {
-  'package.json': string;
   'index.html': string;
-  'vite.config.js': string;
-  'src/main.jsx': string;
-  'src/App.jsx': string;
-  'src/index.css': string;
-  'src/components/index.js': string;
-  'src/utils/cn.js': string;
-  'src/utils/buttonRenderer.jsx': string;
   '_headers': string;
   'netlify.toml': string;
-  'tailwind.config.js': string;
-  'postcss.config.js': string;
+  'public/favicon.svg': string;
+  'public/robots.txt': string;
   [key: string]: string; // Allow dynamic component files
 }
 
@@ -28,25 +20,26 @@ export class ReactProjectTemplateGenerator {
       const variation = component.component_variation?.variation_number;
       
       if (componentType && variation) {
-        const fileName = `${this.capitalize(componentType)}Variation${variation}.jsx`;
-        componentFiles[`src/components/${fileName}`] = this.generateComponentFile(component);
+        try {
+          const fileName = `${this.capitalize(componentType)}Variation${variation}.jsx`;
+          const componentContent = this.generateComponentFile(component);
+          
+          // Only add if component content is valid
+          if (componentContent && componentContent.trim()) {
+            componentFiles[`src/components/${fileName}`] = componentContent;
+          }
+        } catch (error) {
+          console.warn(`Failed to generate component file for ${componentType}Variation${variation}:`, error);
+        }
       }
     });
 
     return {
-      'package.json': this.generatePackageJson(),
       'index.html': this.generateIndexHtml(pageData),
-      'vite.config.js': this.generateViteConfig(),
-      'src/main.jsx': this.generateMainJsx(),
-      'src/App.jsx': this.generateAppJsx(pageData),
-      'src/index.css': this.generateIndexCss(pageData),
-      'src/components/index.js': this.generateComponentsIndex(),
-      'src/utils/cn.js': this.generateCnUtility(),
-      'src/utils/buttonRenderer.jsx': this.generateButtonRenderer(),
       '_headers': this.generateNetlifyHeaders(),
       'netlify.toml': this.generateNetlifyToml(),
-      'tailwind.config.js': this.generateTailwindConfig(pageData),
-      'postcss.config.js': this.generatePostCSSConfig(),
+      'public/favicon.svg': this.generateFavicon(),
+      'public/robots.txt': this.generateRobotsTxt(),
       ...componentFiles
     };
   }
@@ -84,6 +77,10 @@ export class ReactProjectTemplateGenerator {
     const globalTheme = pageData.global_theme || this.getDefaultGlobalTheme();
     const seoConfig = pageData.seo_config || this.getDefaultSeoConfig();
     
+    // Generate production-ready HTML with inline React bundle
+    const reactBundle = this.generateInlineReactBundle(pageData);
+    const styles = this.generateInlineStyles(pageData);
+    
     return `<!DOCTYPE html>
 <html lang="${globalTheme.language || 'en'}" dir="${globalTheme.direction || 'ltr'}">
   <head>
@@ -113,10 +110,46 @@ export class ReactProjectTemplateGenerator {
     
     <!-- Tracking Scripts -->
     ${this.generateTrackingScripts(pageData.tracking_config)}
+    
+    <!-- Inline Styles -->
+    <style>${styles}</style>
   </head>
-  <body style="background-color: ${globalTheme.backgroundColor || '#ffffff'}">
+  <body style="background: ${globalTheme.backgroundColor || '#ffffff'}">
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    
+    <!-- React and React DOM from CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Debug React loading -->
+    <script>
+      console.log('React:', typeof React);
+      console.log('ReactDOM:', typeof ReactDOM);
+      if (typeof React === 'undefined') {
+        console.error('React failed to load!');
+      }
+      if (typeof ReactDOM === 'undefined') {
+        console.error('ReactDOM failed to load!');
+      }
+    </script>
+    
+    <!-- Inline React Bundle -->
+    <script>
+      ${reactBundle}
+      
+      // Simple fallback rendering if React components fail
+      setTimeout(() => {
+        const rootElement = document.getElementById('root');
+        if (rootElement && (!rootElement.children || rootElement.children.length === 0)) {
+          console.warn('React components did not render, using fallback');
+          rootElement.innerHTML = \`
+            <div style="min-height: 100vh; font-family: Inter, sans-serif;">
+              ${this.generateFallbackHTML(pageData)}
+            </div>
+          \`;
+        }
+      }, 1000);
+    </script>
   </body>
 </html>`;
   }
@@ -158,24 +191,104 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-)`;
+// Error boundary component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error: error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('React Error Boundary caught an error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '20px', textAlign: 'center' }}>
+          <h1>Something went wrong.</h1>
+          <p>Please check the console for more details.</p>
+          <details style={{ marginTop: '20px', textAlign: 'left' }}>
+            <summary>Error Details</summary>
+            <pre>{this.state.error?.toString()}</pre>
+          </details>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// Initialize React app with error handling
+try {
+  const root = ReactDOM.createRoot(document.getElementById('root'));
+  root.render(
+    <React.StrictMode>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </React.StrictMode>
+  );
+} catch (error) {
+  console.error('Failed to initialize React app:', error);
+  // Fallback: Show basic content
+  document.getElementById('root').innerHTML = \`
+    <div style="padding: 20px; text-align: center;">
+      <h1>Landing Page</h1>
+      <p>React app failed to load. Check console for details.</p>
+      <p>Error: \${error.message}</p>
+    </div>
+  \`;
+}`;
   }
 
   private generateAppJsx(pageData: any): string {
     const globalTheme = pageData.global_theme || this.getDefaultGlobalTheme();
     const components = pageData.components || [];
     
-    return `import React from 'react'
+    // Filter out invalid component imports
+    const validComponentImports = components
+      .map((comp: LandingPageComponent) => this.getComponentImportName(comp))
+      .filter(name => name && name.trim() !== '');
+    
+    // Generate imports only if we have valid components
+    const importStatement = validComponentImports.length > 0 
+      ? `import React from 'react'
 import { 
-  ${components.map((comp: LandingPageComponent) => this.getComponentImportName(comp)).join(',\n  ')}
-} from './components'
+  ${validComponentImports.join(',\n  ')}
+} from './components'`
+      : `import React from 'react'`;
+    
+    return `${importStatement}
 
 function App() {
-  const globalTheme = ${JSON.stringify(globalTheme, null, 2)};
+  // Debug logging
+  console.log('React App initializing...');
+  console.log('Components data:', ${JSON.stringify(components.length)} components);
+  
+  // Error handling for JSON parsing
+  let globalTheme;
+  try {
+    globalTheme = ${JSON.stringify(globalTheme, null, 2)};
+    console.log('Global theme loaded:', globalTheme);
+  } catch (error) {
+    console.error('Failed to parse global theme:', error);
+    globalTheme = {
+      primaryColor: '#3b82f6',
+      backgroundColor: '#ffffff',
+      textColor: '#1f2937',
+      fontFamily: 'Inter, sans-serif',
+      direction: 'ltr',
+      language: 'en'
+    };
+  }
+  
+  console.log('React App rendering...');
   
   return (
     <div 
@@ -188,9 +301,22 @@ function App() {
       }}
     >
       ${components
+        .filter((comp: LandingPageComponent) => {
+          const componentType = comp.component_variation?.component_type;
+          const variation = comp.component_variation?.variation_number;
+          return componentType && variation;
+        })
         .sort((a: LandingPageComponent, b: LandingPageComponent) => a.order_index - b.order_index)
         .map((comp: LandingPageComponent) => this.generateComponentJSX(comp))
         .join('\n      ')}
+      ${components.length === 0 ? `
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Welcome</h1>
+          <p className="text-lg text-gray-600">Your landing page is ready!</p>
+          <p className="text-sm text-gray-500 mt-4">Debug: React app loaded successfully</p>
+        </div>
+      </div>` : ''}
     </div>
   )
 }
@@ -356,62 +482,27 @@ export default App`;
 }`;
   }
 
-  private generateComponentsIndex(): string {
+  private generateComponentsIndex(components: LandingPageComponent[]): string {
+    const usedComponents = components.map((comp: LandingPageComponent) => {
+      const componentType = comp.component_variation?.component_type;
+      const variation = comp.component_variation?.variation_number;
+      
+      if (componentType && variation) {
+        const componentName = `${this.capitalize(componentType)}Variation${variation}`;
+        return `export { default as ${componentName} } from './${componentName}';`;
+      }
+      return null;
+    }).filter(Boolean);
+
     return `// Auto-generated component exports for React deployment
 // These components are production-ready versions of landing page components
 
-// Hero Components
-export { default as HeroVariation1 } from './HeroVariation1';
-export { default as HeroVariation2 } from './HeroVariation2';
-export { default as HeroVariation3 } from './HeroVariation3';
-export { default as HeroVariation4 } from './HeroVariation4';
-export { default as HeroVariation5 } from './HeroVariation5';
-export { default as HeroVariation6 } from './HeroVariation6';
-
-// Features Components
-export { default as FeaturesVariation1 } from './FeaturesVariation1';
-export { default as FeaturesVariation2 } from './FeaturesVariation2';
-export { default as FeaturesVariation3 } from './FeaturesVariation3';
-export { default as FeaturesVariation4 } from './FeaturesVariation4';
-export { default as FeaturesVariation5 } from './FeaturesVariation5';
-export { default as FeaturesVariation6 } from './FeaturesVariation6';
-
-// Pricing Components
-export { default as PricingVariation1 } from './PricingVariation1';
-export { default as PricingVariation2 } from './PricingVariation2';
-export { default as PricingVariation3 } from './PricingVariation3';
-export { default as PricingVariation4 } from './PricingVariation4';
-export { default as PricingVariation5 } from './PricingVariation5';
-export { default as PricingVariation6 } from './PricingVariation6';
-
-// CTA Components
-export { default as CtaVariation1 } from './CtaVariation1';
-export { default as CtaVariation2 } from './CtaVariation2';
-export { default as CtaVariation3 } from './CtaVariation3';
-export { default as CtaVariation4 } from './CtaVariation4';
-export { default as CtaVariation5 } from './CtaVariation5';
-export { default as CtaVariation6 } from './CtaVariation6';
-
-// FAQ Components
-export { default as FaqVariation1 } from './FaqVariation1';
-export { default as FaqVariation2 } from './FaqVariation2';
-export { default as FaqVariation3 } from './FaqVariation3';
-export { default as FaqVariation4 } from './FaqVariation4';
-export { default as FaqVariation5 } from './FaqVariation5';
-export { default as FaqVariation6 } from './FaqVariation6';
-
-// Testimonials Components
-export { default as TestimonialsVariation1 } from './TestimonialsVariation1';
-export { default as TestimonialsVariation2 } from './TestimonialsVariation2';
-export { default as TestimonialsVariation3 } from './TestimonialsVariation3';
-export { default as TestimonialsVariation4 } from './TestimonialsVariation4';
-export { default as TestimonialsVariation5 } from './TestimonialsVariation5';
-export { default as TestimonialsVariation6 } from './TestimonialsVariation6';`;
+${usedComponents.length > 0 ? usedComponents.join('\n') : '// No components to export'}
+`;
   }
 
   private generateNetlifyHeaders(): string {
     return `/*
-  # Security Headers
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   X-XSS-Protection: 1; mode=block
@@ -419,121 +510,94 @@ export { default as TestimonialsVariation6 } from './TestimonialsVariation6';`;
   Permissions-Policy: geolocation=(), microphone=(), camera=()
   Strict-Transport-Security: max-age=31536000; includeSubDomains
 
-# MIME Type Headers for JavaScript modules (all possible patterns)
-*.js
+/*.js
   Content-Type: application/javascript
   Cache-Control: public, max-age=31536000
 
-*.jsx
+/*.mjs
   Content-Type: application/javascript
   Cache-Control: public, max-age=31536000
 
-*.mjs
-  Content-Type: application/javascript
-  Cache-Control: public, max-age=31536000
-
-*.ts
-  Content-Type: application/javascript
-  Cache-Control: public, max-age=31536000
-
-*.tsx
-  Content-Type: application/javascript
-  Cache-Control: public, max-age=31536000
-
-/assets/*.js
-  Content-Type: application/javascript
-  Cache-Control: public, max-age=31536000
-
-/src/*.js
-  Content-Type: application/javascript
-  Cache-Control: public, max-age=31536000
-
-/src/*.jsx
-  Content-Type: application/javascript
-  Cache-Control: public, max-age=31536000
-
-# Cache Control for other assets
-*.html
+/*.html
   Cache-Control: no-cache
 
-*.css
+/*.css
   Content-Type: text/css
   Cache-Control: public, max-age=31536000
 
-/assets/*.css
-  Content-Type: text/css
-  Cache-Control: public, max-age=31536000
-
-*.png, *.jpg, *.jpeg, *.gif, *.webp
-  Cache-Control: public, max-age=31536000
-
-*.svg
+/*.svg
   Content-Type: image/svg+xml
   Cache-Control: public, max-age=31536000
 
-*.woff, *.woff2
+/*.png
+  Cache-Control: public, max-age=31536000
+
+/*.jpg
+  Cache-Control: public, max-age=31536000
+
+/*.jpeg
+  Cache-Control: public, max-age=31536000
+
+/*.gif
+  Cache-Control: public, max-age=31536000
+
+/*.webp
+  Cache-Control: public, max-age=31536000
+
+/*.woff
+  Content-Type: font/woff
+  Cache-Control: public, max-age=31536000
+
+/*.woff2
   Content-Type: font/woff2
   Cache-Control: public, max-age=31536000
 
-*.json
+/*.json
   Content-Type: application/json
   Cache-Control: public, max-age=31536000`;
   }
 
   private generateNetlifyToml(): string {
-    return `[build]
+    return `# Netlify configuration for React project deployment
+[build]
   command = "npm run build"
   publish = "dist"
-
+  
 [build.environment]
   NODE_VERSION = "18"
+  NPM_VERSION = "9"
 
-# MIME type configuration for JavaScript modules
+# SPA redirects
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers for better performance and security
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[headers]]
+  for = "/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
 [[headers]]
   for = "/*.js"
   [headers.values]
     Content-Type = "application/javascript; charset=utf-8"
-
-[[headers]]
-  for = "/*.jsx"
-  [headers.values]
-    Content-Type = "application/javascript; charset=utf-8"
-
-[[headers]]
-  for = "/*.mjs"
-  [headers.values]
-    Content-Type = "application/javascript; charset=utf-8"
-
-[[headers]]
-  for = "/assets/*.js"
-  [headers.values]
-    Content-Type = "application/javascript; charset=utf-8"
-
-[[headers]]
-  for = "/src/*.js"
-  [headers.values]
-    Content-Type = "application/javascript; charset=utf-8"
-
-[[headers]]
-  for = "/src/*.jsx"
-  [headers.values]
-    Content-Type = "application/javascript; charset=utf-8"
+    Cache-Control = "public, max-age=31536000"
 
 [[headers]]
   for = "/*.css"
   [headers.values]
     Content-Type = "text/css; charset=utf-8"
-
-[[headers]]
-  for = "/assets/*.css"
-  [headers.values]
-    Content-Type = "text/css; charset=utf-8"
-
-# Single Page Application redirect
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200`;
+    Cache-Control = "public, max-age=31536000"`;
   }
 
   private generateGoogleFontsLink(pageData: any): string {
@@ -640,13 +704,23 @@ export { default as TestimonialsVariation6 } from './TestimonialsVariation6';`;
     
     const componentName = `${this.capitalize(componentType)}Variation${variation}`;
     
+    // Safely serialize JSON data
+    const safeJSONStringify = (obj: any) => {
+      try {
+        return JSON.stringify(obj || {});
+      } catch (error) {
+        console.warn('Failed to serialize object:', error);
+        return '{}';
+      }
+    };
+    
     return `<${componentName}
         key="${component.id}"
-        content={${JSON.stringify(component.content || {})}}
-        styles={${JSON.stringify(component.custom_styles || {})}}
-        visibility={${JSON.stringify(component.visibility || {})}}
-        mediaUrls={${JSON.stringify(component.media_urls || {})}}
-        customActions={${JSON.stringify(component.custom_actions || {})}}
+        content={${safeJSONStringify(component.content)}}
+        styles={${safeJSONStringify(component.custom_styles)}}
+        visibility={${safeJSONStringify(component.visibility)}}
+        mediaUrls={${safeJSONStringify(component.media_urls)}}
+        customActions={${safeJSONStringify(component.custom_actions)}}
         globalTheme={globalTheme}
         isEditing={false}
         viewport="responsive"
@@ -752,6 +826,21 @@ export default {
     autoprefixer: {},
   },
 }`;
+  }
+
+  private generateFavicon(): string {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="4" fill="#3b82f6"/>
+  <path d="M8 8h16v16H8z" fill="#ffffff" opacity="0.2"/>
+  <path d="M12 12h8v2h-8zm0 4h8v2h-8zm0 4h6v2h-6z" fill="#ffffff"/>
+</svg>`;
+  }
+
+  private generateRobotsTxt(): string {
+    return `User-agent: *
+Allow: /
+
+Sitemap: /sitemap.xml`;
   }
 
   private generateComponentFile(component: LandingPageComponent): string {
@@ -861,5 +950,520 @@ export const renderButton = ({
     </button>
   );
 };`;
+  }
+
+  private generateInlineReactBundle(pageData: any): string {
+    // Generate a complete React application bundle as JavaScript
+    const components = pageData.components || [];
+    const componentCode = this.generateAllComponentsCode(components);
+    const appCode = this.generateAppCode(pageData);
+    
+    return `
+// Component utilities
+function cn(...classes) {
+  return classes.filter(Boolean).join(' ');
+}
+
+// Button renderer utility
+function renderButton(action, className, style, content) {
+  const handleClick = () => {
+    if (action?.type === 'marketplace_checkout' && action.url) {
+      window.open(action.url, '_blank');
+    } else if (action?.type === 'external_link' && action.url) {
+      window.open(action.url, '_blank');
+    } else if (action?.type === 'scroll_to' && action.target_id) {
+      const element = document.getElementById(action.target_id);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
+
+  return React.createElement('button', {
+    onClick: handleClick,
+    className: className,
+    style: style
+  }, content);
+}
+
+// Generated Components
+${componentCode}
+
+// Main App Component
+${appCode}
+
+// Initialize React app
+try {
+  console.log('Initializing React app...');
+  const rootElement = document.getElementById('root');
+  if (!rootElement) {
+    throw new Error('Root element not found');
+  }
+  
+  if (typeof React === 'undefined') {
+    throw new Error('React is not loaded');
+  }
+  
+  if (typeof ReactDOM === 'undefined') {
+    throw new Error('ReactDOM is not loaded');
+  }
+  
+  // Test React.createElement before using it
+  try {
+    const testElement = React.createElement('div', null, 'Test');
+    console.log('React.createElement test passed');
+  } catch (createError) {
+    throw new Error('React.createElement failed: ' + createError.message);
+  }
+  
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(React.createElement(App));
+  console.log('React app initialized successfully!');
+} catch (error) {
+  console.error('Failed to initialize React app:', error);
+  // Fallback: Show error message
+  const rootElement = document.getElementById('root');
+  if (rootElement) {
+    rootElement.innerHTML = '<div style="padding: 20px; text-align: center; color: red;"><h1>App Loading Error</h1><p>' + error.message + '</p><p>Please check the browser console for more details.</p><p>Using fallback content instead...</p></div>';
+    
+    // Trigger fallback immediately on error
+    setTimeout(() => {
+      rootElement.innerHTML = \`
+        <div style="min-height: 100vh; font-family: Inter, sans-serif;">
+          ${this.generateFallbackHTML(pageData)}
+        </div>
+      \`;
+    }, 100);
+  }
+}
+`;
+  }
+
+  private generateInlineStyles(pageData: any): string {
+    // Generate all CSS including Tailwind utilities and component styles
+    const globalTheme = pageData.global_theme || this.getDefaultGlobalTheme();
+    
+    return `
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: ${globalTheme.fontFamily || 'Inter, system-ui, sans-serif'};
+  line-height: 1.6;
+  color: ${globalTheme.textColor || '#333333'};
+  background: ${globalTheme.backgroundColor || '#ffffff'};
+}
+
+/* Essential Tailwind-like utilities */
+.container { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
+.mx-auto { margin-left: auto; margin-right: auto; }
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+.min-h-screen { min-height: 100vh; }
+.py-8 { padding-top: 2rem; padding-bottom: 2rem; }
+.py-12 { padding-top: 3rem; padding-bottom: 3rem; }
+.py-16 { padding-top: 4rem; padding-bottom: 4rem; }
+.px-4 { padding-left: 1rem; padding-right: 1rem; }
+.px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+.mb-4 { margin-bottom: 1rem; }
+.mb-6 { margin-bottom: 1.5rem; }
+.mb-8 { margin-bottom: 2rem; }
+.mt-8 { margin-top: 2rem; }
+.text-xl { font-size: 1.25rem; }
+.text-2xl { font-size: 1.5rem; }
+.text-3xl { font-size: 1.875rem; }
+.text-4xl { font-size: 2.25rem; }
+.text-5xl { font-size: 3rem; }
+.font-bold { font-weight: 700; }
+.font-semibold { font-weight: 600; }
+.rounded { border-radius: 0.25rem; }
+.rounded-lg { border-radius: 0.5rem; }
+.bg-blue-600 { background-color: #2563eb; }
+.bg-gray-100 { background-color: #f3f4f6; }
+.text-white { color: #ffffff; }
+.text-gray-600 { color: #4b5563; }
+.text-gray-800 { color: #1f2937; }
+.hover\\:bg-blue-700:hover { background-color: #1d4ed8; }
+.transition { transition-property: all; transition-duration: 150ms; }
+.cursor-pointer { cursor: pointer; }
+.block { display: block; }
+.inline-block { display: inline-block; }
+.grid { display: grid; }
+.gap-4 { gap: 1rem; }
+.gap-6 { gap: 1.5rem; }
+.gap-8 { gap: 2rem; }
+
+/* Responsive grid */
+.grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+.grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+@media (min-width: 768px) {
+  .md\\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .md\\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .md\\:text-5xl { font-size: 3rem; }
+  .md\\:text-6xl { font-size: 3.75rem; }
+}
+
+@media (min-width: 1024px) {
+  .lg\\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .lg\\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* Component-specific styles */
+.hero-section { padding: 4rem 0; }
+.cta-section { padding: 3rem 0; }
+.features-section { padding: 3rem 0; }
+.testimonials-section { padding: 3rem 0; }
+.pricing-section { padding: 3rem 0; }
+.faq-section { padding: 3rem 0; }
+
+/* Button styles */
+.btn {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-primary {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background-color: #1d4ed8;
+}
+
+.btn-secondary {
+  background-color: #6b7280;
+  color: #ffffff;
+}
+
+.btn-secondary:hover {
+  background-color: #4b5563;
+}
+`;
+  }
+
+  private generateAllComponentsCode(components: LandingPageComponent[]): string {
+    return components.map((component, index) => {
+      const componentType = component.component_variation?.component_type;
+      const variation = component.component_variation?.variation_number;
+      
+      if (!componentType || !variation) return '';
+      
+      const componentName = `${this.capitalize(componentType)}Variation${variation}`;
+      const componentContent = this.generateComponentFileContent(component);
+      
+      return `
+// ${componentName} Component
+function ${componentName}(props) {
+  ${componentContent}
+}
+`;
+    }).join('\n');
+  }
+
+  private generateComponentFileContent(component: LandingPageComponent): string {
+    const componentType = component.component_variation?.component_type;
+    
+    switch (componentType) {
+      case 'hero':
+        return this.generateHeroComponentContent(component);
+      case 'features':
+        return this.generateFeaturesComponentContent(component);
+      case 'cta':
+        return this.generateCtaComponentContent(component);
+      case 'testimonials':
+        return this.generateTestimonialsComponentContent(component);
+      case 'pricing':
+        return this.generatePricingComponentContent(component);
+      case 'faq':
+        return this.generateFaqComponentContent(component);
+      default:
+        return 'return React.createElement("div", null, "Component not implemented");';
+    }
+  }
+
+  private generateAppCode(pageData: any): string {
+    const components = pageData.components || [];
+    const componentElements = components.map((component, index) => {
+      const componentType = component.component_variation?.component_type;
+      const variation = component.component_variation?.variation_number;
+      
+      if (!componentType || !variation) return '';
+      
+      const componentName = `${this.capitalize(componentType)}Variation${variation}`;
+      return `React.createElement(${componentName}, { key: ${index}, ...${JSON.stringify(component)} })`;
+    }).filter(Boolean).join(',\n    ');
+
+    return `
+function App() {
+  return React.createElement('div', { className: 'min-h-screen' },
+    ${componentElements}
+  );
+}
+`;
+  }
+
+  private generateHeroComponentContent(component: LandingPageComponent): string {
+    const content = component.content || {};
+    const customActions = component.custom_actions || {};
+    const marketplaceData = (component as any).marketplace_data;
+    
+    // Try to get button action from multiple sources
+    let buttonAction = content.button?.action || customActions['cta-button'] || customActions['ctaButton'];
+    let buttonText = content.button?.text || content.ctaButton || 'Get Started';
+    
+    // Handle different action types
+    if (buttonAction?.type === 'checkout' && marketplaceData) {
+      buttonAction = {
+        type: 'marketplace_checkout',
+        url: marketplaceData.checkout_url
+      };
+    }
+    
+    const buttonElement = buttonAction ? 
+      `renderButton(${JSON.stringify(buttonAction)}, 'btn btn-primary', {}, '${this.escapeHtml(buttonText)}')` : 
+      (buttonText !== 'Get Started' ? `renderButton({type: 'external_link', url: '#'}, 'btn btn-primary', {}, '${this.escapeHtml(buttonText)}')` : 'null');
+    
+    return `
+  return React.createElement('section', { 
+    className: 'hero-section text-center py-16',
+    style: { backgroundColor: '${content.backgroundColor || '#ffffff'}' }
+  }, 
+    React.createElement('div', { className: 'container mx-auto px-4' },
+      React.createElement('h1', { 
+        className: 'text-4xl md:text-6xl font-bold mb-6',
+        style: { color: '${content.textColor || '#1f2937'}' }
+      }, '${this.escapeHtml(content.headline || 'Hero Headline')}'),
+      React.createElement('p', { 
+        className: 'text-xl text-gray-600 mb-8',
+        style: { color: '${content.subtitleColor || '#6b7280'}' }
+      }, '${this.escapeHtml(content.subtitle || content.subheadline || 'Hero subtitle text')}'),
+      ${buttonElement}
+    )
+  );
+`;
+  }
+
+  private generateFeaturesComponentContent(component: LandingPageComponent): string {
+    const content = component.content || {};
+    const features = content.features || [];
+    
+    const featureElements = features.map((feature: any, index: number) => `
+        React.createElement('div', { key: ${index}, className: 'text-center' },
+          React.createElement('h3', { className: 'text-xl font-semibold mb-4' }, '${this.escapeHtml(feature.title || '')}'),
+          React.createElement('p', { className: 'text-gray-600' }, '${this.escapeHtml(feature.description || '')}')
+        )`).join(',\n');
+    
+    return `
+  return React.createElement('section', { 
+    className: 'features-section py-16',
+    style: { backgroundColor: '${content.backgroundColor || '#f9fafb'}' }
+  },
+    React.createElement('div', { className: 'container mx-auto px-4' },
+      React.createElement('h2', { 
+        className: 'text-3xl font-bold text-center mb-12',
+        style: { color: '${content.textColor || '#1f2937'}' }
+      }, '${this.escapeHtml(content.title || 'Features')}'),
+      React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-8' },
+        ${featureElements}
+      )
+    )
+  );
+`;
+  }
+
+  private generateCtaComponentContent(component: LandingPageComponent): string {
+    const content = component.content || {};
+    const customActions = component.custom_actions || {};
+    const marketplaceData = (component as any).marketplace_data;
+    
+    // Try to get button action from multiple sources
+    let buttonAction = content.button?.action || customActions['cta-button'] || customActions['ctaButton'];
+    let buttonText = content.button?.text || content.ctaButton || 'Get Started';
+    
+    // Handle different action types
+    if (buttonAction?.type === 'checkout' && marketplaceData) {
+      buttonAction = {
+        type: 'marketplace_checkout',
+        url: marketplaceData.checkout_url
+      };
+    }
+    
+    const buttonElement = buttonAction ? 
+      `renderButton(${JSON.stringify(buttonAction)}, 'btn btn-primary', { backgroundColor: '#ffffff', color: '#2563eb' }, '${this.escapeHtml(buttonText)}')` : 
+      (buttonText !== 'Get Started' ? `renderButton({type: 'external_link', url: '#'}, 'btn btn-primary', { backgroundColor: '#ffffff', color: '#2563eb' }, '${this.escapeHtml(buttonText)}')` : 'null');
+    
+    return `
+  return React.createElement('section', { 
+    className: 'cta-section text-center py-16',
+    style: { backgroundColor: '${content.backgroundColor || '#2563eb'}' }
+  }, 
+    React.createElement('div', { className: 'container mx-auto px-4' },
+      React.createElement('h2', { 
+        className: 'text-3xl font-bold mb-6',
+        style: { color: '${content.textColor || '#ffffff'}' }
+      }, '${this.escapeHtml(content.headline || 'Call to Action')}'),
+      React.createElement('p', { 
+        className: 'text-xl mb-8',
+        style: { color: '${content.subtitleColor || '#e5e7eb'}' }
+      }, '${this.escapeHtml(content.subtitle || content.subheadline || 'Take action now')}'),
+      ${buttonElement}
+    )
+  );
+`;
+  }
+
+  private generateTestimonialsComponentContent(component: LandingPageComponent): string {
+    const content = component.content || {};
+    const testimonials = content.testimonials || [];
+    
+    const testimonialElements = testimonials.map((testimonial: any, index: number) => `
+        React.createElement('div', { key: ${index}, className: 'bg-gray-100 p-6 rounded-lg' },
+          React.createElement('p', { className: 'text-gray-600 mb-4' }, '${this.escapeHtml(testimonial.quote || '')}'),
+          React.createElement('div', { className: 'font-semibold' }, '${this.escapeHtml(testimonial.author || '')}')
+        )`).join(',\n');
+    
+    return `
+  return React.createElement('section', { 
+    className: 'testimonials-section py-16',
+    style: { backgroundColor: '${content.backgroundColor || '#ffffff'}' }
+  },
+    React.createElement('div', { className: 'container mx-auto px-4' },
+      React.createElement('h2', { 
+        className: 'text-3xl font-bold text-center mb-12',
+        style: { color: '${content.textColor || '#1f2937'}' }
+      }, '${this.escapeHtml(content.title || 'Testimonials')}'),
+      React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 gap-8' },
+        ${testimonialElements}
+      )
+    )
+  );
+`;
+  }
+
+  private generatePricingComponentContent(component: LandingPageComponent): string {
+    const content = component.content || {};
+    const plans = content.plans || [];
+    
+    const planElements = plans.map((plan: any, index: number) => `
+        React.createElement('div', { key: ${index}, className: 'bg-white p-6 rounded-lg border text-center' },
+          React.createElement('h3', { className: 'text-xl font-semibold mb-4' }, '${this.escapeHtml(plan.name || '')}'),
+          React.createElement('div', { className: 'text-3xl font-bold mb-4' }, '${this.escapeHtml(plan.price || '')}'),
+          React.createElement('p', { className: 'text-gray-600 mb-6' }, '${this.escapeHtml(plan.description || '')}'),
+          ${plan.button ? `renderButton(${JSON.stringify(plan.button.action)}, 'btn btn-primary w-full', {}, '${this.escapeHtml(plan.button.text || 'Choose Plan')}')` : 'null'}
+        )`).join(',\n');
+    
+    return `
+  return React.createElement('section', { 
+    className: 'pricing-section py-16',
+    style: { backgroundColor: '${content.backgroundColor || '#f9fafb'}' }
+  },
+    React.createElement('div', { className: 'container mx-auto px-4' },
+      React.createElement('h2', { 
+        className: 'text-3xl font-bold text-center mb-12',
+        style: { color: '${content.textColor || '#1f2937'}' }
+      }, '${this.escapeHtml(content.title || 'Pricing')}'),
+      React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-8' },
+        ${planElements}
+      )
+    )
+  );
+`;
+  }
+
+  private generateFaqComponentContent(component: LandingPageComponent): string {
+    const content = component.content || {};
+    const faqs = content.faqs || [];
+    
+    const faqElements = faqs.map((faq: any, index: number) => `
+        React.createElement('div', { key: ${index}, className: 'mb-6 border-b pb-6' },
+          React.createElement('h3', { className: 'text-lg font-semibold mb-2' }, '${this.escapeHtml(faq.question || '')}'),
+          React.createElement('p', { className: 'text-gray-600' }, '${this.escapeHtml(faq.answer || '')}')
+        )`).join(',\n');
+    
+    return `
+  return React.createElement('section', { 
+    className: 'faq-section py-16',
+    style: { backgroundColor: '${content.backgroundColor || '#ffffff'}' }
+  },
+    React.createElement('div', { className: 'container mx-auto px-4' },
+      React.createElement('h2', { 
+        className: 'text-3xl font-bold text-center mb-12',
+        style: { color: '${content.textColor || '#1f2937'}' }
+      }, '${this.escapeHtml(content.title || 'FAQ')}'),
+      React.createElement('div', { className: 'max-w-3xl mx-auto' },
+        ${faqElements}
+      )
+    )
+  );
+`;
+  }
+
+  private generateFallbackHTML(pageData: any): string {
+    const components = pageData.components || [];
+    
+    return components.map((component: LandingPageComponent) => {
+      const content = component.content || {};
+      const componentType = component.component_variation?.component_type;
+      
+      if (componentType === 'hero') {
+        return `
+          <section style="text-align: center; padding: 4rem 1rem; background-color: ${content.backgroundColor || '#ffffff'};">
+            <div style="max-width: 1200px; margin: 0 auto;">
+              <h1 style="font-size: 2.5rem; font-weight: bold; margin-bottom: 1.5rem; color: ${content.textColor || '#1f2937'};">
+                ${this.escapeHtml(content.headline || 'Hero Headline')}
+              </h1>
+              <p style="font-size: 1.25rem; margin-bottom: 2rem; color: ${content.subtitleColor || '#6b7280'};">
+                ${this.escapeHtml(content.subtitle || content.subheadline || 'Hero subtitle text')}
+              </p>
+              ${content.button ? `
+                <button style="background-color: #2563eb; color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; border: none; font-weight: 600; cursor: pointer;" onclick="window.open('${content.button.action?.url || '#'}', '_blank')">
+                  ${this.escapeHtml(content.button.text || content.ctaButton || 'Get Started')}
+                </button>
+              ` : ''}
+            </div>
+          </section>
+        `;
+      } else if (componentType === 'cta') {
+        return `
+          <section style="text-align: center; padding: 3rem 1rem; background-color: ${content.backgroundColor || '#2563eb'};">
+            <div style="max-width: 1200px; margin: 0 auto;">
+              <h2 style="font-size: 1.875rem; font-weight: bold; margin-bottom: 1.5rem; color: ${content.textColor || '#ffffff'};">
+                ${this.escapeHtml(content.headline || 'Call to Action')}
+              </h2>
+              <p style="font-size: 1.25rem; margin-bottom: 2rem; color: ${content.subtitleColor || '#e5e7eb'};">
+                ${this.escapeHtml(content.subtitle || content.subheadline || 'Take action now')}
+              </p>
+              ${content.button ? `
+                <button style="background-color: #ffffff; color: #2563eb; padding: 0.75rem 1.5rem; border-radius: 0.5rem; border: none; font-weight: 600; cursor: pointer;" onclick="window.open('${content.button.action?.url || '#'}', '_blank')">
+                  ${this.escapeHtml(content.button.text || content.ctaButton || 'Get Started')}
+                </button>
+              ` : ''}
+            </div>
+          </section>
+        `;
+      }
+      return '';
+    }).join('');
   }
 }
