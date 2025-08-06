@@ -50,6 +50,10 @@ export class ReactProjectGenerator {
       // Netlify configuration with proper build settings
       'netlify.toml': this.generateBuildableNetlifyToml(),
       
+      // Node.js version specification
+      '.nvmrc': '18',
+      '.node-version': '18.17.0',
+      
       // React application entry points
       'src/main.tsx': this.generateMainTsx(pageData),
       'src/App.tsx': this.generateAppTsx(pageData),
@@ -263,14 +267,30 @@ export default {
 
   private generateBuildableNetlifyToml(): string {
     return `# Netlify configuration for React project deployment
-# This project will be built by Netlify using Vite
+# This project MUST be built by Netlify using Vite
+# DO NOT skip builds - this is a React application that requires building
 
 [build]
   command = "npm run build"
   publish = "dist"
-
+  
 [build.environment]
   NODE_VERSION = "18"
+  NPM_FLAGS = "--production=false"
+  
+# Force build processing
+[build.processing]
+  skip_processing = false
+  
+# Context-specific build settings
+[context.production]
+  command = "npm ci && npm run build"
+  
+[context.deploy-preview]
+  command = "npm ci && npm run build"
+  
+[context.branch-deploy]
+  command = "npm ci && npm run build"
 
 # SPA redirect
 [[redirects]]

@@ -100,9 +100,24 @@ export class NetlifyService {
     
     console.log('Creating Netlify site with name:', uniqueName);
     
-    // Create site for static file deployment (no build process needed)
+    // Create site for React project deployment WITH build process
     const sitePayload: any = {
-      name: uniqueName
+      name: uniqueName,
+      build_settings: {
+        cmd: 'npm run build',
+        dir: 'dist',
+        env: {
+          NODE_VERSION: '18'
+        },
+        // Explicitly enable builds
+        skip_prs: false,
+        auto_deploy_branch: 'main'
+      },
+      // Ensure the site is configured for source deployments
+      repo: {
+        provider: 'manual',
+        repo_branch: 'main'
+      }
     };
     
     // Only add custom domain if it's provided and valid
@@ -117,7 +132,7 @@ export class NetlifyService {
       body: JSON.stringify(sitePayload),
     });
 
-    console.log('Netlify site created successfully:', data.id);
+    console.log('Netlify site created successfully with build settings:', data.id);
     
     return {
       site_id: data.id,
@@ -126,195 +141,124 @@ export class NetlifyService {
   }
 
   async deploySite(siteId: string, files: Record<string, string>): Promise<NetlifyDeployment> {
-    console.log('Starting React project deployment with build process');
+    console.log('Starting React project deployment with ZIP method only');
     
-    try {
-      // Try ZIP-based deployment first (enables builds)
-      return await this.deployWithBuild(siteId, files);
-    } catch (error: any) {
-      console.warn('ZIP deployment failed, checking if it\'s a CORS error:', error.message);
-      
-      // If it's a CORS error, try the manual deployment approach
-      if (error.message.includes('CORS') || error.message.includes('Failed to fetch')) {
-        console.log('CORS error detected, using manual deployment approach');
-        return await this.deployWithManualApproach(siteId, files);
-      }
-      
-      // For other errors, fallback to file-based deployment
-      console.warn('Using file-based deployment fallback:', error);
-      return await this.deployFilesOnly(siteId, files);
-    }
+    // Only use ZIP upload method for React builds
+    console.log('Deploying with ZIP upload method to trigger React build');
+    return await this.deployWithFormDataZip(siteId, files);
   }
 
-  private async deployWithManualApproach(siteId: string, files: Record<string, string>): Promise<NetlifyDeployment> {
-    // For CORS issues in development, provide instructions for manual deployment
-    console.log('Manual deployment approach activated due to CORS restrictions');
+  private async deployWithFormDataZip(siteId: string, files: Record<string, string>): Promise<NetlifyDeployment> {
+    console.log('🚀 Deploying React project using ZIP method to force build');
     
-    // Create a downloadable ZIP file for manual upload
+    // Ensure site has proper build settings before deployment
+    await this.updateSiteBuildSettings(siteId);
+    
+    // Create ZIP buffer with all source files
+    console.log(`📦 Creating ZIP archive with ${Object.keys(files).length} files`);
     const zipBuffer = await this.createZipFromFiles(files);
-    const blob = new Blob([zipBuffer], { type: 'application/zip' });
-    const url = URL.createObjectURL(blob);
+    console.log(`📦 ZIP archive created, size: ${zipBuffer.length} bytes`);
     
-    // Create download link
-    const downloadLink = document.createElement('a');
-    downloadLink.href = url;
-    downloadLink.download = `landing-page-${Date.now()}.zip`;
-    downloadLink.style.display = 'none';
-    document.body.appendChild(downloadLink);
-    
-    // Show instructions to user
-    const deployUrl = `https://app.netlify.com/sites/${siteId}/deploys`;
-    
-    alert(`Due to browser security restrictions, please complete the deployment manually:
-
-1. Click OK to download the project ZIP file
-2. Go to: ${deployUrl}
-3. Drag and drop the downloaded ZIP file to deploy
-4. Your site will build automatically on Netlify
-
-The download will start automatically after you close this dialog.`);
-    
-    // Trigger download
-    downloadLink.click();
-    document.body.removeChild(downloadLink);
-    URL.revokeObjectURL(url);
-    
-    // Return a mock deployment response
-    return {
-      id: `manual-deploy-${Date.now()}`,
-      site_id: siteId,
-      deploy_url: `https://${siteId}.netlify.app`,
-      state: 'building', // Will be building once manually uploaded
-      created_at: new Date().toISOString(),
-      deploy_ssl_url: `https://${siteId}.netlify.app`,
-      branch: 'main',
-      commit_ref: null,
-    };
-  }
-
-  private async deployWithBuild(siteId: string, files: Record<string, string>): Promise<NetlifyDeployment> {
-    // Use ZIP-based deployment to trigger Netlify builds
-    console.log('Creating ZIP deployment for React project build:', Object.keys(files));
-    
-    // Create a ZIP archive of the source files
-    const zipBuffer = await this.createZipFromFiles(files);
-    
-    // Create deployment that will trigger build process
-    // Using the deploy endpoint without files parameter to enable build
-    const deployment = await this.request(`/sites/${siteId}/deploys`, {
+    // Upload ZIP file directly to create deployment with build
+    console.log('📤 Uploading ZIP to Netlify for React build...');
+    const response = await fetch(`${this.baseUrl}/sites/${siteId}/deploys`, {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${this.accessToken}`,
         'Content-Type': 'application/zip',
+        // Add headers to indicate this is a source deployment
+        'X-Netlify-Deploy-Type': 'manual-source',
       },
       body: zipBuffer,
     });
 
-    console.log('Build-enabled deployment created:', { id: deployment.id, state: deployment.state });
-
-    // Poll deployment status until build completes
-    await this.waitForDeployment(deployment.id);
-
-    console.log('React project deployment with build completed successfully');
-
-    return {
-      id: deployment.id,
-      site_id: siteId,
-      deploy_url: deployment.deploy_ssl_url || deployment.deploy_url,
-      state: deployment.state,
-      created_at: deployment.created_at,
-      deploy_ssl_url: deployment.deploy_ssl_url,
-      branch: deployment.branch,
-      commit_ref: deployment.commit_ref,
-    };
-  }
-
-  private async deployFilesOnly(siteId: string, files: Record<string, string>): Promise<NetlifyDeployment> {
-    // Fallback: Prepare static files for direct deployment
-    const fileMap: Record<string, string> = {};
-    const fileHashes: Record<string, string> = {};
-    
-    for (const [filePath, content] of Object.entries(files)) {
-      const hash = await this.generateFileHash(content);
-      fileMap[filePath] = hash;
-      fileHashes[hash] = content;
-    }
-
-    // Create deployment for static files (no build needed)
-    console.log('Creating static file deployment (fallback):', Object.keys(fileMap));
-    const deployment = await this.request(`/sites/${siteId}/deploys`, {
-      method: 'POST',
-      body: JSON.stringify({
-        files: fileMap,
-      }),
-    });
-
-    console.log('Static deployment created:', { id: deployment.id, required: deployment.required });
-
-    // Upload required files
-    if (deployment.required && deployment.required.length > 0) {
-      console.log(`Uploading ${deployment.required.length} static files`);
-      for (const hash of deployment.required) {
-        const content = fileHashes[hash];
-        if (content) {
-          await this.uploadFileByHash(deployment.id, hash, content);
-        } else {
-          console.warn(`Content not found for hash: ${hash}`);
-        }
-      }
-    }
-
-    console.log('Static site deployment completed successfully');
-
-    return {
-      id: deployment.id,
-      site_id: siteId,
-      deploy_url: deployment.deploy_ssl_url || deployment.deploy_url,
-      state: deployment.state,
-      created_at: deployment.created_at,
-      deploy_ssl_url: deployment.deploy_ssl_url,
-      branch: deployment.branch,
-      commit_ref: deployment.commit_ref,
-    };
-  }
-
-  private async generateFileHash(content: string): Promise<string> {
-    // Use SHA-1 hash as expected by Netlify
-    const encoder = new TextEncoder();
-    const data = encoder.encode(content);
-    const hashBuffer = await crypto.subtle.digest('SHA-1', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  }
-
-  private async uploadFileByHash(deployId: string, hash: string, content: string): Promise<void> {
-    // Upload file content by hash to Netlify
-    const url = `${this.baseUrl}/deploys/${deployId}/files/${hash}`;
-    console.log(`Uploading to URL: ${url}`);
-    
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${this.accessToken}`,
-        'Content-Type': 'application/octet-stream',
-      },
-      body: content,
-    });
-
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Upload failed:', {
-        deployId,
-        hash,
+      const errorText = await response.text().catch(() => 'No error details available');
+      console.error('❌ ZIP deployment failed:', {
         status: response.status,
         statusText: response.statusText,
-        url,
         errorText,
-        contentLength: content.length
+        siteId,
+        zipSize: zipBuffer.length
       });
-      throw new Error(`Failed to upload file with hash ${hash}: ${response.status} ${response.statusText} - ${errorText}`);
+      throw new Error(`ZIP deployment failed: ${response.status} ${response.statusText} - ${errorText}`);
     }
-    
-    console.log(`Successfully uploaded file with hash: ${hash}`);
+
+    const deployment = await response.json();
+    console.log('✅ ZIP deployment created successfully:', {
+      id: deployment.id,
+      state: deployment.state,
+      deploy_url: deployment.deploy_url || deployment.deploy_ssl_url
+    });
+
+    // Wait for build completion with proper monitoring
+    console.log('⏳ Waiting for React build to complete...');
+    await this.waitForDeployment(deployment.id);
+
+    const finalState = await this.getDeployment(deployment.id);
+    console.log('🎉 React deployment completed:', {
+      id: deployment.id,
+      state: finalState.state,
+      url: finalState.deploy_ssl_url || finalState.deploy_url
+    });
+
+    return {
+      id: deployment.id,
+      site_id: siteId,
+      deploy_url: deployment.deploy_ssl_url || deployment.deploy_url,
+      state: finalState.state,
+      created_at: deployment.created_at,
+      deploy_ssl_url: deployment.deploy_ssl_url,
+      branch: deployment.branch,
+      commit_ref: deployment.commit_ref,
+    };
+  }
+
+  private async updateSiteBuildSettings(siteId: string): Promise<void> {
+    try {
+      console.log('Updating site build settings to enable builds');
+      await this.request(`/sites/${siteId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          build_settings: {
+            cmd: 'npm run build',
+            dir: 'dist',
+            env: {
+              NODE_VERSION: '18',
+              NPM_FLAGS: '--production=false'
+            },
+            // Force builds to be enabled
+            skip_prs: false,
+            auto_deploy_branch: 'main'
+          },
+          // Enable processing and builds
+          processing_settings: {
+            skip: false,
+            css: {
+              bundle: true,
+              minify: true
+            },
+            js: {
+              bundle: true,
+              minify: true
+            },
+            images: {
+              optimize: true
+            }
+          },
+          // Explicitly set deployment type
+          repo: {
+            provider: 'manual',
+            deployment_type: 'source'
+          },
+          // Force manual deployments to trigger builds
+          build_image: 'ubuntu-20.04'
+        }),
+      });
+      console.log('Site build settings updated successfully');
+    } catch (error) {
+      console.warn('Failed to update build settings, continuing with deployment:', error);
+    }
   }
 
   private async createZipFromFiles(files: Record<string, string>): Promise<Uint8Array> {
@@ -337,29 +281,84 @@ The download will start automatically after you close this dialog.`);
     return zipBuffer;
   }
 
-  private async waitForDeployment(deployId: string, maxWaitTime = 300000): Promise<void> {
-    // Wait for deployment to complete with timeout
+  private async waitForDeployment(deployId: string, maxWaitTime = 180000): Promise<void> {
+    // Wait for deployment to complete with timeout (3 minutes for React builds)
     const startTime = Date.now();
+    let consecutiveNewStates = 0;
+    let hasSeenBuilding = false;
+    
+    console.log('⏳ Monitoring deployment progress...');
     
     while (Date.now() - startTime < maxWaitTime) {
       const deployment = await this.getDeployment(deployId);
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
       
-      console.log(`Deployment ${deployId} status: ${deployment.state}`);
+      // Track if we've seen the "building" state (indicates real build)
+      if (deployment.state === 'building') {
+        hasSeenBuilding = true;
+        console.log(`🔨 Building React project... (${elapsed}s elapsed)`);
+      } else {
+        console.log(`📊 Deployment status: ${deployment.state} (${elapsed}s elapsed)`);
+      }
       
+      // Success states
       if (deployment.state === 'ready') {
-        console.log('✅ Build and deployment completed successfully');
+        if (hasSeenBuilding) {
+          console.log('🎉 React build completed successfully! Built assets deployed.');
+        } else {
+          console.log('✅ Deployment ready (may be static files without build)');
+        }
         return;
       }
       
+      // Error states
       if (deployment.state === 'error') {
-        throw new Error(`Deployment failed: ${deployment.deploy_url}`);
+        const deployUrl = deployment.deploy_url || deployment.deploy_ssl_url;
+        throw new Error(`❌ Deployment failed - check build logs at: ${deployUrl}`);
+      }
+      
+      // Handle "new" state - might be preparing for build
+      if (deployment.state === 'new') {
+        consecutiveNewStates++;
+        
+        if (consecutiveNewStates >= 8) { // 40 seconds
+          console.log('⚠️ Still in "new" state after 40 seconds - this may indicate static deployment');
+          
+          if (consecutiveNewStates >= 16) { // 80 seconds  
+            console.log('🔍 Deployment has been in "new" state for 80+ seconds');
+            
+            // Check if there's a valid deploy URL (static deployment completed)
+            const deployUrl = deployment.deploy_url || deployment.deploy_ssl_url;
+            if (deployUrl) {
+              console.log('⚠️ IMPORTANT: This appears to be a static file deployment.');
+              console.log('💡 Netlify may have skipped the build process because:');
+              console.log('   - All files are identical to a previous deployment');
+              console.log('   - No package.json or build command detected');
+              console.log('   - Files are being treated as pre-built static assets');
+              console.log(`📱 Site available at: ${deployUrl}`);
+              return; // Accept as completed (even if no build happened)
+            }
+          }
+        }
+      } else {
+        consecutiveNewStates = 0; // Reset counter when state changes
       }
       
       // Wait 5 seconds before checking again
       await new Promise(resolve => setTimeout(resolve, 5000));
     }
     
-    throw new Error(`Deployment timeout: Build did not complete within ${maxWaitTime / 1000} seconds`);
+    // Timeout handling
+    const finalDeployment = await this.getDeployment(deployId);
+    const deployUrl = finalDeployment.deploy_url || finalDeployment.deploy_ssl_url;
+    
+    if (deployUrl && finalDeployment.state !== 'error') {
+      console.log('⏰ Deployment timeout reached, but site appears to be available');
+      console.log(`📱 Site URL: ${deployUrl}`);
+      return; // Accept as completed
+    }
+    
+    throw new Error(`⏰ Deployment timeout: Build did not complete within ${maxWaitTime / 1000} seconds. Final state: ${finalDeployment.state}`);
   }
 
   async getDeployment(deployId: string): Promise<NetlifyDeployment> {

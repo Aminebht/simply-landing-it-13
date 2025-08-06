@@ -12,7 +12,7 @@ export interface NetlifyDeployment {
   id: string;
   site_id: string;
   deploy_url: string;
-  state: 'building' | 'ready' | 'error';
+  state: 'new' | 'building' | 'ready' | 'error' | 'prepared' | 'uploading' | 'uploaded' | 'enqueued' | 'processing';
   created_at: string;
   deploy_ssl_url?: string;
   branch?: string;
