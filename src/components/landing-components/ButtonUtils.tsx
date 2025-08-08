@@ -30,7 +30,8 @@ export function handleButtonClick(action: unknown, isEditing: boolean, e: React.
         if (url && !/^https?:\/\//i.test(url)) {
           url = 'https://' + url;
         }
-        window.open(url, actionObj.newTab ? '_blank' : '_self');
+        // Always open external links in new tab to avoid navigating away from the page
+        window.open(url, '_blank');
       }
       break;
     case 'scroll':
@@ -48,9 +49,7 @@ export function handleButtonClick(action: unknown, isEditing: boolean, e: React.
         handleCheckout(action, isEditing);
       } else {
         console.warn('Checkout action missing productId:', actionObj);
-        if (!isEditing) {
-          alert('Checkout configuration is incomplete. Please contact support.');
-        }
+        alert('Checkout configuration is incomplete. Please contact support.');
       }
       break;
     default:
@@ -61,16 +60,18 @@ export function handleButtonClick(action: unknown, isEditing: boolean, e: React.
 
 // Checkout handler function
 async function handleCheckout(action: unknown, isEditing: boolean) {
-  if (isEditing) return;
+  // Allow checkout in preview mode (when isEditing is false) or when explicitly called
   
   const actionObj = action as Record<string, unknown>;
-  console.log('Starting checkout process with action:', actionObj);
+  console.log('Starting checkout process with action:', actionObj, 'isEditing:', isEditing);
   
   try {
     // Get form data from DynamicCheckoutForm if it exists
-    const formElements = document.querySelectorAll('form input, form select');
+    const formElements = document.querySelectorAll('form input, form select, form textarea');
     const formData: Record<string, string> = {};
     let userEmail = '';
+    let isValid = true;
+    const missingFields: string[] = [];
     
     formElements.forEach((element) => {
       const input = element as HTMLInputElement;
@@ -78,10 +79,22 @@ async function handleCheckout(action: unknown, isEditing: boolean) {
         const key = input.name || input.id;
         formData[key] = input.value;
         if (key === 'email') userEmail = input.value;
+        
+        // Check if required field is empty
+        if (input.required && !input.value.trim()) {
+          isValid = false;
+          missingFields.push(input.placeholder || key);
+        }
       }
     });
 
     console.log('Form data collected:', formData);
+
+    // Validate required fields
+    if (!isValid) {
+      alert('Please fill in all required fields: ' + missingFields.join(', '));
+      return;
+    }
 
     // Validate required email
     if (!userEmail) {
@@ -228,7 +241,9 @@ export function renderButton({
         });
         break;
       case 'scroll':
-        buttonAttributes['data-action-data'] = String(actionObj.targetId || '');
+        buttonAttributes['data-action-data'] = JSON.stringify({
+          target: `#${actionObj.targetId || ''}`
+        });
         break;
       case 'checkout':
         const checkoutData = {

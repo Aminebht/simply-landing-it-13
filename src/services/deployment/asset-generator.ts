@@ -86,6 +86,115 @@ export class AssetGenerator {
     return `(function() {
 'use strict';
 
+// Utility function to generate UUID (fallback if not available globally)
+function generateUUID() {
+  if (typeof window.generateUUID === 'function') {
+    return window.generateUUID();
+  }
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback UUID generation
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+// Full checkout handler (calls secure edge function)
+async function handleCheckout(actionData) {
+  // Mirror builder logic for collecting form data and validation
+  console.log('Starting checkout process with action:', actionData);
+  try {
+    // Collect all form fields (input, select, textarea) with name or id
+    const formElements = document.querySelectorAll('form input, form select, form textarea');
+    const formData = {};
+    let userEmail = '';
+    let isValid = true;
+    const missingFields = [];
+    formElements.forEach((element) => {
+      const input = element;
+      const key = input.name || input.id;
+      if (key) {
+        formData[key] = input.value;
+        if (key === 'email') userEmail = input.value;
+        // Check if required field is empty
+        if (input.required && !input.value.trim()) {
+          isValid = false;
+          missingFields.push(input.placeholder || key);
+        }
+      }
+    });
+    console.log('Form data collected:', formData);
+    // Validate required fields
+    if (!isValid) {
+      alert('Please fill in all required fields: ' + missingFields.join(', '));
+      return;
+    }
+    // Validate required email
+    if (!userEmail) {
+      alert("Please enter your email to proceed with checkout.");
+      return;
+    }
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(userEmail)) {
+      alert("Please enter a valid email address.");
+      return;
+    }
+    // Generate proper UUID for order ID
+    const orderId = generateUUID();
+    const buyerName = formData.name || formData.full_name || userEmail.split('@')[0];
+    // Get amount, defaulting to 0 if not provided
+    const amount = Number(actionData.amount) || 0;
+    console.log('Processing checkout for productId:', actionData.productId, 'amount:', amount);
+    showToast('Processing your order...', 'info');
+    console.log('Calling secure checkout edge function...', {
+      orderId,
+      productId: actionData.productId,
+      amount,
+      buyerEmail: userEmail,
+      buyerName,
+      pageSlug: PAGE_CONFIG.slug
+    });
+    // Call the secure-checkout edge function
+    const response = await fetch('https://ijrisuqixfqzmlomlgjb.supabase.co/functions/v1/secure-checkout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+  'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'x-page-slug': PAGE_CONFIG.slug
+      },
+      body: JSON.stringify({
+        orderId,
+        productId: actionData.productId,
+        amount,
+        buyerEmail: userEmail,
+        buyerName,
+        formData,
+        pageSlug: PAGE_CONFIG.slug
+      })
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      console.error('Secure checkout error:', result);
+      showToast(result.error || "Failed to process checkout. Please try again.", 'error');
+      return;
+    }
+    if (result.success && result.paymentUrl) {
+      console.log('Redirecting to payment URL:', result.paymentUrl);
+      showToast('Redirecting to payment...', 'success');
+      window.open(result.paymentUrl, '_blank');
+    } else {
+      showToast("Failed to initialize payment. Please try again.", 'error');
+    }
+  } catch (error) {
+    console.error('Checkout error:', error);
+    showToast("An error occurred during checkout. Please try again.", 'error');
+  }
+}
+
 // Toast notification system
 function showToast(message, type = 'info', duration = 5000) {
   const toastContainer = document.querySelector('.toast-container') || (() => {
@@ -148,6 +257,7 @@ function initializeButtons() {
       const actionData = this.dataset.actionData ? JSON.parse(this.dataset.actionData) : {};
       
       switch (action) {
+        case 'scroll':
         case 'scroll-to':
           if (actionData.target) {
             const target = document.querySelector(actionData.target);
@@ -157,13 +267,25 @@ function initializeButtons() {
           }
           break;
           
+        case 'open_link':
         case 'open-url':
           if (actionData.url) {
-            if (actionData.newTab) {
-              window.open(actionData.url, '_blank');
-            } else {
-              window.location.href = actionData.url;
+            let url = actionData.url;
+            // Add https:// prefix if not present to ensure external links work properly
+            if (url && !/^https?:\/\//i.test(url)) {
+              url = 'https://' + url;
             }
+            // Always open external links in new tab to avoid navigating away
+            window.open(url, '_blank');
+          }
+          break;
+          
+        case 'checkout':
+          if (actionData.checkoutUrl) {
+            window.open(actionData.checkoutUrl, '_blank');
+          } else if (actionData.productId) {
+            // Use the same Supabase-based checkout as the builder
+            handleCheckout(actionData);
           }
           break;
           

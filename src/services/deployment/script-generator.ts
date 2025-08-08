@@ -14,9 +14,16 @@ export class ScriptGenerator {
     
     return `<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script>
-const supabase=window.supabase.createClient('${supabaseUrl}','${supabaseAnonKey}',{auth:{persistSession:false,autoRefreshToken:false}});
+const supabase=window.supabase.createClient('${supabaseUrl}','${supabaseAnonKey}',{
+  auth:{
+    storage:localStorage,
+    persistSession:true,
+    autoRefreshToken:true
+  }
+});
 const SUPABASE_ANON_KEY='${supabaseAnonKey}';
-const PAGE_CONFIG={slug:'${pageData.slug || 'landing-page'}',title:'${this.escapeJs(pageData.seo_config?.title || 'Landing Page')}',url:window.location.href,language:'${pageData.global_theme?.language || 'en'}'};
+const PAGE_CONFIG={slug:'${pageData.slug || 'landing-page'}',title:'${this.escapeJs(pageData.seo_config?.title || 'Landing Page')}',url:'',language:'${pageData.global_theme?.language || 'en'}'};
+PAGE_CONFIG.url=window.location.href;
 
 function generateUUID(){
   if(typeof crypto!=='undefined'&&crypto.randomUUID){return crypto.randomUUID();}

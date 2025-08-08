@@ -328,7 +328,7 @@ export class LandingPageService {
   }
 
   private generateCheckoutUrl(productId: string, sellerId: string): string {
-    return `https://yourdomain.com/checkout/${productId}?seller=${sellerId}`;
+    return `https://demarky.tn/checkout/${productId}?seller=${sellerId}`;
   }
 
   // Landing page by slug
