@@ -24,14 +24,14 @@ const FeaturesVariation4: React.FC<FeaturesVariation4Props> = ({
 }) => {
   const [activeTab, setActiveTab] = useState(0);
 
-  const { getMediaUrl } = useComponentMedia({
-    componentId,
+  const { mediaUrls: hookMediaUrls, getMediaUrl, refreshMediaUrls } = useComponentMedia({
+    componentId: componentId!,
     initialMediaUrls: mediaUrls,
     autoLoad: true,
   });
 
   const getImageUrl = (fieldName: string): string | undefined => {
-    return mediaUrls?.[fieldName] || getMediaUrl(fieldName);
+    return hookMediaUrls[fieldName] || getMediaUrl(fieldName) || mediaUrls?.[fieldName];
   };
 
   const containerClassMap = {
@@ -150,12 +150,34 @@ const FeaturesVariation4: React.FC<FeaturesVariation4Props> = ({
                     onSelect={onElementSelect}
                     className="mb-8 w-full h-80 bg-muted/30 rounded-xl overflow-hidden border border-border/30 shadow-lg"
                   >
-                    <img
-                      src={content.mainImageUrl || activeFeature.image || 'https://via.placeholder.com/800x600'}
-                      alt="Feature showcase"
-                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                      style={getElementStyles(styles, 'mainImage')}
-                    />
+                    {isEditing ? (
+                      <ImageUpload
+                        value={getImageUrl('mainImage') || activeFeature.image || ''}
+                        onChange={async () => {
+                          await refreshMediaUrls();
+                        }}
+                        placeholder="Upload feature image"
+                        className="w-full h-full"
+                        disabled={!isEditing}
+                        containerId={`feature-image-${activeTab}`}
+                        autoDetectDimensions={true}
+                        aspectRatio={4/3}
+                        minWidth={300}
+                        minHeight={200}
+                        imageType="product"
+                        enableWebP={true}
+                        useMediaService={true}
+                        componentId={componentId!}
+                        fieldName={"mainImage"}
+                      />
+                    ) : (
+                      <img
+                        src={getImageUrl('mainImage') || activeFeature.image || 'https://via.placeholder.com/800x600'}
+                        alt="Feature showcase"
+                        className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                        style={getElementStyles(styles, 'mainImage')}
+                      />
+                    )}
                   </SelectableElement>
                 )}
                 {isVisible(visibility, `feature-description-${activeTab}`) && (

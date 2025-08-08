@@ -328,7 +328,7 @@ export class HtmlGenerator {
     // must be set as HTTP headers, not meta tags. We'll handle these via Netlify _headers file.
     // Only CSP can be set via meta tag as a fallback.
     return `<!-- Content Security Policy (meta fallback) -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; font-src 'self' https:; img-src 'self' data: https: blob:; connect-src 'self' https:; frame-src 'none'; object-src 'none';">`;
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; font-src 'self' https:; img-src 'self' data: https: blob:; connect-src 'self' https:; frame-src 'self' https://www.youtube.com https://youtube.com https://player.vimeo.com https://vimeo.com; object-src 'none';">`;
   }
 
   private escapeHtml(text: string): string {
