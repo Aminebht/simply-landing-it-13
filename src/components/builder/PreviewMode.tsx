@@ -50,13 +50,13 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
 
     try {
       setIsExporting(true);
-      toast.info("Starting React project deployment...");
+      toast.info("Starting React-based deployment...");
       
-      // Use React deployment service with React project mode for better performance
+      // Use React deployment service for better accuracy
       const deploymentService = new ReactDeploymentService("nfp_PxSrwC6LMCXfjrSi28pvhSdx9rNKLKyv4a6d");
       const result = await deploymentService.deployLandingPage(pageId);
       
-      toast.success(`React project deployment completed! URL: ${result.url}`, {
+      toast.success(`React deployment completed! URL: ${result.url}`, {
         action: {
           label: "Open",
           onClick: () => window.open(result.url, '_blank')

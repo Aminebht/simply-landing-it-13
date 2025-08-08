@@ -43,7 +43,7 @@ export default function Builder() {
   const [selectedComponent, setSelectedComponent] = useState<LandingPageComponent | null>(null);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
 
-  // Initialize React deployment hook with Netlify token (using React project mode for better performance)
+  // Initialize React deployment hook with Netlify token
   const { deployLandingPage, isDeploying, deploymentError } = useReactDeployment('nfp_PxSrwC6LMCXfjrSi28pvhSdx9rNKLKyv4a6d');
 
   // Use useUndoRedo for undo/redo and component state
@@ -622,6 +622,7 @@ export default function Builder() {
       const updated = components.map(c => c.id === componentId ? { ...c, ...updates } : c);
       setComponents(updated);
       setSelectedComponent(updated.find(c => c.id === componentId) || null);
+      PageSyncService.getInstance().updateComponents(updated);
       return;
     }
     // If switching to a new variation and there is already content, only reset if content is not the default_content for the new variation
@@ -652,6 +653,7 @@ export default function Builder() {
     const updated = components.map(c => c.id === componentId ? { ...c, ...updates } : c);
     setComponents(updated);
     setSelectedComponent(updated.find(c => c.id === componentId) || null);
+    PageSyncService.getInstance().updateComponents(updated);
   };
 
   const handleDirectionToggle = () => {

@@ -463,6 +463,7 @@ class PageSyncService {
       }
       
       const updateData = {
+        component_variation_id: component.component_variation_id,
         content: component.content || {},
         visibility: component.visibility || {},
         custom_styles: validCustomStyles ? safeCustomStyles : {},
@@ -542,6 +543,7 @@ class PageSyncService {
         const cleanedCustomStyles = this.cleanupCustomStyles(rawCustomStyles);
         const safeCustomStyles = cleanedCustomStyles;
         const updateData = {
+          component_variation_id: component.component_variation_id,
           content: component.content || {},
           visibility: component.visibility || {},
           custom_styles: safeCustomStyles,

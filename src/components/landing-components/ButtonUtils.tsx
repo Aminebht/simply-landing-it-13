@@ -228,9 +228,7 @@ export function renderButton({
         });
         break;
       case 'scroll':
-        buttonAttributes['data-action-data'] = JSON.stringify({
-          target: actionObj.targetId || ''
-        });
+        buttonAttributes['data-action-data'] = String(actionObj.targetId || '');
         break;
       case 'checkout':
         const checkoutData = {

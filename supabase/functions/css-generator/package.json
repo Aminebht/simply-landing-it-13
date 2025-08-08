@@ -1,0 +1,17 @@
+{
+  "name": "css-generator",
+  "version": "1.0.0",
+  "description": "Supabase function to generate Tailwind CSS from HTML",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.3",
+    "@tailwindcss/postcss": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7"
+  }
+}

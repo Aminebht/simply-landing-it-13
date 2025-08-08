@@ -10,16 +10,16 @@ export function useReactDeployment(netlifyToken: string) {
       setIsDeploying(true);
       setDeploymentError(null);
 
-      console.log('Starting React project deployment for page:', pageId);
+      console.log('Starting React-based deployment for page:', pageId);
 
       const deploymentService = new ReactDeploymentService(netlifyToken);
       const result = await deploymentService.deployLandingPage(pageId);
 
-      console.log('React project deployment completed successfully:', result);
+      console.log('React deployment completed successfully:', result);
       return result;
 
     } catch (error) {
-      console.error('Deployment failed:', error);
+      console.error('React deployment failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown deployment error';
       setDeploymentError(errorMessage);
       throw error;

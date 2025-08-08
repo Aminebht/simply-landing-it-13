@@ -1,11 +1,10 @@
 import { LandingPageComponent } from '@/types/components';
 import { LandingPageService } from './landing-page';
 import { NetlifyService } from './netlify';
-import { 
-  DeploymentValidator, 
-  DeploymentLogger,
-  ReactProjectGenerator 
-} from './deployment/index';
+import { HtmlGenerator } from './deployment/html-generator';
+import { AssetGenerator } from './deployment/asset-generator';
+import { DeploymentValidator } from './deployment/deployment-validator';
+import { DeploymentLogger } from './deployment/deployment-logger';
 
 export interface DeploymentStatus {
   isDeployed: boolean;
@@ -20,20 +19,27 @@ export interface DeploymentResult {
 }
 
 export interface DeploymentFiles extends Record<string, string> {
-  // React project files
+  'index.html': string;
+  'styles.css': string;
+  'app.js': string;
+  '_headers': string;
 }
 
 export class ReactDeploymentService {
   private netlifyService: NetlifyService;
+  private htmlGenerator: HtmlGenerator;
+  private assetGenerator: AssetGenerator;
   private validator: DeploymentValidator;
   private logger: DeploymentLogger;
-  private reactProjectGenerator: ReactProjectGenerator;
 
   constructor(netlifyToken: string) {
     this.netlifyService = new NetlifyService(netlifyToken);
+    this.htmlGenerator = new HtmlGenerator({
+      enableTailwindProcessing: true  // Enable Tailwind processing via css-generator
+    });
+    this.assetGenerator = new AssetGenerator();
     this.validator = new DeploymentValidator();
     this.logger = new DeploymentLogger();
-    this.reactProjectGenerator = new ReactProjectGenerator();
   }
 
   async getDeploymentStatus(pageId: string): Promise<DeploymentStatus> {
@@ -57,13 +63,13 @@ export class ReactDeploymentService {
 
   async deployLandingPage(pageId: string): Promise<DeploymentResult> {
     try {
-      this.logger.info('Starting React project deployment', { pageId });
+      this.logger.info('Starting React-based deployment', { pageId });
 
       // Validate and fetch page data
       const pageData = await this.validateAndFetchPageData(pageId);
       
-      // Generate React project files
-      const files = await this.generateReactProjectFiles(pageData);
+      // Generate deployment files
+      const files = await this.generateDeploymentFiles(pageData);
       
       // Deploy to Netlify
       const { siteId, deploymentResult } = await this.deployToNetlify(pageData, files);
@@ -76,11 +82,11 @@ export class ReactDeploymentService {
         siteId: siteId
       };
 
-      this.logger.info('React project deployment completed successfully', { pageId, result });
+      this.logger.info('Deployment completed successfully', { pageId, result });
       return result;
 
     } catch (error) {
-      this.logger.error('Deployment failed', { pageId, error });
+      this.logger.error('React deployment failed', { pageId, error });
       throw error;
     }
   }
@@ -90,16 +96,6 @@ export class ReactDeploymentService {
     const pageData = await landingPageService.getLandingPageWithComponents(pageId);
 
     this.validator.validatePageData(pageData);
-
-    // Debug component content during fetch - summary only
-    const componentSummary = pageData.components.map(c => ({
-      id: c.id,
-      type: c.component_variation?.component_type,
-      variation: c.component_variation?.variation_number,
-      hasContent: !!c.content && Object.keys(c.content).length > 0
-    }));
-
-    console.log('[DEPLOYMENT DEBUG] Page components:', componentSummary);
 
     this.logger.debug('Fetched page data', {
       pageId: pageData.id,
@@ -112,30 +108,29 @@ export class ReactDeploymentService {
     return pageData;
   }
 
-  private async generateReactProjectFiles(pageData: any): Promise<DeploymentFiles> {
-    this.logger.debug('Generating React project files');
+  private async generateDeploymentFiles(pageData: any): Promise<DeploymentFiles> {
+    this.logger.debug('Generating deployment files with integrated CSS generation');
 
-    // Use the React project generator to create a complete React project
-    const reactProjectFiles = this.reactProjectGenerator.generateReactProject(pageData);
+    // Generate HTML with integrated Tailwind CSS processing
+    const finalHTML = await this.htmlGenerator.generateReactHTML(pageData);
     
-    // Validate the generated project
-    const isValid = this.reactProjectGenerator.validateProject(reactProjectFiles);
-    if (!isValid) {
-      throw new Error('Generated React project failed validation');
-    }
+    // Generate other assets
+    const { css: baseCSS, js } = await this.assetGenerator.generateAssets(pageData);
     
-    // Log project info
-    const projectInfo = this.reactProjectGenerator.getProjectInfo(reactProjectFiles);
-    this.logger.info('React project generated and ready for deployment', {
-      totalFiles: projectInfo.totalFiles,
-      componentCount: projectInfo.componentCount,
-      totalSize: projectInfo.totalSize,
-      buildCommand: projectInfo.buildCommand,
-      publishDir: projectInfo.publishDir
+    const headers = this.generateNetlifyHeaders();
+
+    this.logger.debug('Deployment files generated successfully', {
+      htmlSize: finalHTML.length,
+      cssSize: baseCSS.length,
+      jsSize: js.length
     });
 
-    // Return source files for Netlify to build
-    return reactProjectFiles;
+    return {
+      'index.html': finalHTML,
+      'styles.css': baseCSS,
+      'app.js': js,
+      '_headers': headers
+    };
   }
 
   private async deployToNetlify(pageData: any, files: DeploymentFiles): Promise<{
@@ -145,11 +140,9 @@ export class ReactDeploymentService {
     const hasExistingSite = this.hasValidNetlifySiteId(pageData.netlify_site_id);
 
     if (hasExistingSite) {
-      this.logger.info('Updating existing Netlify site', { siteId: pageData.netlify_site_id });
-      return await this.updateExistingSite(pageData, files);
+      return this.updateExistingSite(pageData, files);
     } else {
-      this.logger.info('Creating new Netlify site');
-      return await this.createNewSite(pageData, files);
+      return this.createNewSite(pageData, files);
     }
   }
 
@@ -161,16 +154,28 @@ export class ReactDeploymentService {
     siteId: string;
     deploymentResult: any;
   }> {
+    this.logger.info('Updating existing Netlify site', { siteId: pageData.netlify_site_id });
+
     try {
-      const siteId = pageData.netlify_site_id;
+      const deploymentResult = await this.netlifyService.deploySite(
+        pageData.netlify_site_id,
+        files
+      );
+
+      this.logger.info('Successfully updated existing site', { siteId: pageData.netlify_site_id });
       
-      // Deploy files to existing site
-      const deploymentResult = await this.netlifyService.deploySite(siteId, files);
-      
-      return { siteId, deploymentResult };
-    } catch (error) {
-      this.logger.warn('Failed to update existing site, creating new one', { error });
-      return await this.createNewSiteAsFallback(pageData, files);
+      return {
+        siteId: pageData.netlify_site_id,
+        deploymentResult
+      };
+    } catch (updateError) {
+      this.logger.warn('Failed to update existing site, creating new one', { 
+        siteId: pageData.netlify_site_id, 
+        error: updateError 
+      });
+
+      // Fallback to creating new site
+      return this.createNewSiteAsFallback(pageData, files);
     }
   }
 
@@ -178,34 +183,52 @@ export class ReactDeploymentService {
     siteId: string;
     deploymentResult: any;
   }> {
-    const siteName = `landing-page-${pageData.id}`;
-    const config = { site_name: siteName };
-    
-    // Create new site
-    const siteResult = await this.netlifyService.createSite(config);
-    const siteId = siteResult.site_id;
-    
-    // Deploy files to new site
-    const deploymentResult = await this.netlifyService.deploySite(siteId, files);
-    
-    return { siteId, deploymentResult };
+    this.logger.info('Creating new Netlify site for first deployment');
+
+    const baseName = pageData.slug || 'landing-page';
+    const siteInfo = await this.netlifyService.createSite({
+      site_name: baseName,
+      custom_domain: undefined,
+      build_command: undefined,
+      publish_directory: undefined
+    });
+
+    const deploymentResult = await this.netlifyService.deploySite(
+      siteInfo.site_id,
+      files
+    );
+
+    this.logger.info('Successfully created and deployed new site', { siteId: siteInfo.site_id });
+
+    return {
+      siteId: siteInfo.site_id,
+      deploymentResult
+    };
   }
 
   private async createNewSiteAsFallback(pageData: any, files: DeploymentFiles): Promise<{
     siteId: string;
     deploymentResult: any;
   }> {
-    const siteName = `landing-page-${pageData.id}-${Date.now()}`;
-    const config = { site_name: siteName };
-    
-    // Create new site as fallback
-    const siteResult = await this.netlifyService.createSite(config);
-    const siteId = siteResult.site_id;
-    
-    // Deploy files to new site
-    const deploymentResult = await this.netlifyService.deploySite(siteId, files);
-    
-    return { siteId, deploymentResult };
+    const fallbackBaseName = pageData.slug || 'landing-page';
+    const siteInfo = await this.netlifyService.createSite({
+      site_name: `${fallbackBaseName}-updated`,
+      custom_domain: undefined,
+      build_command: undefined,
+      publish_directory: undefined
+    });
+
+    const deploymentResult = await this.netlifyService.deploySite(
+      siteInfo.site_id,
+      files
+    );
+
+    this.logger.info('Created new site after update failure', { siteId: siteInfo.site_id });
+
+    return {
+      siteId: siteInfo.site_id,
+      deploymentResult
+    };
   }
 
   private async updateDatabaseWithDeploymentInfo(
@@ -213,16 +236,57 @@ export class ReactDeploymentService {
     siteId: string, 
     deploymentResult: any
   ): Promise<void> {
-    try {
-      const landingPageService = LandingPageService.getInstance();
-      await landingPageService.updateLandingPage(pageId, {
-        netlify_site_id: siteId,
-        last_deployed_at: new Date().toISOString(),
-        status: 'published'
-      });
-    } catch (error) {
-      this.logger.error('Failed to update database with deployment info', { pageId, siteId, error });
-      // Don't throw here as deployment was successful
-    }
+    const landingPageService = LandingPageService.getInstance();
+    
+    const updateData = {
+      site_id: siteId,
+      url: deploymentResult.deploy_ssl_url || deploymentResult.deploy_url
+    };
+
+    this.logger.debug('Updating database with deployment info', { pageId, updateData });
+    
+    await landingPageService.updateDeploymentInfo(pageId, updateData);
+    
+    this.logger.debug('Database updated successfully', { pageId });
+  }
+
+  private generateNetlifyHeaders(): string {
+    // Netlify _headers file format for setting HTTP security headers
+    // These headers cannot be set via HTML meta tags
+    return `/*
+  # Security Headers
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  X-XSS-Protection: 1; mode=block
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+  # Additional security headers (relaxed for external resources)
+  X-Permitted-Cross-Domain-Policies: none
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+
+# Specific headers for different file types
+*.html
+  Cache-Control: no-cache
+
+*.css
+  Cache-Control: public, max-age=31536000
+
+*.js
+  Cache-Control: public, max-age=31536000
+
+*.png, *.jpg, *.jpeg, *.gif, *.webp, *.svg
+  Cache-Control: public, max-age=31536000
+
+# API and font specific headers
+/api/*
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+  Access-Control-Allow-Headers: Content-Type, Authorization
+
+*.woff, *.woff2, *.ttf, *.eot
+  Cache-Control: public, max-age=31536000
+  Cross-Origin-Resource-Policy: cross-origin`;
   }
 }
