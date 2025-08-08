@@ -244,6 +244,54 @@ export class LandingPageService {
     if (error) throw error;
   }
 
+  async updateComponentVariation(componentId: string, newVariationId: string, content?: Record<string, unknown>, visibility?: Record<string, boolean>, customStyles?: Record<string, unknown>): Promise<LandingPageComponent> {
+    console.log('LandingPageService: Updating component variation:', { componentId, newVariationId });
+    
+    // Clean content if provided
+    const cleanContent = content ? cleanContentFromImageUrls(content) : undefined;
+    
+    const updateData: Partial<LandingPageComponent> = {
+      component_variation_id: newVariationId,
+      updated_at: new Date().toISOString()
+    };
+    
+    // Add optional fields if provided
+    if (cleanContent !== undefined) {
+      updateData.content = cleanContent;
+    }
+    if (visibility !== undefined) {
+      updateData.visibility = visibility;
+    }
+    if (customStyles !== undefined) {
+      updateData.custom_styles = customStyles;
+    }
+    
+    const { data, error } = await supabase
+      .from('landing_page_components')
+      .update(updateData)
+      .eq('id', componentId)
+      .select(`
+        *,
+        component_variation:component_variations(*)
+      `)
+      .single();
+
+    if (error) {
+      console.error('LandingPageService: Error updating component variation:', error);
+      throw error;
+    }
+    
+    console.log('LandingPageService: Successfully updated component variation');
+    
+    // Add the 'styles' property for frontend compatibility
+    const componentWithStyles = {
+      ...data,
+      styles: data.custom_styles || {}
+    };
+    
+    return componentWithStyles;
+  }
+
   async updateComponentVisibility(componentId: string, visibility: Record<string, boolean>): Promise<void> {
     const { error } = await supabase
       .from('landing_page_components')

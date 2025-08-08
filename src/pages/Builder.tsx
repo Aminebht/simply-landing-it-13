@@ -574,84 +574,189 @@ export default function Builder() {
     PageSyncService.getInstance().updateComponents(updated);
   };
 
-  const handleVariationChange = (componentId: string, newVariation: number) => {
-    // Update variation and sync state
-    const component = components.find(c => c.id === componentId);
-    if (!component) return;
-    let componentType = '';
-    if (component.component_variation?.component_type) {
-      componentType = component.component_variation.component_type;
-    } else if (component.component_variation_id?.includes('-') && component.component_variation_id.split('-')[0].length < 10) {
-      componentType = component.component_variation_id.split('-')[0];
-    } else {
-      const matchingVar = componentVariations.find(v => {
-        if (v.id === component.component_variation_id) return true;
-        const idParts = component.component_variation_id?.split('-');
-        if (idParts && idParts.length === 2) {
-          const uuid = idParts[0];
-          if (v.id === uuid || v.id.includes(uuid)) {
-            return true;
-          }
-        }
-        return false;
-      });
-      if (matchingVar) {
-        componentType = matchingVar.component_type;
+  const handleVariationChange = async (componentId: string, newVariation: number) => {
+    try {
+      // Update variation and sync state
+      const component = components.find(c => c.id === componentId);
+      if (!component) {
+        console.error('Component not found:', componentId);
+        return;
+      }
+
+      // Determine component type
+      let componentType = '';
+      if (component.component_variation?.component_type) {
+        componentType = component.component_variation.component_type;
+      } else if (component.component_variation_id?.includes('-') && component.component_variation_id.split('-')[0].length < 10) {
+        componentType = component.component_variation_id.split('-')[0];
       } else {
-      return;
-    }
-    }
-    const variationMetadata = componentVariations.find(v => v.component_type === componentType && v.variation_number === newVariation);
-    if (!variationMetadata) return;
-    const existingComponent = components.find(comp => comp.id === componentId);
-    const preservedContainerStyles = existingComponent?.custom_styles?.container
-      ? {
-          backgroundColor: existingComponent.custom_styles.container.backgroundColor,
-          primaryColor: existingComponent.custom_styles.container.primaryColor
+        const matchingVar = componentVariations.find(v => {
+          if (v.id === component.component_variation_id) return true;
+          const idParts = component.component_variation_id?.split('-');
+          if (idParts && idParts.length === 2) {
+            const uuid = idParts[0];
+            if (v.id === uuid || v.id.includes(uuid)) {
+              return true;
+            }
+          }
+          return false;
+        });
+        if (matchingVar) {
+          componentType = matchingVar.component_type;
+        } else {
+          console.error('Unable to determine component type for variation change:', componentId);
+          toast({
+            title: "Error changing variation",
+            description: "Unable to determine component type",
+            variant: "destructive"
+          });
+          return;
         }
-      : {};
-    // If the variation is not changing, do not update content at all
-    if (existingComponent?.component_variation_id === variationMetadata.id) {
+      }
+
+      // Find the new variation metadata
+      const variationMetadata = componentVariations.find(v => v.component_type === componentType && v.variation_number === newVariation);
+      if (!variationMetadata) {
+        console.error('Variation metadata not found:', { componentType, newVariation });
+        toast({
+          title: "Error changing variation",
+          description: `Variation ${newVariation} not found for ${componentType}`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('Changing component variation:', { componentId, componentType, oldVariation: component.component_variation?.variation_number, newVariation });
+
+      const existingComponent = components.find(comp => comp.id === componentId);
+      const preservedContainerStyles = existingComponent?.custom_styles?.container
+        ? {
+            backgroundColor: existingComponent.custom_styles.container.backgroundColor,
+            primaryColor: existingComponent.custom_styles.container.primaryColor
+          }
+        : {};
+
+      // If the variation is not changing, do not update content at all
+      if (existingComponent?.component_variation_id === variationMetadata.id) {
+        console.log('Variation is already set, no change needed');
+        const updates: Partial<LandingPageComponent> = {
+          component_variation_id: variationMetadata.id,
+          component_variation: variationMetadata,
+          custom_styles: { container: preservedContainerStyles },
+          media_urls: {},
+          visibility: variationMetadata?.visibility_keys ? Object.fromEntries(variationMetadata.visibility_keys.map(vk => [vk.key, true])) : {}
+        };
+        const updated = components.map(c => c.id === componentId ? { ...c, ...updates } : c);
+        setComponents(updated);
+        setSelectedComponent(updated.find(c => c.id === componentId) || null);
+        return;
+      }
+
+      // Prepare content for the new variation
+      let newContent;
+      const isContentDefault = JSON.stringify(existingComponent?.content || {}) === JSON.stringify(variationMetadata?.default_content || {});
+      if (existingComponent?.content && Object.keys(existingComponent.content).length > 0 && !isContentDefault) {
+        // Keep only specific keys from the previous content
+        const keysToKeep = ['price', 'originalPrice', 'badge', 'headline', 'subheadline', 'ctaButton', 'secondaryButton'];
+        newContent = {};
+        keysToKeep.forEach(key => {
+          if (existingComponent.content[key] !== undefined) {
+            newContent[key] = existingComponent.content[key];
+          }
+        });
+      } else if (variationMetadata?.default_content) {
+        newContent = { ...variationMetadata.default_content };
+      } else {
+        newContent = {};
+      }
+
+      // Prepare the updates
       const updates: Partial<LandingPageComponent> = {
         component_variation_id: variationMetadata.id,
         component_variation: variationMetadata,
+        content: newContent,
         custom_styles: { container: preservedContainerStyles },
         media_urls: {},
         visibility: variationMetadata?.visibility_keys ? Object.fromEntries(variationMetadata.visibility_keys.map(vk => [vk.key, true])) : {}
       };
+
+      // Update local state immediately for UI responsiveness
       const updated = components.map(c => c.id === componentId ? { ...c, ...updates } : c);
       setComponents(updated);
       setSelectedComponent(updated.find(c => c.id === componentId) || null);
-      return;
-    }
-    // If switching to a new variation and there is already content, only reset if content is not the default_content for the new variation
-    let newContent;
-    const isContentDefault = JSON.stringify(existingComponent?.content || {}) === JSON.stringify(variationMetadata?.default_content || {});
-    if (existingComponent?.content && Object.keys(existingComponent.content).length > 0 && !isContentDefault) {
-      // Keep only specific keys from the previous content
-      const keysToKeep = ['price', 'originalPrice', 'badge', 'headline', 'subheadline', 'ctaButton', 'secondaryButton'];
-      newContent = {};
-      keysToKeep.forEach(key => {
-        if (existingComponent.content[key] !== undefined) {
-          newContent[key] = existingComponent.content[key];
+
+      // For demo pages or temporary components, only update local state
+      if (!pageId || pageId === 'demo-page-id' || componentId.startsWith('comp-')) {
+        console.log('Demo page or temporary component - only updating local state');
+        toast({
+          title: "Variation changed",
+          description: `Component variation updated to ${componentType} variation ${newVariation}`,
+        });
+        return;
+      }
+
+      // For real components, immediately save variation change to database
+      try {
+        console.log('Saving variation change to database:', { componentId, newVariationId: variationMetadata.id });
+
+        const landingPageService = LandingPageService.getInstance();
+        
+        // Update the component in the database with the new variation using dedicated method
+        const updatedComponent = await landingPageService.updateComponentVariation(
+          componentId,
+          variationMetadata.id,
+          newContent,
+          variationMetadata?.visibility_keys ? Object.fromEntries(variationMetadata.visibility_keys.map(vk => [vk.key, true])) : {},
+          { container: preservedContainerStyles }
+        );
+
+        console.log('Successfully saved variation change to database');
+
+        // Update the local state with the returned component data to ensure consistency
+        const finalUpdated = components.map(c => 
+          c.id === componentId ? { ...updatedComponent, component_variation: variationMetadata } : c
+        );
+        setComponents(finalUpdated);
+        setSelectedComponent(finalUpdated.find(c => c.id === componentId) || null);
+
+        // Update PageSyncService with the new components state
+        PageSyncService.getInstance().updateComponents(finalUpdated);
+
+        // Update last saved time
+        setLastSavedTime(new Date());
+
+        // Show success message
+        toast({
+          title: "Variation changed",
+          description: `Component variation updated to ${componentType} variation ${newVariation} and saved`,
+        });
+
+      } catch (dbError) {
+        console.error('Error saving variation change to database:', dbError);
+        
+        // Revert the local state changes if database save failed
+        const originalComponent = components.find(c => c.id === componentId);
+        if (originalComponent) {
+          const revertedComponents = components.map(c => c.id === componentId ? originalComponent : c);
+          setComponents(revertedComponents);
+          setSelectedComponent(originalComponent);
         }
+
+        toast({
+          title: "Error saving variation change",
+          description: "The variation was changed but couldn't be saved. Please try again.",
+          variant: "destructive"
+        });
+      }
+
+    } catch (error) {
+      console.error('Error in handleVariationChange:', error);
+      toast({
+        title: "Error changing variation",
+        description: "There was a problem changing the component variation. Please try again.",
+        variant: "destructive"
       });
-    } else if (variationMetadata?.default_content) {
-      newContent = { ...variationMetadata.default_content };
-    } else {
-      newContent = {};
     }
-    const updates: Partial<LandingPageComponent> = {
-      component_variation_id: variationMetadata.id,
-      component_variation: variationMetadata,
-      content: newContent,
-      custom_styles: { container: preservedContainerStyles },
-      media_urls: {},
-      visibility: variationMetadata?.visibility_keys ? Object.fromEntries(variationMetadata.visibility_keys.map(vk => [vk.key, true])) : {}
-    };
-    const updated = components.map(c => c.id === componentId ? { ...c, ...updates } : c);
-    setComponents(updated);
-    setSelectedComponent(updated.find(c => c.id === componentId) || null);
   };
 
   const handleDirectionToggle = () => {
