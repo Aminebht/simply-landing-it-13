@@ -427,18 +427,7 @@ export const LandingPageSettings: React.FC<LandingPageSettingsProps> = ({
           </TabsContent>
 
           <TabsContent value="tracking" className="space-y-4 mt-4">
-            {/* Important Note */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <h4 className="font-medium text-blue-900 mb-2">📝 Important Information</h4>
-              <div className="text-sm text-blue-800 space-y-1">
-                <p>• Tracking scripts will be automatically included in your deployed landing page</p>
-                <p>• You must redeploy your landing page after saving these settings</p>
-                <p>• Test your tracking setup using browser developer tools</p>
-                <p>• Make sure to comply with GDPR and privacy regulations</p>
-              </div>
-            </div>
-
-            {/* Facebook Pixel */}
+           
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -543,52 +532,7 @@ export const LandingPageSettings: React.FC<LandingPageSettingsProps> = ({
               </CardContent>
             </Card>
 
-            {/* Conversion Events */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Conversion Events</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="page-view">Page View</Label>
-                      <p className="text-sm text-gray-500">Track when users view your landing page</p>
-                    </div>
-                    <Switch
-                      id="page-view"
-                      checked={trackingConfig.conversion_events.page_view}
-                      onCheckedChange={(checked) => updateConversionEvent('page_view', checked)}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="add-to-cart">Add to Cart</Label>
-                      <p className="text-sm text-gray-500">Track when users add items to cart</p>
-                    </div>
-                    <Switch
-                      id="add-to-cart"
-                      checked={trackingConfig.conversion_events.add_to_cart}
-                      onCheckedChange={(checked) => updateConversionEvent('add_to_cart', checked)}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="purchase">Purchase</Label>
-                      <p className="text-sm text-gray-500">Track when users complete a purchase</p>
-                    </div>
-                    <Switch
-                      id="purchase"
-                      checked={trackingConfig.conversion_events.purchase}
-                      onCheckedChange={(checked) => updateConversionEvent('purchase', checked)}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
+ 
             {/* Quick Links */}
             <Card>
               <CardHeader>

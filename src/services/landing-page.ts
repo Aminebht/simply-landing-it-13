@@ -450,6 +450,7 @@ export class LandingPageService {
       .from('landing_pages')
       .update({
         netlify_site_id: netlifyInfo.site_id,
+        deployed_url: netlifyInfo.url,
         status: 'published',
         last_deployed_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -461,7 +462,7 @@ export class LandingPageService {
       throw error;
     }
     
-    console.log('✅ Successfully updated deployment info - netlify_site_id:', netlifyInfo.site_id);
+    console.log('✅ Successfully updated deployment info - netlify_site_id:', netlifyInfo.site_id, 'deployed_url:', netlifyInfo.url);
   }
 
   async updateCustomDomain(id: string, domain: string): Promise<void> {

@@ -10,7 +10,7 @@ import { UndoRedoStatus } from '@/components/builder/UndoRedoStatus';
 import { LandingPageSettings } from '@/components/builder/LandingPageSettings';
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Palette, Eye, Edit, Save, Globe, ChevronLeft, ChevronRight, CloudUpload, Database } from 'lucide-react';
+import { Palette, Eye, Edit, Save, Globe, ChevronLeft, ChevronRight, CloudUpload, Database, ExternalLink } from 'lucide-react';
 import { useReactDeployment } from '@/hooks/useReactDeployment';
 import { LandingPageComponent, ComponentVariation } from '@/types/components';
 import { LandingPageService } from '@/services/landing-page';
@@ -909,6 +909,16 @@ export default function Builder() {
       const result = await deployLandingPage(pageId);
       
       if (result) {
+        // Update page data with deployment info
+        if (page) {
+          setPage({
+            ...page,
+            deployed_url: result.url,
+            status: 'published',
+            last_deployed_at: new Date().toISOString()
+          });
+        }
+        
         toast({
           title: "Deployment successful",
           description: `Your landing page is live at: ${result.url}`,
@@ -926,6 +936,22 @@ export default function Builder() {
       toast({
         title: "Deployment failed", 
         description: error.message || "There was a problem deploying your landing page.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleViewLive = () => {
+    if (page?.deployed_url) {
+      window.open(page.deployed_url, '_blank');
+    } else if (page?.netlify_site_id) {
+      // Fallback: construct URL from netlify_site_id
+      const fallbackUrl = `https://${page.netlify_site_id}.netlify.app`;
+      window.open(fallbackUrl, '_blank');
+    } else {
+      toast({
+        title: "No deployed site",
+        description: "Deploy your landing page first to view it live",
         variant: "destructive"
       });
     }
@@ -1036,14 +1062,7 @@ export default function Builder() {
             </Button>
             
             <div className="flex items-center gap-3">
-              <Button
-              onClick={handleForceSave}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-                <CloudUpload className="h-4 w-4" />
-                Save
-              </Button>
+          
               
               <LandingPageSettings
                 landingPage={page}
@@ -1058,6 +1077,19 @@ export default function Builder() {
                 <Globe className="h-4 w-4" />
                 {isDeploying ? 'Deploying...' : 'Deploy'}
               </Button>
+              
+              {/* View Live Button - only show if page has been deployed */}
+              {(page?.deployed_url || page?.netlify_site_id) && (
+                <Button
+                  onClick={handleViewLive}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                  title="View your live landing page"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  View Live
+                </Button>
+              )}
               
               
               {lastSavedTime && (
