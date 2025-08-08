@@ -97,7 +97,11 @@ const Index = () => {
               <span className="text-xl font-bold text-slate-900">PageCraft</span>
             </div>
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" onClick={() => alert('Pricing page coming soon!')}>Pricing</Button>
+              <Button variant="ghost" onClick={() => toast({ 
+                title: "Coming Soon! 🚀", 
+                description: "We're working hard to bring you flexible pricing options. Stay tuned!",
+                duration: 4000
+              })}>Pricing</Button>
               <Button onClick={handleCreateLandingPage}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Landing Page

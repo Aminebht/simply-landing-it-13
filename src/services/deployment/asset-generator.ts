@@ -258,6 +258,159 @@ input, textarea, select {
     return `(function() {
 'use strict';
 
+// Toast notification utility
+function showToast(message, type = 'error') {
+  // Create toast container if it doesn't exist
+  let toastContainer = document.getElementById('toast-container');
+  if (!toastContainer) {
+    toastContainer = document.createElement('div');
+    toastContainer.id = 'toast-container';
+    toastContainer.style.cssText = \`
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 420px;
+      width: 100%;
+      pointer-events: none;
+    \`;
+    document.body.appendChild(toastContainer);
+  }
+
+  // Create toast element
+  const toast = document.createElement('div');
+  const isError = type === 'error';
+  const isSuccess = type === 'success';
+  const isWarning = type === 'warning';
+  const isInfo = type === 'info';
+
+  toast.style.cssText = \`
+    background: \${isError ? 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)' : 
+                 isSuccess ? 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)' : 
+                 isWarning ? 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)' : 
+                 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)'};
+    color: \${isError ? '#991b1b' : isSuccess ? '#166534' : isWarning ? '#92400e' : '#1e40af'};
+    border: 1px solid \${isError ? '#fecaca' : isSuccess ? '#bbf7d0' : isWarning ? '#fed7aa' : '#bfdbfe'};
+    padding: 16px 20px;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    backdrop-filter: blur(16px);
+    max-width: 420px;
+    word-wrap: break-word;
+    animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 500;
+    position: relative;
+    pointer-events: auto;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    overflow: hidden;
+  \`;
+
+  // Add icon and message
+  const iconSvg = isError ? 
+    '<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd"></path></svg>' :
+    isSuccess ?
+    '<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.236 4.53L8.53 10.53a.75.75 0 00-1.06 1.06l2 2a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"></path></svg>' :
+    isWarning ?
+    '<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"></path></svg>' :
+    '<svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd"></path></svg>';
+
+  toast.innerHTML = \`
+    <div style="display: flex; align-items: flex-start; gap: 12px;">
+      <div style="flex-shrink: 0; margin-top: 1px;">
+        \${iconSvg}
+      </div>
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-weight: 600; margin-bottom: 4px;">\${isError ? 'Error' : isSuccess ? 'Success' : isWarning ? 'Warning' : 'Info'}</div>
+        <div style="font-weight: 400; opacity: 0.9;">\${message}</div>
+      </div>
+      <button onclick="this.parentElement.parentElement.style.animation='slideOut 0.3s cubic-bezier(0.4, 0, 1, 1)'; setTimeout(() => this.parentElement.parentElement.remove(), 300);" style="
+        background: none;
+        border: none;
+        color: currentColor;
+        opacity: 0.5;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        transition: opacity 0.2s ease;
+        flex-shrink: 0;
+      " onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='0.5'">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+        </svg>
+      </button>
+    </div>
+  \`;
+
+  // Add hover effects
+  toast.addEventListener('mouseenter', () => {
+    toast.style.transform = 'translateY(-2px)';
+    toast.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.15)';
+  });
+
+  toast.addEventListener('mouseleave', () => {
+    toast.style.transform = 'translateY(0)';
+    toast.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';
+  });
+
+  // Add animation styles if not already present
+  if (!document.getElementById('toast-styles')) {
+    const style = document.createElement('style');
+    style.id = 'toast-styles';
+    style.textContent = \`
+      @keyframes slideIn {
+        from { 
+          transform: translateX(100%) scale(0.95); 
+          opacity: 0; 
+        }
+        to { 
+          transform: translateX(0) scale(1); 
+          opacity: 1; 
+        }
+      }
+      @keyframes slideOut {
+        from { 
+          transform: translateX(0) scale(1); 
+          opacity: 1; 
+        }
+        to { 
+          transform: translateX(100%) scale(0.95); 
+          opacity: 0; 
+        }
+      }
+      @media (max-width: 640px) {
+        #toast-container {
+          left: 16px !important;
+          right: 16px !important;
+          top: 16px !important;
+          max-width: none !important;
+        }
+      }
+    \`;
+    document.head.appendChild(style);
+  }
+
+  toastContainer.appendChild(toast);
+
+  // Auto remove after 5 seconds
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.style.animation = 'slideOut 0.3s cubic-bezier(0.4, 0, 1, 1)';
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+      }, 300);
+    }
+  }, 5000);
+}
+
 // Load Supabase SDK dynamically
 (function() {
   console.log('📦 DEBUG: Starting Supabase SDK loading...');
@@ -367,18 +520,18 @@ async function handleCheckout(actionData) {
     });
 
     if (!isValid) {
-      alert('Please fill in all required fields: ' + missingFields.join(', '));
+      showToast('Please fill in all required fields: ' + missingFields.join(', '));
       return;
     }
     
     if (!userEmail) {
-      alert("Please enter your email to proceed with checkout.");
+      showToast("Please enter your email to proceed with checkout.");
       return;
     }
     
     const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
     if (!emailRegex.test(userEmail)) {
-      alert("Please enter a valid email address.");
+      showToast("Please enter a valid email address.");
       return;
     }
 

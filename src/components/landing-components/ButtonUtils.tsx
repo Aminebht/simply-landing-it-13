@@ -1,6 +1,7 @@
 import React from 'react';
 import { SelectableElement } from '@/components/builder/SelectableElement';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 // Utility function to generate UUID with fallback
 function generateUUID(): string {
@@ -49,7 +50,7 @@ export function handleButtonClick(action: unknown, isEditing: boolean, e: React.
         handleCheckout(action, isEditing);
       } else {
         console.warn('Checkout action missing productId:', actionObj);
-        alert('Checkout configuration is incomplete. Please contact support.');
+        toast.error('Checkout configuration is incomplete. Please contact support.');
       }
       break;
     default:
@@ -92,20 +93,20 @@ async function handleCheckout(action: unknown, isEditing: boolean) {
 
     // Validate required fields
     if (!isValid) {
-      alert('Please fill in all required fields: ' + missingFields.join(', '));
+      toast.error('Please fill in all required fields: ' + missingFields.join(', '));
       return;
     }
 
     // Validate required email
     if (!userEmail) {
-      alert("Please enter your email to proceed with checkout.");
+      toast.error("Please enter your email to proceed with checkout.");
       return;
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(userEmail)) {
-      alert("Please enter a valid email address.");
+      toast.error("Please enter a valid email address.");
       return;
     }
 
@@ -136,7 +137,7 @@ async function handleCheckout(action: unknown, isEditing: boolean) {
 
     if (orderError) {
       console.error('Order creation error:', orderError);
-      alert("Failed to create order. Please try again.");
+      toast.error("Failed to create order. Please try again.");
       return;
     }
 
@@ -160,12 +161,13 @@ async function handleCheckout(action: unknown, isEditing: boolean) {
 
     if (paymentError || !paymentData?.payUrl) {
       console.error('Payment creation error:', paymentError);
-      alert("Failed to create payment session. Please try again.");
+      toast.error("Failed to create payment session. Please try again.");
       return;
     }
 
     // Redirect to payment gateway
     console.log('Redirecting to payment URL:', paymentData.payUrl);
+    toast.success('Redirecting to secure payment gateway...');
     window.location.href = paymentData.payUrl;
 
   } catch (error) {
@@ -174,7 +176,7 @@ async function handleCheckout(action: unknown, isEditing: boolean) {
       actionObj,
       error: error.message || error
     });
-    alert(`Checkout failed: ${error.message || 'An unexpected error occurred'}. Please try again.`);
+    toast.error(`Checkout failed: ${error.message || 'An unexpected error occurred'}. Please try again.`);
   }
 }
 

@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import { Button } from './button';
 import { mediaService } from '@/services/media';
+import { toast } from 'sonner';
 
 interface MediaUploadProps {
   value?: string; // Current media URL
@@ -43,12 +44,13 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
 
       if (url) {
         onChange(url);
+        toast.success('Media uploaded successfully!');
       } else {
-        alert('Upload failed. Please try again.');
+        toast.error('Upload failed. Please try again.');
       }
     } catch (error) {
   
-      alert('Upload failed. Please try again.');
+      toast.error('Upload failed. Please try again.');
     } finally {
       setIsUploading(false);
     }

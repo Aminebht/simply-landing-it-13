@@ -102,6 +102,71 @@
   }
 }
 
+/* Enhanced Toast Styles */
+@layer components {
+  .toaster {
+    --normal-bg: theme(colors.background);
+    --normal-border: theme(colors.border);
+    --normal-text: theme(colors.foreground);
+    
+    --success-bg: theme(colors.green.50);
+    --success-border: theme(colors.green.200);
+    --success-text: theme(colors.green.900);
+    
+    --error-bg: theme(colors.red.50);
+    --error-border: theme(colors.red.200);
+    --error-text: theme(colors.red.900);
+    
+    --warning-bg: theme(colors.yellow.50);
+    --warning-border: theme(colors.yellow.200);
+    --warning-text: theme(colors.yellow.900);
+    
+    --info-bg: theme(colors.blue.50);
+    --info-border: theme(colors.blue.200);
+    --info-text: theme(colors.blue.900);
+  }
+
+  .dark .toaster {
+    --success-bg: theme(colors.green.950);
+    --success-border: theme(colors.green.800);
+    --success-text: theme(colors.green.100);
+    
+    --error-bg: theme(colors.red.950);
+    --error-border: theme(colors.red.800);
+    --error-text: theme(colors.red.100);
+    
+    --warning-bg: theme(colors.yellow.950);
+    --warning-border: theme(colors.yellow.800);
+    --warning-text: theme(colors.yellow.100);
+    
+    --info-bg: theme(colors.blue.950);
+    --info-border: theme(colors.blue.800);
+    --info-text: theme(colors.blue.100);
+  }
+
+  /* Custom toast animations */
+  .toast {
+    @apply backdrop-blur-md;
+    transform: translateX(var(--initial-transform, 100%));
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform, opacity;
+  }
+
+  .toast[data-expanded] {
+    transform: translateX(0) scale(1);
+  }
+
+  .toast[data-front="true"] {
+    transform: translateX(0) scale(1);
+    z-index: 999;
+  }
+
+  .toast[data-front="false"] {
+    transform: translateX(0) scale(0.98);
+    opacity: 0.85;
+  }
+}
+
 /* Chart animations */
 @keyframes drawLine {
   to {

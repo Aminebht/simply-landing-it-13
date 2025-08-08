@@ -7,6 +7,7 @@ import { useImageDimensions, getOptimalCropDimensions, getRecommendedDimensionsT
 import { supabase } from '@/services/supabase';
 import { convertImageToWebP, getRecommendedQuality, formatFileSize, type ConversionResult } from '@/utils/imageConverter';
 import { mediaService } from '@/services/media';
+import { toast } from 'sonner';
 import 'react-image-crop/dist/ReactCrop.css';
 
 interface ImageUploadProps {
@@ -128,14 +129,14 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please select a valid image file.');
+      toast.error('Please select a valid image file.');
       return;
     }
 
     // Validate file size (max 10MB)
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      alert('File size must be less than 10MB.');
+      toast.error('File size must be less than 10MB.');
       return;
     }
 
@@ -165,7 +166,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       reader.readAsDataURL(processedFile);
     } catch (error) {
 
-      alert('Failed to process image. Please try again.');
+      toast.error('Failed to process image. Please try again.');
       setIsLoading(false);
     }
   };
@@ -291,7 +292,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       setImageSrc('');
       setRotation(0);
     } catch (error) {
-      alert('Failed to crop image. Please try again.');
+      toast.error('Failed to crop image. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -324,6 +325,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         
         // Call onChange with the uploaded URL
         onChange(uploadedUrl);
+        toast.success('Image uploaded successfully!');
         return;
       }
       
@@ -367,9 +369,10 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 
       // Call onChange with the public URL
       onChange(publicUrl);
+      toast.success('Image processed and saved successfully!');
       
     } catch (error) {
-      alert(getErrorMessage(error));
+      toast.error(getErrorMessage(error));
       throw error;
     }
   };
@@ -414,7 +417,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       if (useMediaService && componentId && fieldName) {
         const success = await mediaService.removeComponentMediaUrl(componentId, fieldName);
         if (!success) {
-          alert('Failed to remove image from database');
+          toast.error('Failed to remove image from database');
         }
         onChange('');
         return;
@@ -431,14 +434,14 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             
           if (error) {
             console.error('Failed to delete image from storage:', error);
-            alert('Failed to delete image from storage: ' + error.message);
+            toast.error('Failed to delete image from storage: ' + error.message);
             // Still call onChange to clear the UI even if deletion fails
           }
         }
       }
     } catch (error) {
       console.error('Error removing image:', error);
-      alert('Failed to remove image: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error('Failed to remove image: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       // Always clear the value in the UI
       onChange('');
