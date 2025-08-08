@@ -260,9 +260,11 @@ input, textarea, select {
 
 // Load Supabase SDK dynamically
 (function() {
+  console.log('📦 DEBUG: Starting Supabase SDK loading...');
   const script = document.createElement('script');
   script.src = 'https://unpkg.com/@supabase/supabase-js@2';
   script.onload = function() {
+    console.log('✅ DEBUG: Supabase SDK loaded successfully');
     window.supabase = window.supabase.createClient('${supabaseUrl}', '${supabaseAnonKey}', {
       auth: {
         storage: localStorage,
@@ -270,6 +272,32 @@ input, textarea, select {
         autoRefreshToken: true
       }
     });
+    console.log('🔗 DEBUG: Supabase client created and attached to window');
+    
+    // Trigger dynamic form rebuilding once Supabase is loaded
+    console.log('🔄 DEBUG: Supabase loaded, rebuilding dynamic checkout forms...');
+    setTimeout(() => {
+      const forms = document.querySelectorAll('form[data-dynamic-checkout]');
+      console.log('🔍 DEBUG: Found', forms.length, 'dynamic forms to rebuild after Supabase load');
+      
+      forms.forEach((form, index) => {
+        console.log('🔄 DEBUG: Processing form', index + 1, 'after Supabase load');
+        const checkoutButton = form.parentElement?.querySelector('[data-action="checkout"]');
+        let productId = null;
+        
+        if (checkoutButton?.dataset.actionData) {
+          try {
+            const actionData = JSON.parse(checkoutButton.dataset.actionData);
+            productId = actionData.productId;
+            console.log('🎯 DEBUG: ProductId for form', index + 1, ':', productId);
+          } catch (e) {
+            console.warn('Could not parse checkout button action data');
+          }
+        }
+        
+        rebuildCheckoutForm(productId);
+      });
+    }, 100);
   };
   document.head.appendChild(script);
 })();
@@ -418,8 +446,221 @@ function showToast(message, type = 'info', duration = 5000) {
   setTimeout(() => toast.remove(), duration);
 }
 
-// Form handling
+// Form handling with dynamic checkout fields
+async function fetchCheckoutFields(productId) {
+  try {
+    console.log('🔍 DEBUG: fetchCheckoutFields called with productId:', productId);
+    
+    if (!window.supabase) {
+      console.warn('Supabase not loaded yet, retrying...');
+      return [];
+    }
+
+    const { data, error } = await window.supabase
+      .from('checkout_fields')
+      .select('*')
+      .order('display_order', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching checkout fields:', error);
+      return [];
+    }
+    
+    console.log('📊 DEBUG: Raw fields fetched from database:', data?.length || 0, 'fields');
+    console.log('📋 DEBUG: Raw fields data:', data);
+    
+    // Filter fields by product if productId is provided
+    const filteredFields = data?.filter(field => 
+      !productId || field.product_ids.includes(productId)
+    ) || [];
+
+    console.log('🎯 DEBUG: Filtered fields for productId', productId + ':', filteredFields.length, 'fields');
+    console.log('📝 DEBUG: Filtered fields details:', filteredFields.map(f => ({
+      key: f.field_key,
+      label: f.label,
+      type: f.field_type,
+      required: f.required || f.is_required,
+      placeholder: f.placeholder,
+      order: f.display_order,
+      productIds: f.product_ids
+    })));
+
+    return filteredFields;
+  } catch (error) {
+    console.error('Error in fetchCheckoutFields:', error);
+    return [];
+  }
+}
+
+function createFormField(field) {
+  console.log('🔧 DEBUG: createFormField called with:', {
+    field_key: field.field_key,
+    placeholder: field.placeholder,
+    field_type: field.field_type
+  });
+  
+  const fieldWrapper = document.createElement('div');
+  fieldWrapper.className = 'field-wrapper';
+
+  // Create label
+  const labelWrapper = document.createElement('div');
+  labelWrapper.className = 'label-wrapper';
+  
+  const label = document.createElement('label');
+  label.setAttribute('for', field.field_key);
+  label.className = 'block text-sm font-medium text-foreground mb-2';
+  label.textContent = field.label;
+  
+  if (field.required || field.is_required) {
+    const asterisk = document.createElement('span');
+    asterisk.className = 'text-destructive';
+    asterisk.textContent = ' *';
+    label.appendChild(asterisk);
+  }
+  
+  labelWrapper.appendChild(label);
+  fieldWrapper.appendChild(labelWrapper);
+
+  // Create input based on field type
+  let input;
+  
+  // Set placeholder with fallbacks based on field type
+  let placeholder = field.placeholder;
+  if (!placeholder) {
+    // Provide sensible defaults based on field type and key
+    switch (field.field_key) {
+      case 'email':
+        placeholder = 'Enter your email address';
+        break;
+      case 'name':
+      case 'full_name':
+        placeholder = 'Enter your full name';
+        break;
+      case 'phone':
+        placeholder = 'Enter your phone number';
+        break;
+      case 'company':
+        placeholder = 'Enter your company name';
+        break;
+      case 'country':
+        placeholder = 'Select your country';
+        break;
+      default:
+        placeholder = 'Enter ' + (field.label || field.field_key).toLowerCase();
+    }
+  }
+  
+  console.log('📝 DEBUG: Determined placeholder for', field.field_key + ':', placeholder);
+  
+  switch (field.field_type) {
+    case 'select':
+      input = document.createElement('select');
+      input.className = 'w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent';
+      
+      // Add default option with placeholder text
+      const defaultOption = document.createElement('option');
+      defaultOption.value = '';
+      defaultOption.textContent = placeholder;
+      input.appendChild(defaultOption);
+      
+      // Add options from field.options
+      if (field.options && Array.isArray(field.options)) {
+        field.options.forEach(option => {
+          const optionElement = document.createElement('option');
+          optionElement.value = option.value || option;
+          optionElement.textContent = option.label || option;
+          input.appendChild(optionElement);
+        });
+      }
+      break;
+      
+    case 'textarea':
+      input = document.createElement('textarea');
+      input.className = 'w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent';
+      input.rows = 4;
+      input.placeholder = placeholder;
+      break;
+      
+    default: // text, email, tel, etc.
+      input = document.createElement('input');
+      input.type = field.field_type || 'text';
+      input.className = 'w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent';
+      input.placeholder = placeholder;
+  }
+  
+  input.id = field.field_key;
+  input.name = field.field_key;
+  
+  if (field.required || field.is_required) {
+    input.required = true;
+  }
+  
+  fieldWrapper.appendChild(input);
+  return fieldWrapper;
+}
+
+async function rebuildCheckoutForm(productId) {
+  const forms = document.querySelectorAll('form[data-dynamic-checkout]');
+  console.log('🔄 DEBUG: rebuildCheckoutForm called for', forms.length, 'forms with productId:', productId);
+  
+  for (const form of forms) {
+    try {
+      showToast('Loading checkout fields...', 'info', 2000);
+      
+      const fields = await fetchCheckoutFields(productId);
+      console.log('📥 DEBUG: Received fields from fetchCheckoutFields:', fields.length, 'fields');
+      
+      // Clear existing fields
+      form.innerHTML = '';
+      
+      // Always ensure email field is present
+      const hasEmailField = fields.some(field => field.field_key === 'email');
+      console.log('✉️ DEBUG: Email field exists in fetched fields:', hasEmailField);
+      
+      if (!hasEmailField) {
+        const emailField = {
+          field_key: 'email',
+          label: 'Email',
+          field_type: 'email',
+          placeholder: 'Enter your email address',
+          required: true,
+          is_required: true,
+          display_order: 0
+        };
+        fields.unshift(emailField);
+        console.log('➕ DEBUG: Added default email field with placeholder:', emailField.placeholder);
+      }
+      
+      // Sort fields by display_order
+      fields.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+      console.log('🔀 DEBUG: Fields sorted by display_order:', fields.map(f => f.field_key + '(' + (f.display_order || 0) + ')').join(', '));
+      
+      // Create form fields
+      fields.forEach((field, index) => {
+        console.log('🏗️ DEBUG: Creating field ' + (index + 1) + '/' + fields.length + ':', {
+          key: field.field_key,
+          label: field.label,
+          type: field.field_type,
+          required: field.required || field.is_required,
+          placeholder: field.placeholder || 'No placeholder',
+          isRequired: field.is_required,
+          requiredProp: field.required
+        });
+        const fieldElement = createFormField(field);
+        form.appendChild(fieldElement);
+      });
+      
+      console.log('✅ DEBUG: Checkout form rebuilt successfully with', fields.length, 'fields');
+      
+    } catch (error) {
+      console.error('Error rebuilding checkout form:', error);
+      showToast('Error loading checkout fields', 'error');
+    }
+  }
+}
+
 function initializeForms() {
+  // Initialize regular forms
   document.querySelectorAll('form[data-form-type]').forEach(form => {
     if (form.dataset.formInitialized) return;
     form.dataset.formInitialized = 'true';
@@ -439,6 +680,62 @@ function initializeForms() {
         showToast('Error submitting form. Please try again.', 'error');
       }
     });
+  });
+
+  // Initialize dynamic checkout forms
+  const allForms = document.querySelectorAll('form');
+  const dynamicForms = document.querySelectorAll('form[data-dynamic-checkout]');
+  console.log('🔍 DEBUG: Found', allForms.length, 'total forms on page');
+  console.log('🔍 DEBUG: Found', dynamicForms.length, 'forms with data-dynamic-checkout attribute');
+  
+  // Debug: Log all forms and their attributes
+  allForms.forEach((form, index) => {
+    const attributes = Array.from(form.attributes).map(attr => attr.name + '="' + attr.value + '"');
+    const parentElement = form.parentElement;
+    const parentClass = parentElement ? parentElement.className : 'no parent';
+    
+    console.log('📋 DEBUG: Form ' + (index + 1) + ':', {
+      tagName: form.tagName,
+      attributes: attributes,
+      parentClass: parentClass,
+      formData: form.innerHTML.includes('data-dynamic-checkout'),
+      innerHTML: form.innerHTML.length > 200 ? form.innerHTML.substring(0, 200) + '...' : form.innerHTML
+    });
+  });
+  
+  console.log('🚀 DEBUG: Found', dynamicForms.length, 'dynamic checkout forms to initialize');
+  
+  dynamicForms.forEach((form, index) => {
+    console.log('🔍 DEBUG: Processing dynamic form', index + 1, 'of', dynamicForms.length);
+    
+    if (form.dataset.dynamicInitialized) {
+      console.log('⏭️ DEBUG: Form already initialized, skipping');
+      return;
+    }
+    form.dataset.dynamicInitialized = 'true';
+
+    // Get productId from nearest button with checkout action
+    const checkoutButton = form.parentElement?.querySelector('[data-action="checkout"]');
+    let productId = null;
+    
+    console.log('🔗 DEBUG: Looking for checkout button near form...');
+    console.log('🔗 DEBUG: Found checkout button:', !!checkoutButton);
+    
+    if (checkoutButton?.dataset.actionData) {
+      try {
+        const actionData = JSON.parse(checkoutButton.dataset.actionData);
+        productId = actionData.productId;
+        console.log('🎯 DEBUG: Extracted productId from button:', productId);
+      } catch (e) {
+        console.warn('Could not parse checkout button action data');
+      }
+    } else {
+      console.log('📝 DEBUG: No action data found on checkout button');
+    }
+
+    console.log('🏁 DEBUG: Calling rebuildCheckoutForm with productId:', productId);
+    // Rebuild form with dynamic fields
+    rebuildCheckoutForm(productId);
   });
 }
 
@@ -467,7 +764,7 @@ function initializeButtons() {
         case 'open-url':
           if (actionData.url) {
             let url = actionData.url;
-            if (url && !/^https?:\\/\\/i.test(url)) {
+            if (url && !/^https?:\\/\\//i.test(url)) {
               url = 'https://' + url;
             }
             window.open(url, '_blank');
@@ -496,6 +793,9 @@ ${this.generateTrackingIntegration(pageData)}
 
 // Initialize everything
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('🎬 DEBUG: Page loaded, initializing forms and buttons...');
+  console.log('📋 DEBUG: PAGE_CONFIG:', PAGE_CONFIG);
+  
   initializeForms();
   initializeButtons();
   

@@ -222,7 +222,11 @@ export const DynamicCheckoutForm: React.FC<DynamicCheckoutFormProps> = ({
 
   // Render the complete form
   return (
-    <form onSubmit={handleSubmit} className={`${CtaClassMaps.form.container} ${className}`}>
+    <form 
+      onSubmit={handleSubmit} 
+      className={`${CtaClassMaps.form.container} ${className}`}
+      data-dynamic-checkout="true"
+    >
       {fieldsWithEmail.map((field) => (
         <div key={field.id}>
           <label htmlFor={field.field_key} className="block text-sm font-medium text-foreground mb-2">
