@@ -2,7 +2,6 @@ import React from 'react';
 import ReactDOMServer from 'react-dom/server';
 import { LandingPageComponent } from '@/types/components';
 import { ComponentRenderer } from '@/components/registry/ComponentRenderer';
-import { LandingPageService } from '../landing-page';
 import { SeoGenerator, ScriptGenerator, StyleGenerator } from './index';
 import { CssGeneratorService } from './css-generator';
 
@@ -11,7 +10,7 @@ export interface HtmlGeneratorConfig {
   suppressConsoleWarnings?: boolean;
   cleanProductionHtml?: boolean;
   enableTailwindProcessing?: boolean;
-  siteUrl?: string; // For post-deployment processing
+  siteUrl?: string;
 }
 
 export class HtmlGenerator {
