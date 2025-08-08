@@ -492,28 +492,200 @@ async function fetchCheckoutFields(productId) {
   }
 }
 
-function createFormField(field) {
+// Detect CTA variation based on form styling and container
+function detectCtaVariation(form) {
+  // Check the form's className for variation-specific patterns
+  const formClasses = form.className || '';
+  const containerClasses = form.parentElement?.className || '';
+  const grandparentClasses = form.parentElement?.parentElement?.className || '';
+  
+  // Also check for existing fields to see their styling
+  const existingInputs = form.querySelectorAll('input, select, textarea');
+  const existingLabels = form.querySelectorAll('label');
+  
+  console.log('🔍 DEBUG: Analyzing classes for CTA variation detection:', {
+    formClasses: formClasses,
+    containerClasses: containerClasses,
+    grandparentClasses: grandparentClasses,
+    existingInputCount: existingInputs.length,
+    firstInputClasses: existingInputs[0]?.className || 'none',
+    firstLabelClasses: existingLabels[0]?.className || 'none'
+  });
+  
+  // Check existing input styling for more accurate detection
+  if (existingInputs.length > 0) {
+    const inputClasses = existingInputs[0].className;
+    
+    // CTA Variation 1: backdrop-blur, white/10, white borders
+    if (inputClasses.includes('backdrop-blur') || 
+        inputClasses.includes('bg-white/10') || 
+        inputClasses.includes('border-white/20') ||
+        inputClasses.includes('placeholder-white/60')) {
+      return 'variation1';
+    }
+    
+    // CTA Variation 2: rounded-full, text-center, px-5 py-3
+    if (inputClasses.includes('rounded-full') && 
+        (inputClasses.includes('text-center') || inputClasses.includes('px-5'))) {
+      return 'variation2';
+    }
+  }
+  
+  // Fallback to className analysis
+  // CTA Variation 1: Look for white/backdrop blur/glass styling
+  if (formClasses.includes('backdrop-blur') || 
+      formClasses.includes('bg-white/10') || 
+      formClasses.includes('placeholder-white/60') ||
+      formClasses.includes('border-white/20')) {
+    return 'variation1';
+  }
+  
+  // CTA Variation 2: Look for centered/flex column/rounded-full styling
+  if (formClasses.includes('text-center') || 
+      formClasses.includes('rounded-full') ||
+      formClasses.includes('items-center') ||
+      formClasses.includes('flex-col') ||
+      containerClasses.includes('text-center')) {
+    return 'variation2';
+  }
+  
+  // Default fallback
+  return 'variation3';
+}
+
+// Helper functions for variation-specific CSS classes
+function getFieldWrapperClasses(variation) {
+  switch (variation) {
+    case 'variation1':
+      return 'field-wrapper w-full';
+    case 'variation2':
+      return 'field-wrapper w-full flex flex-col items-center';
+    case 'variation3':
+    default:
+      return 'field-wrapper';
+  }
+}
+
+function getLabelWrapperClasses(variation) {
+  switch (variation) {
+    case 'variation1':
+      return 'label-wrapper';
+    case 'variation2':
+      return 'label-wrapper flex items-center justify-center';
+    case 'variation3':
+    default:
+      return 'label-wrapper';
+  }
+}
+
+function getLabelClasses(variation) {
+  switch (variation) {
+    case 'variation1':
+      // White text to match the glass/dark theme - inherits from container color: #ffffff
+      return 'block text-sm font-medium text-white mb-2';
+    case 'variation2':
+      return 'mb-2 text-center font-medium text-white';
+    case 'variation3':
+    default:
+      return 'block text-sm font-medium text-foreground mb-2';
+  }
+}
+
+function getRequiredAsteriskClasses(variation) {
+  switch (variation) {
+    case 'variation1':
+      // Lighter red/pink that's visible on dark glass background
+      return 'text-red-400 ml-1';
+    case 'variation2':
+      return 'text-red-500 ml-1 select-none';
+    case 'variation3':
+    default:
+      return 'text-destructive';
+  }
+}
+
+function getInputClasses(variation) {
+  // Base classes from CtaClassMaps.form.input
+  const baseClasses = 'w-full px-4 py-3 border focus:outline-none';
+  
+  switch (variation) {
+    case 'variation1':
+      // Exact CTA1 styling: rounded-full + glass effect with white text + white focus ring
+      // Note: placeholder color is handled via inline styles
+      return baseClasses + ' rounded-full bg-white/10 backdrop-blur-md border-white/20 text-white focus:ring-2 focus:ring-white/50 focus:border-white/40';
+    case 'variation2':
+      // CTA2 styling: rounded-full + centered + larger padding
+      return baseClasses + ' rounded-full px-5 py-3 border-gray-300 text-center focus:ring-2 focus:ring-primary';
+    case 'variation3':
+    default:
+      // Standard CTA3 styling
+      return baseClasses + ' border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-transparent';
+  }
+}
+
+function getSelectClasses(variation) {
+  // Base classes from CtaClassMaps.form.select  
+  const baseClasses = 'w-full px-4 py-3 border focus:outline-none';
+  
+  switch (variation) {
+    case 'variation1':
+      // Exact CTA1 styling: rounded-full + glass effect with white text + white focus ring
+      return baseClasses + ' rounded-full bg-white/10 backdrop-blur-md border-white/20 text-white focus:ring-2 focus:ring-white/50 focus:border-white/40';
+    case 'variation2':
+      // CTA2 styling: rounded-full + centered + larger padding
+      return baseClasses + ' rounded-full px-5 py-3 border-gray-300 text-center focus:ring-2 focus:ring-primary';
+    case 'variation3':
+    default:
+      // Standard CTA3 styling
+      return baseClasses + ' border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent';
+  }
+}
+
+function getTextareaClasses(variation) {
+  // Base classes similar to form input but with textarea-specific styling
+  const baseClasses = 'w-full px-4 py-3 border focus:outline-none';
+  
+  switch (variation) {
+    case 'variation1':
+      // Exact CTA1 styling: rounded-2xl + glass effect with white text + white focus ring
+      // Note: placeholder color is handled via inline styles
+      return baseClasses + ' rounded-2xl bg-white/10 backdrop-blur-md border-white/20 text-white focus:ring-2 focus:ring-white/50 focus:border-white/40';
+    case 'variation2':
+      // CTA2 styling: rounded-2xl + centered + larger padding
+      return baseClasses + ' rounded-2xl px-5 py-3 border-gray-300 text-center focus:ring-2 focus:ring-primary';
+    case 'variation3':
+    default:
+      // Standard CTA3 styling
+      return baseClasses + ' border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-transparent';
+  }
+}
+
+function createFormField(field, ctaVariation = 'variation3') {
   console.log('🔧 DEBUG: createFormField called with:', {
     field_key: field.field_key,
     placeholder: field.placeholder,
-    field_type: field.field_type
+    field_type: field.field_type,
+    ctaVariation: ctaVariation
   });
   
   const fieldWrapper = document.createElement('div');
-  fieldWrapper.className = 'field-wrapper';
+  fieldWrapper.className = getFieldWrapperClasses(ctaVariation);
 
   // Create label
   const labelWrapper = document.createElement('div');
-  labelWrapper.className = 'label-wrapper';
+  labelWrapper.className = getLabelWrapperClasses(ctaVariation);
   
   const label = document.createElement('label');
   label.setAttribute('for', field.field_key);
-  label.className = 'block text-sm font-medium text-foreground mb-2';
+  const labelClasses = getLabelClasses(ctaVariation);
+  label.className = labelClasses;
   label.textContent = field.label;
+  
+  console.log('🏷️ DEBUG: Label classes for', field.field_key + ':', labelClasses);
   
   if (field.required || field.is_required) {
     const asterisk = document.createElement('span');
-    asterisk.className = 'text-destructive';
+    asterisk.className = getRequiredAsteriskClasses(ctaVariation);
     asterisk.textContent = ' *';
     label.appendChild(asterisk);
   }
@@ -555,7 +727,9 @@ function createFormField(field) {
   switch (field.field_type) {
     case 'select':
       input = document.createElement('select');
-      input.className = 'w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent';
+      const selectClasses = getSelectClasses(ctaVariation);
+      input.className = selectClasses;
+      console.log('📋 DEBUG: Select classes for', field.field_key + ':', selectClasses);
       
       // Add default option with placeholder text
       const defaultOption = document.createElement('option');
@@ -576,16 +750,46 @@ function createFormField(field) {
       
     case 'textarea':
       input = document.createElement('textarea');
-      input.className = 'w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent';
+      const textareaClasses = getTextareaClasses(ctaVariation);
+      input.className = textareaClasses;
       input.rows = 4;
       input.placeholder = placeholder;
+      
+      // Apply placeholder color as inline style for CTA Variation 1
+      if (ctaVariation === 'variation1') {
+        input.style.setProperty('--placeholder-color', 'rgba(255, 255, 255, 0.6)');
+        input.style.color = 'white';
+        // Set placeholder color using CSS custom property
+        const style = document.createElement('style');
+        style.textContent = 'textarea[data-field="' + field.field_key + '"]::placeholder { color: rgba(255, 255, 255, 0.6) !important; }';
+        document.head.appendChild(style);
+        input.setAttribute('data-field', field.field_key);
+        console.log('🎨 DEBUG: Applied white placeholder styling for textarea', field.field_key);
+      }
+      
+      console.log('📝 DEBUG: Textarea classes for', field.field_key + ':', textareaClasses);
       break;
       
     default: // text, email, tel, etc.
       input = document.createElement('input');
       input.type = field.field_type || 'text';
-      input.className = 'w-full px-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent';
+      const inputClasses = getInputClasses(ctaVariation);
+      input.className = inputClasses;
       input.placeholder = placeholder;
+      
+      // Apply placeholder color as inline style for CTA Variation 1
+      if (ctaVariation === 'variation1') {
+        input.style.setProperty('--placeholder-color', 'rgba(255, 255, 255, 0.6)');
+        input.style.color = 'white';
+        // Set placeholder color using CSS custom property
+        const style = document.createElement('style');
+        style.textContent = 'input[data-field="' + field.field_key + '"]::placeholder { color: rgba(255, 255, 255, 0.6) !important; }';
+        document.head.appendChild(style);
+        input.setAttribute('data-field', field.field_key);
+        console.log('🎨 DEBUG: Applied white placeholder styling for input', field.field_key);
+      }
+      
+      console.log('📝 DEBUG: Input classes for', field.field_key + ':', inputClasses);
   }
   
   input.id = field.field_key;
@@ -606,6 +810,10 @@ async function rebuildCheckoutForm(productId) {
   for (const form of forms) {
     try {
       showToast('Loading checkout fields...', 'info', 2000);
+      
+      // Detect CTA variation based on form or container styling
+      const ctaVariation = detectCtaVariation(form);
+      console.log('🎨 DEBUG: Detected CTA variation:', ctaVariation);
       
       const fields = await fetchCheckoutFields(productId);
       console.log('📥 DEBUG: Received fields from fetchCheckoutFields:', fields.length, 'fields');
@@ -644,9 +852,10 @@ async function rebuildCheckoutForm(productId) {
           required: field.required || field.is_required,
           placeholder: field.placeholder || 'No placeholder',
           isRequired: field.is_required,
-          requiredProp: field.required
+          requiredProp: field.required,
+          variation: ctaVariation
         });
-        const fieldElement = createFormField(field);
+        const fieldElement = createFormField(field, ctaVariation);
         form.appendChild(fieldElement);
       });
       
