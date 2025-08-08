@@ -18,6 +18,7 @@ export class HtmlGenerator {
   private scriptGenerator: ScriptGenerator;
   private styleGenerator: StyleGenerator;
   private cssGenerator: CssGeneratorService;
+  private lastGeneratedCSS: string = '';
 
   constructor(private config: HtmlGeneratorConfig = {}) {
     this.seoGenerator = new SeoGenerator();
@@ -25,13 +26,15 @@ export class HtmlGenerator {
     this.styleGenerator = new StyleGenerator();
     this.cssGenerator = new CssGeneratorService();
     
-    // Set defaults
+    // Set defaults - always enable Tailwind processing
     this.config = {
       suppressConsoleWarnings: true,
       cleanProductionHtml: true,
-      enableTailwindProcessing: true,
+      enableTailwindProcessing: true, // Always enabled
       ...config
     };
+    // Force enable processing regardless of config
+    this.config.enableTailwindProcessing = true;
   }
 
   async generateReactHTML(pageData: any): Promise<string> {
@@ -56,48 +59,34 @@ export class HtmlGenerator {
       // Generate complete HTML document
       const baseHTML = this.generateCompleteHTMLDocument(pageData, cleanedHTML);
 
-      // Process with Tailwind if enabled
-      if (this.config.enableTailwindProcessing) {
-        console.log('🎨 Tailwind processing enabled, calling processor...');
-        console.log('📊 Base HTML length:', baseHTML.length);
+      // Process with Tailwind CSS generator and merge with styles.css
+      console.log('🎨 Processing with Tailwind CSS generator...');
+      console.log('📊 Base HTML length:', baseHTML.length);
+      
+      try {
+        const processingStartTime = Date.now();
         
-        try {
-          const processingStartTime = Date.now();
-          
-          // Generate CSS using the new css-generator Edge Function
-          const generatedCSS = await this.cssGenerator.generateCss(baseHTML);
-          
-          // Inject the generated CSS into the HTML
-          const finalHTML = this.injectGeneratedCSS(baseHTML, generatedCSS, pageData);
-          
-          const totalProcessingTime = Date.now() - processingStartTime;
-          
-          console.log('✅ Tailwind processing complete!');
-          console.log('📈 Final HTML length:', finalHTML.length);
-          console.log('⏱️ Total processing time:', totalProcessingTime + 'ms');
-          console.log('📊 Size change:', ((finalHTML.length - baseHTML.length) / baseHTML.length * 100).toFixed(1) + '%');
-          
-          // Verify the HTML was actually processed
-          if (finalHTML.length === 0) {
-            console.error('❌ Tailwind processing returned empty HTML, using base HTML');
-            return baseHTML;
-          }
-          
-          // Check if processing actually occurred (should have inline styles)
-          if (!finalHTML.includes('<style>') && finalHTML.length === baseHTML.length) {
-            console.warn('⚠️ Tailwind processing may not have occurred properly');
-          }
-          
-          return finalHTML;
-        } catch (processingError) {
-          console.error('❌ Tailwind processing failed completely:', processingError);
-          console.log('🔄 Returning base HTML as fallback');
-          return baseHTML;
-        }
+        // Generate CSS using the css-generator Edge Function
+        const generatedCSS = await this.cssGenerator.generateCss(baseHTML);
+        
+        // Store generated CSS for merging with styles.css (no injection into HTML)
+        this.lastGeneratedCSS = generatedCSS;
+        
+        const totalProcessingTime = Date.now() - processingStartTime;
+        
+        console.log('✅ Tailwind processing complete!');
+        console.log('📈 Generated CSS will be merged with styles.css');
+        console.log('⏱️ Total processing time:', totalProcessingTime + 'ms');
+        console.log('📊 Clean HTML for better performance');
+        
+        // Return clean HTML without embedded CSS
+        return baseHTML;
+      } catch (processingError) {
+        console.error('❌ Tailwind processing failed completely:', processingError);
+        console.log('🔄 Returning base HTML as fallback');
+        this.lastGeneratedCSS = '';
+        return baseHTML;
       }
-
-      console.log('ℹ️ Tailwind processing disabled, returning base HTML');
-      return baseHTML;
 
     } catch (error) {
       console.error('Failed to generate React HTML:', error);
@@ -105,77 +94,27 @@ export class HtmlGenerator {
     }
   }
 
+  getLastGeneratedCSS(): string {
+    return this.lastGeneratedCSS;
+  }
+
   async processDeployedHTML(html: string, pageData: any, siteUrl: string): Promise<string> {
     try {
       console.log('Processing deployed HTML with css-generator Edge Function...');
       
-      // Generate CSS using the new css-generator
+      // Generate CSS using the css-generator Edge Function and store for styles.css
       const generatedCSS = await this.cssGenerator.generateCss(html);
+      this.lastGeneratedCSS = generatedCSS;
       
-      // Inject the CSS into the HTML
-      const processedHTML = this.injectGeneratedCSS(html, generatedCSS, pageData);
-      
-      return processedHTML;
+      // Return clean HTML - CSS will be in external styles.css
+      return html;
 
     } catch (error) {
       console.error('Failed to process deployed HTML:', error);
+      this.lastGeneratedCSS = '';
       // Return original HTML if processing fails
       return html;
     }
-  }
-
-  private injectGeneratedCSS(html: string, css: string, pageData: any): string {
-    // Extract theme colors from pageData for CSS variables
-    const primaryColor = pageData?.global_theme?.primaryColor || '#3b82f6';
-    const secondaryColor = pageData?.global_theme?.secondaryColor || '#f3f4f6';
-    const backgroundColor = pageData?.global_theme?.backgroundColor || '#ffffff';
-
-    // Create the style block with CSS variables and generated CSS
-    const styleBlock = `    <style>
-/* CSS Variables for theming */
-:root {
-  --primary-color: ${primaryColor};
-  --secondary-color: ${secondaryColor};
-  --background-color: ${backgroundColor};
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --primary: 221.2 83.2% 53.3%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222.2 84% 4.9%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222.2 84% 4.9%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 221.2 83.2% 53.3%;
-  --radius: 0.5rem;
-}
-
-/* Generated page-specific Tailwind CSS */
-${css}
-    </style>
-`;
-
-    // Find the head tag and inject the CSS
-    const headEndMatch = html.match(/<\/head>/i);
-    if (!headEndMatch) {
-      console.warn('No </head> tag found in HTML, injecting CSS at the beginning');
-      return styleBlock + html;
-    }
-
-    // Inject CSS right before the closing head tag
-    const beforeHead = html.substring(0, headEndMatch.index);
-    const afterHead = html.substring(headEndMatch.index!);
-    
-    return beforeHead + styleBlock + afterHead;
   }
 
   private sortComponentsByOrder(components: LandingPageComponent[]): LandingPageComponent[] {
@@ -364,7 +303,7 @@ ${css}
     const dir = pageData.global_theme?.direction || 'ltr';
     const title = pageData.seo_config?.title || pageData.slug;
 
-    // Only include Tailwind CDN if edge function processing is disabled
+    // Clean separation: HTML only contains structure and references to external files
     return `<!DOCTYPE html>
 <html lang="${lang}" dir="${dir}">
 <head>
@@ -376,9 +315,6 @@ ${css}
   ${this.seoGenerator.generateSEOMetaTags(pageData)}
   <link rel="stylesheet" href="styles.css">
   ${this.styleGenerator.generateGoogleFontsLink(pageData)}
-  ${this.config.enableTailwindProcessing ? '' : this.styleGenerator.generateTailwindCSS()}
-  ${this.scriptGenerator.generateSupabaseSDK(pageData)}
-  ${this.scriptGenerator.generateTrackingScripts(pageData)}
 </head>
 <body>
   ${bodyHTML}

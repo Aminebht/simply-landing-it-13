@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { LandingPageComponent, ComponentVariation } from '@/types/components';
-import { LandingPage, MarketplaceData } from '@/types/landing-page';
+import { LandingPage} from '@/types/landing-page';
 
 // Helper function to clean content by removing image URLs
 const cleanContentFromImageUrls = (content: unknown): unknown => {
@@ -86,12 +86,6 @@ export class LandingPageService {
     return {
       ...landingPage,
       components: enrichedComponents,
-      marketplaceData: {
-        product_id: landingPage.product?.id,
-        price: landingPage.product?.price,
-        currency: 'TND',
-        checkout_url: this.generateCheckoutUrl(landingPage.product?.id, landingPage.profile?.id)
-      }
     };
   }
 
@@ -126,9 +120,7 @@ export class LandingPageService {
     if (cleanComponentData.content) {
       cleanComponentData.content = cleanContentFromImageUrls(cleanComponentData.content);
     }
-    
-    // Remove the 'styles' property as it doesn't exist in database schema
-    // The database only has 'custom_styles', 'content', 'visibility' etc.
+
     const { styles, ...dbComponentData } = cleanComponentData;
     
     // Calculate order_index as number of existing components + 1 (1,2,3...)
@@ -310,26 +302,13 @@ export class LandingPageService {
       return components;
     }
 
-    const productData = product as { id: string; price: number };
-    const profileData = profile as { id: string };
-
-    const marketplaceData: MarketplaceData = {
-      product_id: productData.id,
-      price: productData.price,
-      currency: 'TND',
-      checkout_url: this.generateCheckoutUrl(productData.id, profileData.id)
-    };
-
     return components.map(component => ({
       ...component,
       styles: component.custom_styles || {}, // Add styles property for frontend compatibility
-      marketplace_data: marketplaceData
     }));
   }
 
-  private generateCheckoutUrl(productId: string, sellerId: string): string {
-    return `https://demarky.tn/checkout/${productId}?seller=${sellerId}`;
-  }
+
 
   // Landing page by slug
   async getLandingPageBySlug(slug: string): Promise<LandingPage | null> {

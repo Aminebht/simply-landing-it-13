@@ -50,14 +50,6 @@ export interface LandingPage {
   created_at: string;
   updated_at: string;
 }
-
-export interface MarketplaceData {
-  product_id: string;
-  price: number;
-  currency: string;
-  checkout_url: string;
-}
-
 export interface ButtonAction {
   action_type: 'marketplace_checkout' | 'external_link' | 'scroll_to' | 'modal';
   tracking_event?: string;

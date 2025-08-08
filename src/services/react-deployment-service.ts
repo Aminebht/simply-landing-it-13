@@ -1,4 +1,3 @@
-import { LandingPageComponent } from '@/types/components';
 import { LandingPageService } from './landing-page';
 import { NetlifyService } from './netlify';
 import { HtmlGenerator } from './deployment/html-generator';
@@ -65,18 +64,10 @@ export class ReactDeploymentService {
     try {
       this.logger.info('Starting React-based deployment', { pageId });
 
-      // Validate and fetch page data
       const pageData = await this.validateAndFetchPageData(pageId);
-      
-      // Generate deployment files
       const files = await this.generateDeploymentFiles(pageData);
-      
-      // Deploy to Netlify
       const { siteId, deploymentResult } = await this.deployToNetlify(pageData, files);
-      
-      // Update database with deployment info
       await this.updateDatabaseWithDeploymentInfo(pageId, siteId, deploymentResult);
-
       const result: DeploymentResult = {
         url: deploymentResult.deploy_ssl_url || deploymentResult.deploy_url,
         siteId: siteId
@@ -114,20 +105,24 @@ export class ReactDeploymentService {
     // Generate HTML with integrated Tailwind CSS processing
     const finalHTML = await this.htmlGenerator.generateReactHTML(pageData);
     
-    // Generate other assets
-    const { css: baseCSS, js } = await this.assetGenerator.generateAssets(pageData);
+    // Get the generated CSS from HTML generator for merging
+    const priorityCSS = this.htmlGenerator.getLastGeneratedCSS();
+    
+    // Generate other assets with priority CSS merged into styles.css
+    const { css: finalCSS, js } = await this.assetGenerator.generateAssets(pageData, priorityCSS);
     
     const headers = this.generateNetlifyHeaders();
 
     this.logger.debug('Deployment files generated successfully', {
       htmlSize: finalHTML.length,
-      cssSize: baseCSS.length,
-      jsSize: js.length
+      cssSize: finalCSS.length,
+      jsSize: js.length,
+      priorityCSSSize: priorityCSS.length
     });
 
     return {
       'index.html': finalHTML,
-      'styles.css': baseCSS,
+      'styles.css': finalCSS,
       'app.js': js,
       '_headers': headers
     };

@@ -3,7 +3,6 @@ export interface ComponentProps {
   styles: Record<string, any>;
   visibility: Record<string, boolean>;
   mediaUrls?: Record<string, string>; // Added media_urls from component data
-  marketplaceData?: any;
   trackingConfig?: any;
   isEditing?: boolean;
   selectedElementId?: string | null;
@@ -137,13 +136,6 @@ export interface ButtonAction {
   fallback_url?: string;
 }
 
-export interface MarketplaceData {
-  product_id: string;
-  price: number;
-  currency: string;
-  checkout_url: string;
-}
-
 export interface TrackingConfig {
   facebook_pixel_id?: string;
   facebook_access_token?: string;
@@ -162,7 +154,6 @@ export interface ComponentInstance {
   visibility: Record<string, boolean>;
   content: Record<string, any>;
   styles: Record<string, CustomizableStyles>;
-  marketplace_data?: MarketplaceData;
   tracking_config?: TrackingConfig;
 }
 

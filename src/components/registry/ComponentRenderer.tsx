@@ -10,7 +10,6 @@ interface ComponentRendererProps {
   styles: Record<string, any>;
   visibility: Record<string, boolean>;
   mediaUrls?: Record<string, string>; // Added media_urls prop
-  marketplaceData?: any;
   trackingConfig?: any;
   isEditing?: boolean;
   selectedElementId?: string | null;
@@ -40,7 +39,6 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
   styles,
   visibility,
   mediaUrls,
-  marketplaceData,
   trackingConfig,
   isEditing,
   selectedElementId,
@@ -235,7 +233,6 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     styles: mergedStyles,
     visibility,
     mediaUrls, // Pass media_urls from prop
-    marketplaceData,
     trackingConfig,
     isEditing,
     selectedElementId,
