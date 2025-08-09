@@ -18,7 +18,21 @@ const config = {
       },
     },
     extend: {
+      fontFamily: {
+        poppins: ['Poppins', 'sans-serif'],
+        heading: ['Poppins', 'sans-serif'],
+        body: ['Poppins', 'sans-serif'],
+      },
       colors: {
+        // Brand Colors
+        brand: {
+          'deep-indigo': '#130128',
+          'medium-violet': '#7049c3',
+          'cotton-candy-pink': '#f2c0dd',
+          'light-cream': '#fef7cd',
+          'lavender-gray': '#ccc9dc',
+        },
+        // System Colors
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

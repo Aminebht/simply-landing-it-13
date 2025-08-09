@@ -998,9 +998,9 @@ export default function Builder() {
   }
 
   return (
-    <div className="h-screen flex bg-gradient-to-br from-brand-light-cream/10 via-background to-brand-cotton-candy-pink/5 overflow-hidden">
+    <div className="h-screen flex bg-gradient-to-br from-brand-light-cream/20 via-white to-brand-cotton-candy-pink/20 overflow-hidden font-poppins">
       {/* Left Sidebar - Component Library - Collapsible */}
-      <div className={`bg-white/90 backdrop-blur-xl border-r border-brand-lavender-gray/30 flex-shrink-0 h-full flex flex-col sticky top-0 transition-all duration-300 shadow-lg ${
+      <div className={`bg-white/95 backdrop-blur-xl border-r border-brand-lavender-gray/20 flex-shrink-0 h-full flex flex-col sticky top-0 transition-all duration-300 shadow-xl ${
         isLeftSidebarOpen ? 'w-80' : 'w-0'
       }`}>
         <div className={`${isLeftSidebarOpen ? 'block' : 'hidden'} w-80 flex-1 overflow-hidden`}>
@@ -1015,10 +1015,10 @@ export default function Builder() {
             variant="outline"
             size="icon"
             onClick={toggleLeftSidebar}
-            className="rounded-l-none rounded-r-xl bg-white/90 backdrop-blur-sm border-l-0 border-brand-lavender-gray/30 shadow-lg hover:bg-brand-cotton-candy-pink/20 hover:border-brand-medium-violet/30 transition-all duration-200"
+            className="rounded-l-none rounded-r-2xl bg-white/95 backdrop-blur-sm border-l-0 border-brand-lavender-gray/20 shadow-xl hover:bg-brand-cotton-candy-pink/30 hover:border-brand-medium-violet/40 transition-all duration-300 hover:scale-105"
             title="Open Component Library (Ctrl+B)"
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4 text-brand-medium-violet" />
           </Button>
         </div>
       )}
@@ -1026,7 +1026,7 @@ export default function Builder() {
       {/* Main Canvas Area - Scrollable */}
       <div className="flex-1 flex flex-col h-full">
         {/* Top Toolbar - Fixed */}
-        <div className="bg-white/80 backdrop-blur-xl border-b border-brand-lavender-gray/30 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+        <div className="bg-white/90 backdrop-blur-xl border-b border-brand-lavender-gray/20 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
           <div className="flex items-center gap-4">
             {/* Left Sidebar Toggle */}
             {isLeftSidebarOpen && (
@@ -1034,14 +1034,22 @@ export default function Builder() {
                 variant="ghost"
                 size="icon"
                 onClick={toggleLeftSidebar}
-                className="h-8 w-8"
+                className="h-8 w-8 hover:bg-brand-cotton-candy-pink/20 text-brand-medium-violet"
                 title="Close Component Library (Ctrl+B)"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
             )}
             
-            <h1 className="text-lg font-heading font-semibold text-brand-deep-indigo">Landing Page Builder</h1>
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-brand-medium-violet to-brand-deep-indigo rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">✨</span>
+              </div>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-brand-deep-indigo to-brand-medium-violet bg-clip-text text-transparent">
+                Landing Page Builder
+              </h1>
+            </div>
+            
             <DirectionToggle 
               currentDirection={direction} 
               onToggle={handleDirectionToggle} 
@@ -1054,7 +1062,7 @@ export default function Builder() {
           
           <div className="flex items-center gap-3">
             {/* Enhanced Undo/Redo Status */}
-            <div className="border-r border-gray-200 pr-3">
+            <div className="border-r border-brand-lavender-gray/30 pr-4">
               <UndoRedoStatus
                 canUndo={canUndo}
                 canRedo={canRedo}
@@ -1066,15 +1074,13 @@ export default function Builder() {
             <Button
               variant="outline"
               onClick={handlePreview}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 border-brand-lavender-gray/30 text-brand-deep-indigo hover:bg-brand-cotton-candy-pink/20 hover:border-brand-medium-violet/30 transition-all duration-200"
             >
               <Eye className="h-4 w-4" />
               Preview
             </Button>
             
             <div className="flex items-center gap-3">
-          
-              
               <LandingPageSettings
                 landingPage={page}
                 onSettingsUpdate={handleSettingsUpdate}
@@ -1083,7 +1089,7 @@ export default function Builder() {
               <Button
                 onClick={handleDeploy}
                 disabled={isDeploying}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 bg-gradient-to-r from-brand-medium-violet to-brand-deep-indigo hover:from-brand-deep-indigo hover:to-brand-medium-violet text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 font-medium"
               >
                 <Globe className="h-4 w-4" />
                 {isDeploying ? 'Deploying...' : 'Deploy'}
@@ -1094,7 +1100,7 @@ export default function Builder() {
                 <Button
                   onClick={handleViewLive}
                   variant="outline"
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 border-brand-lavender-gray/30 text-brand-deep-indigo hover:bg-brand-cotton-candy-pink/20 hover:border-brand-medium-violet/30 transition-all duration-200"
                   title="View your live landing page"
                 >
                   <ExternalLink className="h-4 w-4" />
@@ -1102,9 +1108,8 @@ export default function Builder() {
                 </Button>
               )}
               
-              
               {lastSavedTime && (
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-brand-deep-indigo/60 bg-brand-light-cream/30 px-3 py-1 rounded-full">
                   Last saved: {lastSavedTime.toLocaleTimeString()}
                 </div>
               )}
@@ -1116,10 +1121,10 @@ export default function Builder() {
                 variant="ghost"
                 size="icon"
                 onClick={toggleRightSidebar}
-                className="h-8 w-8"
+                className="h-8 w-8 hover:bg-brand-cotton-candy-pink/20 text-brand-medium-violet"
                 title="Close Visual Editor (Ctrl+J)"
               >
-                <ChevronRight className="h-4 w-4 text-brand-medium-violet" />
+                <ChevronRight className="h-4 w-4" />
               </Button>
             )}
           </div>
@@ -1130,24 +1135,24 @@ export default function Builder() {
           {/* Canvas Area - Scrollable */}
           <div className="flex-1 overflow-y-auto relative">
             {/* Direction Indicator */}
-            <div className="absolute top-6 left-6 z-10 bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl text-xs font-medium text-brand-deep-indigo border border-brand-lavender-gray/30 shadow-lg">
+            <div className="absolute top-6 left-6 z-10 bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl text-xs font-semibold text-brand-deep-indigo border border-brand-lavender-gray/20 shadow-lg">
               Components: {direction.toUpperCase()}
             </div>
 
             {/* Viewport Size Indicator */}
-            <div className="absolute top-6 right-6 z-10 bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl text-xs font-medium text-brand-deep-indigo border border-brand-lavender-gray/30 shadow-lg">
+            <div className="absolute top-6 right-6 z-10 bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl text-xs font-semibold text-brand-deep-indigo border border-brand-lavender-gray/20 shadow-lg">
               {currentViewport === 'mobile' && '📱 Mobile (375px)'}
               {currentViewport === 'tablet' && '📋 Tablet (768px)'}
               {currentViewport === 'desktop' && '🖥️ Desktop (1440px)'}
             </div>
             
             {/* Canvas Content with Direction and Responsive Preview */}
-            <div className="min-h-full flex items-center justify-center bg-gradient-to-br from-brand-light-cream/20 via-transparent to-brand-cotton-candy-pink/10">
+            <div className="min-h-full flex items-center justify-center bg-gradient-to-br from-brand-light-cream/30 via-white/50 to-brand-cotton-candy-pink/20">
               <div 
-                className={`bg-white shadow-lg transition-all duration-300 ${
+                className={`bg-white shadow-2xl transition-all duration-300 ${
                   currentViewport === 'desktop' 
                     ? 'w-full min-h-full shadow-none' 
-                    : 'my-8 rounded-lg overflow-hidden'
+                    : 'my-8 rounded-2xl overflow-hidden'
                 }`}
                 style={{
                   width: currentViewport === 'desktop' ? '100%' : 
@@ -1175,7 +1180,7 @@ export default function Builder() {
           </div>
 
           {/* Right Sidebar - Visual Editor - Collapsible */}
-          <div className={`bg-white/90 backdrop-blur-xl border-l border-brand-lavender-gray/30 flex-shrink-0 h-full flex flex-col sticky top-0 transition-all duration-300 shadow-lg ${
+          <div className={`bg-white/95 backdrop-blur-xl border-l border-brand-lavender-gray/20 flex-shrink-0 h-full flex flex-col sticky top-0 transition-all duration-300 shadow-xl ${
             isRightSidebarOpen ? 'w-80' : 'w-0'
           }`}>
             <div className={`${isRightSidebarOpen ? 'block' : 'hidden'} w-80 flex-1 overflow-hidden`}>
@@ -1203,7 +1208,7 @@ export default function Builder() {
               variant="outline"
               size="icon"
               onClick={toggleRightSidebar}
-              className="rounded-r-none rounded-l-xl bg-white/90 backdrop-blur-sm border-r-0 border-brand-lavender-gray/30 shadow-lg hover:bg-brand-cotton-candy-pink/20 hover:border-brand-medium-violet/30 transition-all duration-200"
+              className="rounded-r-none rounded-l-2xl bg-white/95 backdrop-blur-sm border-r-0 border-brand-lavender-gray/20 shadow-xl hover:bg-brand-cotton-candy-pink/30 hover:border-brand-medium-violet/40 transition-all duration-300 hover:scale-105"
               title="Open Visual Editor (Ctrl+J)"
             >
               <ChevronLeft className="h-4 w-4 text-brand-medium-violet" />

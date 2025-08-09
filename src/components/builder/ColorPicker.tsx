@@ -186,61 +186,72 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({ color, onChange, label
   };
 
   return (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-gray-700">{label}</label>
+    <div className="space-y-3 font-poppins">
+      <label className="text-sm font-semibold text-brand-deep-indigo">{label}</label>
       <Popover open={isOpen} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            className="w-full h-10 p-1 border-2"
+            className="w-full h-11 p-2 border-2 border-brand-lavender-gray/30 hover:border-brand-medium-violet/40 bg-white/80 backdrop-blur-sm transition-all duration-200 hover:shadow-md"
           >
-            <div className="flex items-center space-x-2 w-full">
-              <div className="relative w-6 h-6 rounded border border-gray-300">
+            <div className="flex items-center space-x-3 w-full">
+              <div className="relative w-7 h-7 rounded-lg border-2 border-brand-lavender-gray/40 shadow-sm">
                 {currentDisplayValue === 'transparent' ? (
-                  <div className="absolute inset-0 bg-checkerboard" />
+                  <div className="absolute inset-0 bg-checkerboard rounded-md" />
                 ) : (
                   <div 
-                    className="absolute inset-0"
+                    className="absolute inset-0 rounded-md shadow-inner"
                     style={{ backgroundColor: currentDisplayValue }}
                   />
                 )}
                 {currentDisplayValue === 'transparent' && (
-                  <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-500">T</div>
+                  <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-brand-deep-indigo/60">T</div>
                 )}
               </div>
-              <span className="text-sm text-gray-600 flex-1 text-left">
+              <span className="text-sm font-medium text-brand-deep-indigo flex-1 text-left">
                 {currentDisplayValue}
               </span>
             </div>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-3">
-          <div className="flex flex-col space-y-3">
+        <PopoverContent className="w-auto p-4 bg-white/95 backdrop-blur-xl border-brand-lavender-gray/20 shadow-2xl">
+          <div className="flex flex-col space-y-4">
             <div className="flex items-center space-x-2 mb-2">
               <button
                 onClick={() => handleLocalColorChange('transparent')}
-                className={`p-1 border rounded ${currentDisplayValue === 'transparent' ? 'ring-2 ring-blue-500' : 'border-gray-300'}`}
+                className={`p-2 border-2 rounded-lg transition-all duration-200 ${
+                  currentDisplayValue === 'transparent' 
+                    ? 'ring-2 ring-brand-medium-violet border-brand-medium-violet/50' 
+                    : 'border-brand-lavender-gray/30 hover:border-brand-medium-violet/40'
+                }`}
                 title="Transparent"
               >
                 <div className="w-8 h-8 relative">
-                  <div className="absolute inset-0 bg-checkerboard" />
-                  <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-500">T</div>
+                  <div className="absolute inset-0 bg-checkerboard rounded-md" />
+                  <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-brand-deep-indigo/60">T</div>
                 </div>
               </button>
+              <span className="text-sm font-medium text-brand-deep-indigo">Transparent</span>
             </div>
-            <HexColorPicker 
-              color={currentDisplayValue === 'transparent' ? '#00000000' : currentDisplayValue} 
-              onChange={(color) => handleLocalColorChange(color)} 
-            />
+            <div className="rounded-xl overflow-hidden shadow-lg">
+              <HexColorPicker 
+                color={currentDisplayValue === 'transparent' ? '#00000000' : currentDisplayValue} 
+                onChange={(color) => handleLocalColorChange(color)} 
+              />
+            </div>
             <div className="flex items-center space-x-2">
               <input
                 type="text"
                 value={currentDisplayValue}
                 onChange={handleInputChange}
-                className="px-2 py-1 text-xs border rounded w-24 font-mono"
+                className="px-3 py-2 text-sm border-2 border-brand-lavender-gray/30 rounded-lg w-28 font-mono bg-white/80 focus:border-brand-medium-violet focus:ring-2 focus:ring-brand-medium-violet/20 transition-all duration-200"
                 placeholder="transparent"
               />
-              <Button size="sm" onClick={handleFinalColorChange}>
+              <Button 
+                size="sm" 
+                onClick={handleFinalColorChange}
+                className="bg-gradient-to-r from-brand-medium-violet to-brand-deep-indigo hover:from-brand-deep-indigo hover:to-brand-medium-violet text-white font-medium shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+              >
                 Apply
               </Button>
             </div>

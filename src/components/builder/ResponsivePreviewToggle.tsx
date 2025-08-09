@@ -21,26 +21,27 @@ export const ResponsivePreviewToggle: React.FC<ResponsivePreviewToggleProps> = (
     { key: 'desktop' as ViewportSize, icon: Monitor, label: 'Desktop', size: '1440px' }
   ];
 
-  const isDark = className.includes('bg-gray-800');
+  const isDark = className.includes('bg-gray-800') || className.includes('bg-brand-medium-violet');
 
   return (
-    <div className={`flex items-center space-x-1 rounded-lg p-1 ${className || 'bg-gray-100'}`}>
+    <div className={`flex items-center space-x-1 rounded-xl p-1 backdrop-blur-sm font-poppins ${className || 'bg-brand-lavender-gray/10'}`}>
       {viewports.map(({ key, icon: Icon, label, size }) => (
         <Button
           key={key}
           size="sm"
           variant={currentViewport === key ? 'default' : 'ghost'}
           onClick={() => onViewportChange(key)}
-          className={`px-2 py-1 text-xs transition-all ${
+          className={`px-3 py-2 text-xs font-medium transition-all duration-200 rounded-lg ${
             currentViewport === key 
-              ? 'bg-blue-600 text-white shadow-sm' 
+              ? 'bg-gradient-to-r from-brand-medium-violet to-brand-deep-indigo text-white shadow-lg transform scale-105' 
               : isDark 
-                ? 'text-gray-300 hover:text-white hover:bg-gray-700' 
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                ? 'text-brand-light-cream/80 hover:text-brand-light-cream hover:bg-white/10 hover:scale-105' 
+                : 'text-brand-deep-indigo/70 hover:text-brand-deep-indigo hover:bg-brand-cotton-candy-pink/20 hover:scale-105'
           }`}
           title={`${label} (${size})`}
         >
-          <Icon className="h-3 w-3" />
+          <Icon className="h-3 w-3 mr-1" />
+          <span className="hidden sm:inline">{label}</span>
         </Button>
       ))}
     </div>

@@ -202,9 +202,16 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
   // Early return if no component selected
   if (!selectedComponent) {
     return (
-      <div className="p-4 text-center text-gray-500">
-        <Eye className="mx-auto h-12 w-12 mb-2 opacity-50" />
-        <p>Select a component to edit its properties</p>
+      <div className="h-full flex items-center justify-center bg-gradient-to-br from-white to-brand-cotton-candy-pink/5 font-poppins">
+        <div className="text-center p-8">
+          <div className="w-20 h-20 bg-gradient-to-br from-brand-medium-violet/20 to-brand-deep-indigo/20 rounded-3xl flex items-center justify-center mx-auto mb-4">
+            <Eye className="w-10 h-10 text-brand-medium-violet/60" />
+          </div>
+          <h3 className="text-lg font-semibold text-brand-deep-indigo mb-2">Select a Component</h3>
+          <p className="text-brand-deep-indigo/60 max-w-sm">
+            Click on any component in your canvas to start customizing its appearance and properties.
+          </p>
+        </div>
       </div>
     );
   }
@@ -224,19 +231,26 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
   const isButtonElement = selectedElementId === 'cta-button' || selectedElementId === 'secondary-button';
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col bg-gradient-to-br from-white to-brand-cotton-candy-pink/5 font-poppins">
       {/* Header */}
-      <div className="flex-none p-4 border-b">
+      <div className="flex-none p-5 border-b border-brand-lavender-gray/20 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            {selectedElementId ? (
-              <EyeOff className="h-4 w-4 text-blue-600" />
-            ) : (
-              <Eye className="h-4 w-4 text-gray-400" />
-            )}
-            <span className="text-sm font-medium">
-              Editing: {elementDisplayName}
-            </span>
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-brand-medium-violet to-brand-deep-indigo rounded-lg flex items-center justify-center">
+              {selectedElementId ? (
+                <EyeOff className="h-4 w-4 text-white" />
+              ) : (
+                <Eye className="h-4 w-4 text-white" />
+              )}
+            </div>
+            <div>
+              <span className="text-base font-semibold text-brand-deep-indigo">
+                {elementDisplayName}
+              </span>
+              <p className="text-sm text-brand-deep-indigo/60">
+                Customize your component
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -244,61 +258,81 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
-          <div className="p-4 border-b">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="styles">Styles</TabsTrigger>
-              <TabsTrigger value="visibility">Visibility</TabsTrigger>
+          <div className="p-4 border-b border-brand-lavender-gray/10 bg-white/50 backdrop-blur-sm">
+            <TabsList className="grid w-full grid-cols-2 bg-brand-lavender-gray/10 p-1 rounded-xl">
+              <TabsTrigger 
+                value="styles" 
+                className="data-[state=active]:bg-white data-[state=active]:text-brand-deep-indigo data-[state=active]:shadow-md text-brand-deep-indigo/70 font-medium rounded-lg transition-all duration-200"
+              >
+                <Palette className="w-4 h-4 mr-2" />
+                Styles
+              </TabsTrigger>
+              <TabsTrigger 
+                value="visibility" 
+                className="data-[state=active]:bg-white data-[state=active]:text-brand-deep-indigo data-[state=active]:shadow-md text-brand-deep-indigo/70 font-medium rounded-lg transition-all duration-200"
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                Visibility
+              </TabsTrigger>
             </TabsList>
           </div>
 
           {/* Styles Tab */}
-          <TabsContent value="styles" className="space-y-4 mt-0 p-4">
+          <TabsContent value="styles" className="space-y-6 mt-0 p-5">
             {/* Variation Selector */}
             {isEditingContainer && (
-              <VariationSelector
-                selectedComponent={selectedComponent}
-                componentVariations={componentVariations}
-                onChangeVariation={handleVariationChange}
-              />
+              <div className="space-y-3">
+                <VariationSelector
+                  selectedComponent={selectedComponent}
+                  componentVariations={componentVariations}
+                  onChangeVariation={handleVariationChange}
+                />
+              </div>
             )}
 
             {/* Background Controls */}
-            <BackgroundControls
-              getStyleValue={getStyleValue}
-              handleStyleChange={handleStyleChange}
-              handleGradientChange={handleGradientChange}
-              isEditingContainer={isEditingContainer}
-            />
+            <div className="space-y-3">
+              <BackgroundControls
+                getStyleValue={getStyleValue}
+                handleStyleChange={handleStyleChange}
+                handleGradientChange={handleGradientChange}
+                isEditingContainer={isEditingContainer}
+              />
+            </div>
 
             {/* Button Action Config */}
             {isButtonElement && (
-              <ButtonActionConfig
-                selectedComponent={selectedComponent}
-                selectedElementId={selectedElementId}
-                allSections={allSections}
-                actionType={buttonActionType}
-                url={buttonUrl}
-                newTab={buttonNewTab}
-                targetId={buttonTargetId}
-                onActionTypeChange={setButtonActionType}
-                onUrlChange={setButtonUrl}
-                onNewTabChange={setButtonNewTab}
-                onTargetIdChange={setButtonTargetId}
-                onUpdateComponent={onUpdateComponent}
-                productData={productData}
-              />
+              <div className="space-y-3">
+                <ButtonActionConfig
+                  selectedComponent={selectedComponent}
+                  selectedElementId={selectedElementId}
+                  allSections={allSections}
+                  actionType={buttonActionType}
+                  url={buttonUrl}
+                  newTab={buttonNewTab}
+                  targetId={buttonTargetId}
+                  onActionTypeChange={setButtonActionType}
+                  onUrlChange={setButtonUrl}
+                  onNewTabChange={setButtonNewTab}
+                  onTargetIdChange={setButtonTargetId}
+                  onUpdateComponent={onUpdateComponent}
+                  productData={productData}
+                />
+              </div>
             )}
 
             {/* Element Style Panel */}
-            <ElementStylePanel
-              getStyleValue={getStyleValue}
-              onStyleChange={handleStyleChange}
-              isTextElement={isTextElement}
-            />
+            <div className="space-y-3">
+              <ElementStylePanel
+                getStyleValue={getStyleValue}
+                onStyleChange={handleStyleChange}
+                isTextElement={isTextElement}
+              />
+            </div>
           </TabsContent>
 
           {/* Visibility Tab */}
-          <TabsContent value="visibility" className="space-y-4 mt-0">
+          <TabsContent value="visibility" className="space-y-4 mt-0 p-5">
             <VisibilityControls
               component={selectedComponent}
               componentVariation={currentVariation}

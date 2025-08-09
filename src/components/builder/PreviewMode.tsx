@@ -145,12 +145,18 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
   }, [components, productData]);
 
   return (
-    <div className="h-screen bg-gray-100">
+    <div className="h-screen bg-gradient-to-br from-brand-light-cream/20 to-brand-cotton-candy-pink/10 font-poppins">
       {/* Preview Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-gray-900/95 backdrop-blur-sm text-white px-6 py-3 flex items-center justify-between">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-brand-deep-indigo/95 backdrop-blur-xl text-white px-6 py-4 flex items-center justify-between shadow-xl">
         <div className="flex items-center space-x-4">
-          <div className="text-sm text-gray-300">
-            Production Preview
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-brand-medium-violet to-white/20 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">👁️</span>
+            </div>
+            <div>
+              <div className="font-semibold text-brand-light-cream">Live Preview</div>
+              <div className="text-xs text-brand-light-cream/60">See your page as visitors will</div>
+            </div>
           </div>
         </div>
         
@@ -159,45 +165,51 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
           <ResponsivePreviewToggle
             currentViewport={currentViewport}
             onViewportChange={setCurrentViewport}
-            className="bg-gray-800"
+            className="bg-brand-medium-violet/20 border-brand-medium-violet/30"
           />
           
-          <div className="text-xs text-gray-400">
+          <div className="text-xs text-brand-light-cream/80 bg-brand-medium-violet/20 px-3 py-1 rounded-full">
             {viewportSizes[currentViewport].width} × {viewportSizes[currentViewport].height}
           </div>
         </div>
         
-        <div className="flex items-center space-x-2">
-
+        <div className="flex items-center space-x-3">
           <Button 
             size="sm" 
             onClick={handleDeploy}
             disabled={isExporting || components.length === 0}
-            className="text-white bg-blue-600 hover:bg-blue-700"
+            className="bg-gradient-to-r from-brand-medium-violet to-brand-cotton-candy-pink hover:from-brand-cotton-candy-pink hover:to-brand-medium-violet text-brand-deep-indigo font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
           >
             <Globe className="h-4 w-4 mr-2" />
-            {isExporting ? "Deploying..." : "Deploy"}
+            {isExporting ? "Deploying..." : "Deploy Live"}
           </Button>
           <Button 
             size="sm" 
             variant="ghost" 
             onClick={onExitPreview}
-            className="text-white hover:bg-white/20"
+            className="text-brand-light-cream hover:bg-white/10 hover:text-white transition-all duration-200"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4 mr-2" />
+            Exit Preview
           </Button>
         </div>
       </div>
 
       {/* Preview Content - Responsive Container */}
-      <div className="pt-16 h-full flex items-center justify-center bg-gray-100">
+      <div className="pt-20 h-full flex items-center justify-center bg-gradient-to-br from-brand-light-cream/30 via-white/50 to-brand-cotton-candy-pink/20">
         {components.length === 0 ? (
-          <div className="text-center">
-            <h3 className="text-2xl font-semibold text-gray-900 mb-2">No Content Yet</h3>
-            <p className="text-gray-500 mb-6">
-              Add some sections to see your landing page preview
+          <div className="text-center p-12">
+            <div className="w-24 h-24 bg-gradient-to-br from-brand-medium-violet/20 to-brand-deep-indigo/20 rounded-3xl flex items-center justify-center mx-auto mb-6">
+              <span className="text-4xl">📄</span>
+            </div>
+            <h3 className="text-2xl font-bold text-brand-deep-indigo mb-3">No Content Yet</h3>
+            <p className="text-brand-deep-indigo/60 mb-8 max-w-md">
+              Add some sections to your page to see how it will look to your visitors
             </p>
-            <Button onClick={onExitPreview}>
+            <Button 
+              onClick={onExitPreview}
+              className="bg-gradient-to-r from-brand-medium-violet to-brand-deep-indigo hover:from-brand-deep-indigo hover:to-brand-medium-violet text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+            >
               Back to Editor
             </Button>
           </div>
@@ -205,7 +217,7 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
           <div className="h-full w-full flex items-center justify-center">
             {/* Responsive Preview Frame */}
             <div 
-              className="bg-white shadow-2xl rounded-lg overflow-hidden transition-all duration-300 ease-in-out"
+              className="bg-white shadow-2xl rounded-2xl overflow-hidden transition-all duration-500 ease-in-out border border-brand-lavender-gray/20"
               style={{
                 width: currentViewport === 'desktop' ? '100%' : `${viewportSizes[currentViewport].width}px`,
                 height: currentViewport === 'desktop' ? '100%' : `${viewportSizes[currentViewport].height}px`,
