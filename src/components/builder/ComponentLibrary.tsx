@@ -64,8 +64,8 @@ export const ComponentLibrary: React.FC<ComponentLibraryProps> = ({
       <div className="p-6 border-b border-brand-lavender-gray/20 flex-shrink-0 bg-white/80 backdrop-blur-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-brand-medium-violet to-brand-deep-indigo rounded-xl flex items-center justify-center shadow-lg">
-              <Sparkles className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 bg-gradient-to-br from-brand-medium-violet to-brand-deep-indigo rounded-xl flex items-center justify-center shadow-lg">
+              <Sparkles className="w-4 h-4 text-white" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-brand-deep-indigo">Component Library</h2>

@@ -1020,9 +1020,7 @@ export default function Builder() {
         <div className="bg-white/90 backdrop-blur-xl border-b border-brand-lavender-gray/20 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-brand-medium-violet to-brand-deep-indigo rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">✨</span>
-              </div>
+              
               <h1 className="text-xl font-bold bg-gradient-to-r from-brand-deep-indigo to-brand-medium-violet bg-clip-text text-transparent">
                 Landing Page Builder
               </h1>
