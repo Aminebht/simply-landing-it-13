@@ -1004,7 +1004,11 @@ export default function Builder() {
         isLeftSidebarOpen ? 'w-80' : 'w-0'
       }`}>
         <div className={`${isLeftSidebarOpen ? 'block' : 'hidden'} w-80 flex-1 overflow-hidden`}>
-          <ComponentLibrary onAddComponent={handleAddComponent} />
+          <ComponentLibrary 
+            onAddComponent={handleAddComponent} 
+            onToggleSidebar={toggleLeftSidebar}
+            showToggle={true}
+          />
         </div>
       </div>
 
@@ -1028,27 +1032,7 @@ export default function Builder() {
         {/* Top Toolbar - Fixed */}
         <div className="bg-white/90 backdrop-blur-xl border-b border-brand-lavender-gray/20 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
           <div className="flex items-center gap-4">
-            {/* Left Sidebar Toggle */}
-            {isLeftSidebarOpen && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleLeftSidebar}
-                className="h-8 w-8 hover:bg-brand-cotton-candy-pink/20 text-brand-medium-violet"
-                title="Close Component Library (Ctrl+B)"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-            )}
             
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-brand-medium-violet to-brand-deep-indigo rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">✨</span>
-              </div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-brand-deep-indigo to-brand-medium-violet bg-clip-text text-transparent">
-                Landing Page Builder
-              </h1>
-            </div>
             
             <DirectionToggle 
               currentDirection={direction} 

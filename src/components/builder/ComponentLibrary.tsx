@@ -2,60 +2,59 @@ import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Sparkles } from 'lucide-react';
+import { Plus, Sparkles, ChevronLeft } from 'lucide-react';
 
 interface ComponentLibraryProps {
   onAddComponent: (type: string) => void;
   language?: 'en' | 'fr' | 'ar';
+  onToggleSidebar?: () => void;
+  showToggle?: boolean;
 }
 
 export const ComponentLibrary: React.FC<ComponentLibraryProps> = ({
   onAddComponent,
-  language = 'en'
+  language = 'en',
+  onToggleSidebar,
+  showToggle = false
 }) => {
 
   const componentTypes = [
     {
       type: 'hero',
-      name: 'Hero Section',
+      name: 'Hero',
       icon: '🎯',
       variations: 6,
-      description: 'Captivating opening sections'
     },
     {
       type: 'features',
       name: 'Features',
       icon: '⭐',
       variations: 6,
-      description: 'Showcase your key features'
+      
     },
     {
       type: 'testimonials',
       name: 'Testimonials',
       icon: '💬',
       variations: 6,
-      description: 'Social proof and reviews'
     },
     {
       type: 'pricing',
       name: 'Pricing',
       icon: '💰',
       variations: 6,
-      description: 'Plans and pricing tables'
     },
     {
       type: 'faq',
       name: 'FAQ',
       icon: '❓',
       variations: 6,
-      description: 'Frequently asked questions'
     },
     {
       type: 'cta',
-      name: 'Call to Action',
+      name: 'CTA',
       icon: '🚀',
-      variations: 6,
-      description: 'Drive conversions and engagement'
+      variations: 3,
     }
   ];
 
@@ -63,14 +62,29 @@ export const ComponentLibrary: React.FC<ComponentLibraryProps> = ({
     <div className="h-full bg-gradient-to-br from-white to-brand-cotton-candy-pink/5 flex flex-col font-poppins">
       {/* Header - Fixed */}
       <div className="p-6 border-b border-brand-lavender-gray/20 flex-shrink-0 bg-white/80 backdrop-blur-sm">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-brand-medium-violet to-brand-deep-indigo rounded-xl flex items-center justify-center shadow-lg">
-            <Sparkles className="w-5 h-5 text-white" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-brand-medium-violet to-brand-deep-indigo rounded-xl flex items-center justify-center shadow-lg">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-brand-deep-indigo">Component Library</h2>
+           
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl font-semibold text-brand-deep-indigo">Component Library</h2>
-            <p className="text-sm text-brand-deep-indigo/60">Drag & drop to build beautiful pages</p>
-          </div>
+          
+          {/* Toggle Button */}
+          {showToggle && onToggleSidebar && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggleSidebar}
+              className="h-8 w-8 hover:bg-brand-cotton-candy-pink/20 text-brand-medium-violet"
+              title="Close Component Library (Ctrl+B)"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -100,9 +114,7 @@ export const ComponentLibrary: React.FC<ComponentLibraryProps> = ({
                         <h3 className="font-semibold text-brand-deep-indigo text-base mb-1 group-hover:text-brand-medium-violet transition-colors">
                           {component.name}
                         </h3>
-                        <p className="text-sm text-brand-deep-indigo/60 mb-3 leading-relaxed">
-                          {component.description}
-                        </p>
+                        
                       </div>
                       
                       <Button
@@ -112,7 +124,7 @@ export const ComponentLibrary: React.FC<ComponentLibraryProps> = ({
                         title={`Add ${component.name}`}
                       >
                         <Plus className="h-4 w-4 mr-1" />
-                        Add
+                        
                       </Button>
                     </div>
                     

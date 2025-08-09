@@ -16,16 +16,16 @@ export const ResponsivePreviewToggle: React.FC<ResponsivePreviewToggleProps> = (
   className = ""
 }) => {
   const viewports = [
-    { key: 'mobile' as ViewportSize, icon: Smartphone, label: 'Mobile', size: '375px' },
-    { key: 'tablet' as ViewportSize, icon: Tablet, label: 'Tablet', size: '768px' },
-    { key: 'desktop' as ViewportSize, icon: Monitor, label: 'Desktop', size: '1440px' }
+    { key: 'mobile' as ViewportSize, icon: Smartphone, size: '375px' },
+    { key: 'tablet' as ViewportSize, icon: Tablet, size: '768px' },
+    { key: 'desktop' as ViewportSize, icon: Monitor, size: '1440px' }
   ];
 
   const isDark = className.includes('bg-gray-800') || className.includes('bg-brand-medium-violet');
 
   return (
     <div className={`flex items-center space-x-1 rounded-xl p-1 backdrop-blur-sm font-poppins ${className || 'bg-brand-lavender-gray/10'}`}>
-      {viewports.map(({ key, icon: Icon, label, size }) => (
+      {viewports.map(({ key, icon: Icon, size }) => (
         <Button
           key={key}
           size="sm"
@@ -38,10 +38,10 @@ export const ResponsivePreviewToggle: React.FC<ResponsivePreviewToggleProps> = (
                 ? 'text-brand-light-cream/80 hover:text-brand-light-cream hover:bg-white/10 hover:scale-105' 
                 : 'text-brand-deep-indigo/70 hover:text-brand-deep-indigo hover:bg-brand-cotton-candy-pink/20 hover:scale-105'
           }`}
-          title={`${label} (${size})`}
+          title={`(${size})`}
         >
           <Icon className="h-3 w-3 mr-1" />
-          <span className="hidden sm:inline">{label}</span>
+          
         </Button>
       ))}
     </div>
