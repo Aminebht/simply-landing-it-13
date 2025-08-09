@@ -2,8 +2,58 @@ import React from 'react';
 import ReactDOMServer from 'react-dom/server';
 import { LandingPageComponent } from '@/types/components';
 import { ComponentRenderer } from '@/components/registry/ComponentRenderer';
-import { SeoGenerator, ScriptGenerator, StyleGenerator } from './index';
 import { CssGeneratorService } from './css-generator';
+
+// Inline utility classes to replace removed dependencies
+class SeoGenerator {
+  generateSEOMetaTags(pageData: any): string {
+    const title = pageData?.title || 'Landing Page';
+    const description = pageData?.description || 'A beautiful landing page';
+    const keywords = pageData?.keywords || 'landing page, website, marketing';
+    
+    return `
+  <meta name="description" content="${this.escapeHtml(description)}">
+  <meta name="keywords" content="${this.escapeHtml(keywords)}">
+  <meta property="og:title" content="${this.escapeHtml(title)}">
+  <meta property="og:description" content="${this.escapeHtml(description)}">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${this.escapeHtml(title)}">
+  <meta name="twitter:description" content="${this.escapeHtml(description)}">`;
+  }
+
+  private escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+}
+
+class StyleGenerator {
+  generateGoogleFontsLink(pageData: any): string {
+    const fontFamily = pageData?.globalTheme?.fontFamily || 'Inter';
+    if (fontFamily && fontFamily !== 'inherit') {
+      return `<link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontFamily)}:wght@300;400;500;600;700&display=swap" rel="stylesheet">`;
+    }
+    return '';
+  }
+}
+
+class ScriptGenerator {
+  // Simple script generator for basic interactivity
+  generateClientScript(): string {
+    return `
+// Basic client-side functionality
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('Landing page loaded');
+});`;
+  }
+}
 
 // HTML Generator for React SSR deployment
 export interface HtmlGeneratorConfig {

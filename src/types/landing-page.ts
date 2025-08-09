@@ -41,7 +41,6 @@ export interface LandingPage {
   slug: string;
   custom_domain?: string;
   netlify_site_id?: string;
-  deployed_url?: string;
   global_theme: ThemeConfig;
   seo_config: SEOConfig;
   language: 'en' | 'fr' | 'ar';

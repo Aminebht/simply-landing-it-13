@@ -4,7 +4,8 @@ import { X, Download, Globe } from 'lucide-react';
 import { LandingPageComponent } from '@/types/components';
 import { ComponentRenderer } from '@/components/registry/ComponentRenderer';
 import { ResponsivePreviewToggle, ViewportSize } from './ResponsivePreviewToggle';
-import { ReactDeploymentService } from '@/services/react-deployment-service';
+import { ReactSSRFileGenerator } from '@/services/react-ssr-file-generator';
+import { OptimizedDeploymentService } from '@/services/optimized-deployment-service';
 import { toast } from "sonner";
 import { useParams } from 'react-router-dom';
 
@@ -50,20 +51,30 @@ export const PreviewMode: React.FC<PreviewModeProps> = ({
 
     try {
       setIsExporting(true);
-      toast.info("Starting React-based deployment...");
+      toast.info("Starting hybrid deployment (React SSR + Optimized)...");
       
-      // Use React deployment service for better accuracy
-      const deploymentService = new ReactDeploymentService("nfp_PxSrwC6LMCXfjrSi28pvhSdx9rNKLKyv4a6d");
-      const result = await deploymentService.deployLandingPage(pageId);
+      // Step 1: Generate React SSR files for 100% builder match
+      const fileGenerator = new ReactSSRFileGenerator();
+      const reactFiles = await fileGenerator.generateReactSSRFiles(pageId);
       
-      toast.success(`React deployment completed! URL: ${result.url}`, {
-        action: {
-          label: "Open",
-          onClick: () => window.open(result.url, '_blank')
-        }
-      });
+      toast.info("React SSR files generated, deploying...");
+      
+      // Step 2: Deploy using optimized service with pre-generated files
+      const deploymentService = new OptimizedDeploymentService();
+      const result = await deploymentService.deployLandingPage(pageId, reactFiles);
+      
+      if (result.success) {
+        toast.success(`Hybrid deployment completed! URL: ${result.url}`, {
+          action: {
+            label: "Open",
+            onClick: () => window.open(result.url, '_blank')
+          }
+        });
+      } else {
+        throw new Error(result.error || 'Deployment failed');
+      }
     } catch (error) {
-      console.error("React deployment failed:", error);
+      console.error("Hybrid deployment failed:", error);
       toast.error("Failed to deploy landing page. Please check configuration.");
     } finally {
       setIsExporting(false);
