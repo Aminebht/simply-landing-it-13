@@ -999,20 +999,7 @@ export default function Builder() {
 
   return (
     <div className="h-screen flex bg-gradient-to-br from-brand-light-cream/20 via-white to-brand-cotton-candy-pink/20 overflow-hidden font-poppins">
-      {/* Left Sidebar - Component Library - Collapsible */}
-      <div className={`bg-white/95 backdrop-blur-xl border-r border-brand-lavender-gray/20 flex-shrink-0 h-full flex flex-col sticky top-0 transition-all duration-300 shadow-xl ${
-        isLeftSidebarOpen ? 'w-80' : 'w-0'
-      }`}>
-        <div className={`${isLeftSidebarOpen ? 'block' : 'hidden'} w-80 flex-1 overflow-hidden`}>
-          <ComponentLibrary 
-            onAddComponent={handleAddComponent} 
-            onToggleSidebar={toggleLeftSidebar}
-            showToggle={true}
-          />
-        </div>
-      </div>
-
-      {/* Left Sidebar Toggle Button */}
+      {/* Left Sidebar Toggle Button - when closed */}
       {!isLeftSidebarOpen && (
         <div className="fixed left-0 top-1/2 transform -translate-y-1/2 z-20">
           <Button
@@ -1032,7 +1019,14 @@ export default function Builder() {
         {/* Top Toolbar - Fixed */}
         <div className="bg-white/90 backdrop-blur-xl border-b border-brand-lavender-gray/20 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
           <div className="flex items-center gap-4">
-            
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-brand-medium-violet to-brand-deep-indigo rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">✨</span>
+              </div>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-brand-deep-indigo to-brand-medium-violet bg-clip-text text-transparent">
+                Landing Page Builder
+              </h1>
+            </div>
             
             <DirectionToggle 
               currentDirection={direction} 
@@ -1100,22 +1094,25 @@ export default function Builder() {
             </div>
 
             {/* Right Sidebar Toggle */}
-            {isRightSidebarOpen && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleRightSidebar}
-                className="h-8 w-8 hover:bg-brand-cotton-candy-pink/20 text-brand-medium-violet"
-                title="Close Visual Editor (Ctrl+J)"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            )}
+           
           </div>
         </div>
 
-        {/* Content Area with Right Sidebar */}
+        {/* Content Area with Both Sidebars */}
         <div className="flex-1 flex overflow-hidden">
+          {/* Left Sidebar - Component Library - Collapsible */}
+          <div className={`bg-white/95 backdrop-blur-xl border-r border-brand-lavender-gray/20 flex-shrink-0 h-full flex flex-col transition-all duration-300 shadow-xl ${
+            isLeftSidebarOpen ? 'w-80' : 'w-0'
+          }`}>
+            <div className={`${isLeftSidebarOpen ? 'block' : 'hidden'} w-80 flex-1 overflow-hidden`}>
+              <ComponentLibrary 
+                onAddComponent={handleAddComponent} 
+                onToggleSidebar={toggleLeftSidebar}
+                showToggle={true}
+              />
+            </div>
+          </div>
+
           {/* Canvas Area - Scrollable */}
           <div className="flex-1 overflow-y-auto relative">
             {/* Direction Indicator */}
@@ -1180,6 +1177,8 @@ export default function Builder() {
                 allSections={components}
                 globalTheme={globalTheme}
                 productData={productData}
+                onToggleSidebar={toggleRightSidebar}
+                showToggle={true}
               />
             </div>
           </div>

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Eye, EyeOff, Shuffle, Palette, Type, Layout } from 'lucide-react';
+import { Eye, EyeOff, Shuffle, Palette, Type, Layout, ChevronRight } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import { VisibilityControls } from './VisibilityControls';
 
@@ -39,6 +39,8 @@ interface VisualEditorProps {
   onSave?: () => Promise<void>;
   globalTheme?: ThemeConfig | null;
   productData?: { id: string; price: number } | null;
+  onToggleSidebar?: () => void;
+  showToggle?: boolean;
 }
 
 export const VisualEditor: React.FC<VisualEditorProps> = ({
@@ -53,7 +55,9 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
   allSections,
   onSave,
   globalTheme,
-  productData
+  productData,
+  onToggleSidebar,
+  showToggle = false
 }) => {
   // State management
   const [activeTab, setActiveTab] = useState('styles');
@@ -235,6 +239,18 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
       {/* Header */}
       <div className="flex-none p-5 border-b border-brand-lavender-gray/20 bg-white/90 backdrop-blur-sm">
         <div className="flex items-center justify-between">
+          {/* Right Sidebar Toggle Button */}
+          {showToggle && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggleSidebar}
+              className="h-8 w-8 hover:bg-brand-cotton-candy-pink/20 text-brand-medium-violet"
+              title="Close Visual Editor (Ctrl+J)"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          )}
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-gradient-to-br from-brand-medium-violet to-brand-deep-indigo rounded-lg flex items-center justify-center">
               {selectedElementId ? (
@@ -252,6 +268,8 @@ export const VisualEditor: React.FC<VisualEditorProps> = ({
               </p>
             </div>
           </div>
+          
+          
         </div>
       </div>
 
