@@ -998,9 +998,9 @@ export default function Builder() {
   }
 
   return (
-    <div className="h-screen flex bg-gray-100 overflow-hidden">
+    <div className="h-screen flex bg-gradient-to-br from-brand-light-cream/10 via-background to-brand-cotton-candy-pink/5 overflow-hidden">
       {/* Left Sidebar - Component Library - Collapsible */}
-      <div className={`bg-white border-r border-gray-200 flex-shrink-0 h-full flex flex-col sticky top-0 transition-all duration-300 ${
+      <div className={`bg-white/90 backdrop-blur-xl border-r border-brand-lavender-gray/30 flex-shrink-0 h-full flex flex-col sticky top-0 transition-all duration-300 shadow-lg ${
         isLeftSidebarOpen ? 'w-80' : 'w-0'
       }`}>
         <div className={`${isLeftSidebarOpen ? 'block' : 'hidden'} w-80 flex-1 overflow-hidden`}>
@@ -1015,7 +1015,7 @@ export default function Builder() {
             variant="outline"
             size="icon"
             onClick={toggleLeftSidebar}
-            className="rounded-l-none rounded-r-lg bg-white border-l-0 shadow-md hover:bg-gray-50"
+            className="rounded-l-none rounded-r-xl bg-white/90 backdrop-blur-sm border-l-0 border-brand-lavender-gray/30 shadow-lg hover:bg-brand-cotton-candy-pink/20 hover:border-brand-medium-violet/30 transition-all duration-200"
             title="Open Component Library (Ctrl+B)"
           >
             <ChevronRight className="h-4 w-4" />
@@ -1026,7 +1026,7 @@ export default function Builder() {
       {/* Main Canvas Area - Scrollable */}
       <div className="flex-1 flex flex-col h-full">
         {/* Top Toolbar - Fixed */}
-        <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between sticky top-0 z-10">
+        <div className="bg-white/80 backdrop-blur-xl border-b border-brand-lavender-gray/30 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
           <div className="flex items-center gap-4">
             {/* Left Sidebar Toggle */}
             {isLeftSidebarOpen && (
@@ -1041,7 +1041,7 @@ export default function Builder() {
               </Button>
             )}
             
-            <h1 className="text-lg font-semibold text-gray-900">Landing Page Builder</h1>
+            <h1 className="text-lg font-heading font-semibold text-brand-deep-indigo">Landing Page Builder</h1>
             <DirectionToggle 
               currentDirection={direction} 
               onToggle={handleDirectionToggle} 
@@ -1119,7 +1119,7 @@ export default function Builder() {
                 className="h-8 w-8"
                 title="Close Visual Editor (Ctrl+J)"
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4 text-brand-medium-violet" />
               </Button>
             )}
           </div>
@@ -1130,19 +1130,19 @@ export default function Builder() {
           {/* Canvas Area - Scrollable */}
           <div className="flex-1 overflow-y-auto relative">
             {/* Direction Indicator */}
-            <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium text-gray-600 border border-gray-200">
+            <div className="absolute top-6 left-6 z-10 bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl text-xs font-medium text-brand-deep-indigo border border-brand-lavender-gray/30 shadow-lg">
               Components: {direction.toUpperCase()}
             </div>
 
             {/* Viewport Size Indicator */}
-            <div className="absolute top-4 right-4 z-10 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium text-gray-600 border border-gray-200">
+            <div className="absolute top-6 right-6 z-10 bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl text-xs font-medium text-brand-deep-indigo border border-brand-lavender-gray/30 shadow-lg">
               {currentViewport === 'mobile' && '📱 Mobile (375px)'}
               {currentViewport === 'tablet' && '📋 Tablet (768px)'}
               {currentViewport === 'desktop' && '🖥️ Desktop (1440px)'}
             </div>
             
             {/* Canvas Content with Direction and Responsive Preview */}
-            <div className="min-h-full flex items-center justify-center bg-gray-50">
+            <div className="min-h-full flex items-center justify-center bg-gradient-to-br from-brand-light-cream/20 via-transparent to-brand-cotton-candy-pink/10">
               <div 
                 className={`bg-white shadow-lg transition-all duration-300 ${
                   currentViewport === 'desktop' 
@@ -1175,7 +1175,7 @@ export default function Builder() {
           </div>
 
           {/* Right Sidebar - Visual Editor - Collapsible */}
-          <div className={`bg-white border-l border-gray-200 flex-shrink-0 h-full flex flex-col sticky top-0 transition-all duration-300 ${
+          <div className={`bg-white/90 backdrop-blur-xl border-l border-brand-lavender-gray/30 flex-shrink-0 h-full flex flex-col sticky top-0 transition-all duration-300 shadow-lg ${
             isRightSidebarOpen ? 'w-80' : 'w-0'
           }`}>
             <div className={`${isRightSidebarOpen ? 'block' : 'hidden'} w-80 flex-1 overflow-hidden`}>
@@ -1203,10 +1203,10 @@ export default function Builder() {
               variant="outline"
               size="icon"
               onClick={toggleRightSidebar}
-              className="rounded-r-none rounded-l-lg bg-white border-r-0 shadow-md hover:bg-gray-50"
+              className="rounded-r-none rounded-l-xl bg-white/90 backdrop-blur-sm border-r-0 border-brand-lavender-gray/30 shadow-lg hover:bg-brand-cotton-candy-pink/20 hover:border-brand-medium-violet/30 transition-all duration-200"
               title="Open Visual Editor (Ctrl+J)"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4 text-brand-medium-violet" />
             </Button>
           </div>
         )}
